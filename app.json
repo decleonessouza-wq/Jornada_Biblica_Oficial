@@ -1,30 +1,51 @@
 {
   "expo": {
-    "name": "jornada-biblica",
+    "name": "Jornada Bíblica",
     "slug": "jornada-biblica",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
+    "assetBundlePatterns": ["**/*"],
+
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
+
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.decleones.jornadabiblica",
+      "buildNumber": "1"
     },
+
     "android": {
+      "package": "com.decleones.jornadabiblica",
+      "versionCode": 1,
+      "edgeToEdgeEnabled": true,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      },
-      "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      }
     },
+
     "web": {
-      "favicon": "./assets/favicon.png"
+      "bundler": "metro",
+      "output": "single",
+      "favicon": "./assets/favicon.png",
+      "name": "Jornada Bíblica",
+      "shortName": "Jornada",
+      "display": "standalone",
+      "themeColor": "#0E2A47",
+      "backgroundColor": "#ffffff"
+    },
+
+    "extra": {
+      "eas": {
+        "projectId": "b2f8e0ba-ce17-40ad-a27b-ad5ad4591224"
+      }
     }
   }
 }
