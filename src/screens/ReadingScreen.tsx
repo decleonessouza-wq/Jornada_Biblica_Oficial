@@ -10,6 +10,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   SafeAreaView,
+  Platform, // <--- Adicionado para detectar se é Web ou App
 } from "react-native";
 import { useEffect, useMemo, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -743,20 +744,35 @@ export default function ReadingScreen({ route }: Props) {
           </TouchableOpacity>
         </View>
 
-        <WebView
-          source={{ uri: readingUrl }}
-          startInLoadingState
-          renderLoading={() => (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator color={colors.primary} size="large" />
-              <Text style={styles.loadingText}>Carregando leitura...</Text>
-            </View>
-          )}
-          onError={() => {
-            setShowWebView(false);
-            Alert.alert("Erro", "Não foi possível carregar a leitura aqui.");
-          }}
-        />
+        {/* SOLUÇÃO DO ERRO: 
+            Se for WEB, usamos iframe HTML padrão.
+            Se for NATIVO (Celular), usamos o WebView do pacote.
+        */}
+        {Platform.OS === 'web' ? (
+          <View style={{ flex: 1 }}>
+            {/* @ts-ignore */}
+            <iframe
+              src={readingUrl}
+              style={{ width: '100%', height: '100%', border: 'none' }}
+              title="Leitura Bíblica"
+            />
+          </View>
+        ) : (
+          <WebView
+            source={{ uri: readingUrl }}
+            startInLoadingState
+            renderLoading={() => (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator color={colors.primary} size="large" />
+                <Text style={styles.loadingText}>Carregando leitura...</Text>
+              </View>
+            )}
+            onError={() => {
+              setShowWebView(false);
+              Alert.alert("Erro", "Não foi possível carregar a leitura aqui.");
+            }}
+          />
+        )}
       </SafeAreaView>
     );
   }
