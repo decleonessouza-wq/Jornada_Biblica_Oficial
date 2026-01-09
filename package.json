@@ -1,19 +1,16 @@
 {
   "name": "jornada-biblica",
   "version": "1.0.0",
-  "homepage": "https://decleonessouza-wq.github.io/Jornada_Biblica_Oficial",
   "main": "index.ts",
   "private": true,
   "scripts": {
-      "start": "expo start",
-      "android": "expo start --android",
-      "ios": "expo start --ios",
-      "web": "expo start --web",
-      "build:web": "expo export -p web",
-      "serve:web": "npx serve dist",
-      "predeploy": "npm run build:web",
-      "deploy": "gh-pages -d dist"
-    },
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "web": "expo start --web",
+    "build:web": "expo export -p web",
+    "serve:web": "npx serve dist"
+  },
   "dependencies": {
     "@expo/metro-runtime": "~6.1.2",
     "@react-native-async-storage/async-storage": "2.2.0",

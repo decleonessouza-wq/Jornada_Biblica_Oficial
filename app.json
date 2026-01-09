@@ -39,12 +39,7 @@
       "display": "standalone",
       "themeColor": "#0E2A47",
       "backgroundColor": "#ffffff",
-      "lang": "pt-BR",
-      "startUrl": "/Jornada_Biblica_Oficial/",
-      "scope": "/Jornada_Biblica_Oficial/",
-      "experiments": {
-        "baseUrl": "/Jornada_Biblica_Oficial/"
-      }
+      "lang": "pt-BR"
     },
     "extra": {
       "eas": {
