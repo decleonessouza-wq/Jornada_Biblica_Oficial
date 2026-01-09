@@ -39,7 +39,14 @@
       "display": "standalone",
       "themeColor": "#0E2A47",
       "backgroundColor": "#ffffff",
-      "lang": "pt-BR"
+      "lang": "pt-BR",
+      "startUrl": "/",
+      "orientation": "portrait",
+      "splash": {
+        "image": "./assets/splash-icon.png",
+        "resizeMode": "contain",
+        "backgroundColor": "#ffffff"
+      }
     },
     "extra": {
       "eas": {
