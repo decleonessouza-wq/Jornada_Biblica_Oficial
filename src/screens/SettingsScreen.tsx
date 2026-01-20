@@ -7,8 +7,10 @@ import {
   TouchableOpacity,
   StyleSheet,
   StatusBar,
+  SafeAreaView,
+  Platform,
 } from "react-native";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -19,7 +21,11 @@ import { APP_INFO } from "../constants/appInfo";
 import type { RootStackParamList } from "../app_router_off";
 
 // ✅ usar as rotinas oficiais do app para não deixar chaves “penduradas”
-import { resetProgress, setCompletedDays, markAutoRestoreDone } from "../services/progressStore";
+import {
+  resetProgress,
+  setCompletedDays,
+  markAutoRestoreDone,
+} from "../services/progressStore";
 
 // --- TIPOS E INTERFACES ---
 type ExportData = {
@@ -72,6 +78,75 @@ function sanitizeGratitudeMap(input: unknown): Record<string, string> {
     out[k] = text.length > 200 ? text.slice(0, 200) : text;
   }
   return out;
+}
+
+function shadowCard() {
+  return Platform.select({
+    android: { elevation: 2 },
+    ios: {
+      shadowColor: "#000",
+      shadowOpacity: 0.06,
+      shadowRadius: 12,
+      shadowOffset: { width: 0, height: 8 },
+    },
+    default: {},
+  }) as any;
+}
+
+function PrimaryButton({
+  title,
+  onPress,
+  danger,
+}: {
+  title: string;
+  onPress: () => void;
+  danger?: boolean;
+}) {
+  return (
+    <TouchableOpacity
+      activeOpacity={0.92}
+      style={[styles.btnPrimary, danger && styles.btnDanger]}
+      onPress={onPress}
+    >
+      <Text style={styles.btnPrimaryText}>{title}</Text>
+    </TouchableOpacity>
+  );
+}
+
+function SecondaryButton({
+  title,
+  onPress,
+}: {
+  title: string;
+  onPress: () => void;
+}) {
+  return (
+    <TouchableOpacity
+      activeOpacity={0.92}
+      style={styles.btnSecondary}
+      onPress={onPress}
+    >
+      <Text style={styles.btnSecondaryText}>{title}</Text>
+    </TouchableOpacity>
+  );
+}
+
+function OutlineButton({
+  title,
+  onPress,
+}: {
+  title: string;
+  onPress: () => void;
+}) {
+  return (
+    <TouchableOpacity
+      activeOpacity={0.92}
+      style={styles.btnOutline}
+      onPress={onPress}
+    >
+      <Text style={styles.btnOutlineText}>{title}</Text>
+    </TouchableOpacity>
+  );
 }
 
 export default function SettingsScreen() {
@@ -267,56 +342,50 @@ export default function SettingsScreen() {
     navigation.navigate("Dedication");
   }
 
-  const lastBackupLabel = lastBackupAt ? formatIsoDate(lastBackupAt) : "Nunca";
+  const lastBackupLabel = useMemo(() => {
+    return lastBackupAt ? formatIsoDate(lastBackupAt) : "Nunca";
+  }, [lastBackupAt]);
 
-  // --- RENDER ---
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F4F6F8" />
+    <SafeAreaView style={styles.safe}>
+      <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={styles.page}
+        showsVerticalScrollIndicator={false}
+      >
         {/* HEADER */}
-        <View style={{ marginBottom: 20, alignItems: "center" }}>
-          <Text style={styles.screenTitle}>Configurações</Text>
-          <Text style={styles.screenSubtitle}>
+        <View style={styles.header}>
+          <Text style={styles.hTitle}>Configurações</Text>
+          <Text style={styles.hSub}>
             {APP_INFO.name} • v{APP_INFO.version}
           </Text>
         </View>
 
-        {/* 1. PERFIL */}
-        <View style={styles.card}>
+        {/* PERFIL */}
+        <View style={[styles.card, shadowCard()]}>
           <Text style={styles.cardTitle}>👤 Perfil</Text>
-          <Text style={styles.cardDesc}>Gerencie suas informações.</Text>
+          <Text style={styles.cardDesc}>Gerencie suas informações e fluxo inicial.</Text>
 
-          <TouchableOpacity style={styles.buttonOutline} onPress={replayWelcome}>
-            <Text style={styles.buttonOutlineText}>🔁 Rever Boas-vindas</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.buttonOutline} onPress={openDedication}>
-            <Text style={styles.buttonOutlineText}>📜 Ver Dedicatória</Text>
-          </TouchableOpacity>
+          <OutlineButton title="🔁 Rever Boas-vindas" onPress={replayWelcome} />
+          <OutlineButton title="📜 Ver Dedicatória" onPress={openDedication} />
         </View>
 
-        {/* 2. DADOS & BACKUP */}
-        <View style={styles.card}>
+        {/* DADOS & BACKUP */}
+        <View style={[styles.card, shadowCard()]}>
           <Text style={styles.cardTitle}>💾 Dados & Backup</Text>
 
-          {/* Info Backup Auto */}
           <View style={styles.infoBox}>
             <Text style={styles.infoText}>📦 Último Backup Auto: {lastBackupLabel}</Text>
           </View>
 
-          <TouchableOpacity style={styles.buttonSecondary} onPress={restoreAutoBackupNow}>
-            <Text style={styles.buttonSecondaryText}>♻️ Restaurar Backup Automático</Text>
-          </TouchableOpacity>
+          <SecondaryButton title="♻️ Restaurar Backup Automático" onPress={restoreAutoBackupNow} />
 
           <View style={styles.divider} />
 
-          {/* Exportar */}
           <Text style={styles.sectionLabel}>Backup Manual (Texto)</Text>
-          <TouchableOpacity style={styles.buttonPrimary} onPress={exportAsText}>
-            <Text style={styles.buttonPrimaryText}>📋 Gerar Código de Backup</Text>
-          </TouchableOpacity>
+          <PrimaryButton title="📋 Gerar Código de Backup" onPress={exportAsText} />
 
           {exportJson && (
             <View style={styles.codeBlock}>
@@ -329,47 +398,37 @@ export default function SettingsScreen() {
 
           <View style={styles.divider} />
 
-          {/* Importar */}
           <Text style={styles.sectionLabel}>Importar Dados</Text>
           <TextInput
             value={importText}
             onChangeText={setImportText}
             multiline
             placeholder="Cole o código JSON aqui..."
-            placeholderTextColor="#999"
+            placeholderTextColor="#9aa0a6"
             style={styles.textInput}
           />
 
-          <View style={styles.rowButtons}>
-            <TouchableOpacity
-              style={[styles.buttonPrimary, { flex: 1, marginRight: 8, marginBottom: 0 }]}
-              onPress={importProgress}
-            >
-              <Text style={styles.buttonPrimaryText}>📥 Importar</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.buttonOutline, { flex: 1, marginBottom: 0 }]}
-              onPress={clearImportBox}
-            >
-              <Text style={styles.buttonOutlineText}>🧽 Limpar</Text>
-            </TouchableOpacity>
+          <View style={styles.row}>
+            <View style={{ flex: 1, marginRight: 8 }}>
+              <PrimaryButton title="📥 Importar" onPress={importProgress} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <OutlineButton title="🧽 Limpar" onPress={clearImportBox} />
+            </View>
           </View>
         </View>
 
-        {/* 3. ZONA DE PERIGO */}
-        <View style={[styles.card, styles.dangerCard]}>
+        {/* ZONA DE PERIGO */}
+        <View style={[styles.card, styles.dangerCard, shadowCard()]}>
           <Text style={[styles.cardTitle, { color: "#D32F2F" }]}>⚠️ Zona de Perigo</Text>
           <Text style={styles.cardDesc}>
             Apagar todo o progresso, gratidões e configurações do aplicativo. Ação irreversível.
           </Text>
-          <TouchableOpacity style={styles.buttonDanger} onPress={confirmReset}>
-            <Text style={styles.buttonDangerText}>🧹 Resetar Tudo</Text>
-          </TouchableOpacity>
+          <PrimaryButton title="🧹 Resetar Tudo" onPress={confirmReset} danger />
         </View>
 
-        {/* 4. LEGAL */}
-        <View style={styles.card}>
+        {/* LEGAL */}
+        <View style={[styles.card, shadowCard()]}>
           <Text style={styles.cardTitle}>⚖️ Legal</Text>
 
           <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate("Terms")}>
@@ -377,7 +436,7 @@ export default function SettingsScreen() {
             <Text style={styles.menuItemArrow}>›</Text>
           </TouchableOpacity>
 
-          <View style={{ height: 1, backgroundColor: "#EEE" }} />
+          <View style={styles.menuDivider} />
 
           <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate("Privacy")}>
             <Text style={styles.menuItemText}>🔒 Política de Privacidade</Text>
@@ -385,13 +444,14 @@ export default function SettingsScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* 5. SOBRE (Texto Integral) */}
-        <View style={styles.card}>
+        {/* SOBRE */}
+        <View style={[styles.card, shadowCard()]}>
           <Text style={styles.cardTitle}>💙 Sobre o App</Text>
 
-          <View style={styles.aboutContent}>
+          <View style={{ marginTop: 6 }}>
             <Text style={styles.paragraph}>
-              <Text style={styles.bold}>Nossa Missão</Text>{"\n"}
+              <Text style={styles.bold}>Nossa Missão</Text>
+              {"\n"}
               Em um mundo de distrações constantes, sabemos que manter a disciplina espiritual é um desafio real. Muitas vezes, o desejo de ler a Bíblia existe, mas falta a organização ou o incentivo para continuar quando a rotina aperta.
             </Text>
 
@@ -403,7 +463,8 @@ export default function SettingsScreen() {
             </Text>
 
             <Text style={styles.paragraph}>
-              <Text style={styles.bold}>O Foco do Plano: A Grande História da Redenção</Text>{"\n"}
+              <Text style={styles.bold}>O Foco do Plano: A Grande História da Redenção</Text>
+              {"\n"}
               Este não é apenas um cronograma de leitura sequencial. Todo o plano foi cuidadosamente estruturado ao redor do tema central das Escrituras: o{" "}
               <Text style={styles.bold}>Plano Eterno de Salvação do Homem</Text>.
             </Text>
@@ -428,20 +489,21 @@ export default function SettingsScreen() {
             </Text>
 
             <Text style={styles.paragraph}>
-              <Text style={styles.bold}>Como Funciona na Prática</Text>{"\n"}•{" "}
-              <Text style={styles.bold}>Ritmo Sustentável:</Text> A quantidade de leitura diária foi pensada para ser profunda, mas perfeitamente possível de realizar em meio à correria do dia a dia.{"\n"}•{" "}
-              <Text style={styles.bold}>O Valor da Pausa (Domingos):</Text> Reservamos seus domingos para "Meditar". Acreditamos que não basta ler; é preciso ruminar a Palavra. Use esse dia para orar sobre o que leu na semana e deixar as verdades sobre a salvação criarem raízes em seu coração.
+              <Text style={styles.bold}>Como Funciona na Prática</Text>
+              {"\n"}• <Text style={styles.bold}>Ritmo Sustentável:</Text> A quantidade de leitura diária foi pensada para ser profunda, mas perfeitamente possível de realizar em meio à correria do dia a dia.
+              {"\n"}• <Text style={styles.bold}>O Valor da Pausa (Domingos):</Text> Reservamos seus domingos para "Meditar". Acreditamos que não basta ler; é preciso ruminar a Palavra. Use esse dia para orar sobre o que leu na semana e deixar as verdades sobre a salvação criarem raízes em seu coração.
             </Text>
 
             <Text style={styles.paragraph}>
-              <Text style={styles.bold}>Nossos Pilares</Text>{"\n"}1.{" "}
-              <Text style={styles.bold}>Constância:</Text> A fidelidade no pouco gera autoridade no muito.{"\n"}2.{" "}
-              <Text style={styles.bold}>Entendimento:</Text> Capacitar você a enxergar Jesus em toda a Escritura.{"\n"}3.{" "}
-              <Text style={styles.bold}>Transformação:</Text> Não queremos apenas informar sua mente, mas impactar seu espírito.
+              <Text style={styles.bold}>Nossos Pilares</Text>
+              {"\n"}1. <Text style={styles.bold}>Constância:</Text> A fidelidade no pouco gera autoridade no muito.
+              {"\n"}2. <Text style={styles.bold}>Entendimento:</Text> Capacitar você a enxergar Jesus em toda a Escritura.
+              {"\n"}3. <Text style={styles.bold}>Transformação:</Text> Não queremos apenas informar sua mente, mas impactar seu espírito.
             </Text>
 
             <Text style={styles.paragraph}>
-              <Text style={styles.bold}>Uma Nota Pessoal</Text>{"\n"}
+              <Text style={styles.bold}>Uma Nota Pessoal</Text>
+              {"\n"}
               Este aplicativo foi desenvolvido com muita oração. O código é apenas o meio; o fim é a glória de Deus e o seu crescimento no conhecimento da Verdade. Não importa se você é um novo convertido ou um teólogo experiente — a mensagem da Cruz é inesgotável.
             </Text>
 
@@ -460,51 +522,56 @@ export default function SettingsScreen() {
           </View>
         </View>
 
-        <View style={{ height: 60 }} />
+        <View style={{ height: 32 }} />
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
-// === ESTILOS MODERNOS ===
 const styles = StyleSheet.create({
-  container: {
+  safe: {
     flex: 1,
-    backgroundColor: "#F4F6F8",
+    backgroundColor: colors.background,
   },
-  scrollContent: {
-    padding: 20,
+  page: {
     paddingTop: 10,
+    paddingBottom: 24,
+    paddingHorizontal: 16,
   },
-  // Header
-  screenTitle: {
+
+  header: {
+    alignItems: "center",
+    marginBottom: 14,
+    marginTop: 6,
+  },
+  hTitle: {
     fontSize: 24,
-    fontWeight: "bold",
+    fontWeight: "900",
     color: colors.primary,
   },
-  screenSubtitle: {
-    fontSize: 14,
+  hSub: {
+    marginTop: 4,
+    fontSize: 12,
     color: colors.muted,
   },
-  // Cards
+
   card: {
     backgroundColor: "#fff",
-    borderRadius: 16,
+    borderRadius: 18,
     padding: 16,
-    marginBottom: 16,
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 5,
-    shadowOffset: { width: 0, height: 2 },
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "rgba(0,0,0,0.06)",
   },
+
   dangerCard: {
-    borderLeftWidth: 4,
-    borderLeftColor: "#D32F2F",
+    borderColor: "rgba(211,47,47,0.25)",
+    backgroundColor: "#fff",
   },
+
   cardTitle: {
     fontSize: 16,
-    fontWeight: "bold",
+    fontWeight: "900",
     color: colors.text,
     marginBottom: 8,
   },
@@ -512,134 +579,156 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.muted,
     marginBottom: 12,
+    lineHeight: 18,
   },
-  // Buttons
-  buttonPrimary: {
-    backgroundColor: colors.primary,
-    paddingVertical: 12,
-    borderRadius: 10,
-    alignItems: "center",
-    marginBottom: 10,
-  },
-  buttonPrimaryText: {
-    color: "#fff",
-    fontWeight: "bold",
-    fontSize: 14,
-  },
-  buttonSecondary: {
-    backgroundColor: "#F0F0F0",
-    paddingVertical: 12,
-    borderRadius: 10,
-    alignItems: "center",
-    marginBottom: 10,
-  },
-  buttonSecondaryText: {
-    color: colors.text,
-    fontWeight: "bold",
-    fontSize: 14,
-  },
-  buttonOutline: {
-    borderWidth: 1,
-    borderColor: colors.primary,
-    paddingVertical: 10,
-    borderRadius: 10,
-    alignItems: "center",
-    marginBottom: 10,
-  },
-  buttonOutlineText: {
-    color: colors.primary,
-    fontWeight: "bold",
-    fontSize: 14,
-  },
-  buttonDanger: {
-    backgroundColor: "#FFEBEE",
-    paddingVertical: 12,
-    borderRadius: 10,
-    alignItems: "center",
-  },
-  buttonDangerText: {
-    color: "#D32F2F",
-    fontWeight: "bold",
-    fontSize: 14,
-  },
-  rowButtons: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  // Inputs & Helpers
+
   infoBox: {
-    backgroundColor: "#F9F9F9",
+    backgroundColor: "rgba(0,0,0,0.04)",
     padding: 10,
-    borderRadius: 8,
+    borderRadius: 14,
     marginBottom: 10,
     alignItems: "center",
+    borderWidth: 1,
+    borderColor: "rgba(0,0,0,0.06)",
   },
   infoText: {
     fontSize: 12,
     color: colors.muted,
+    fontWeight: "700",
   },
+
+  divider: {
+    height: 1,
+    backgroundColor: "rgba(0,0,0,0.06)",
+    marginVertical: 14,
+  },
+
+  sectionLabel: {
+    fontSize: 12,
+    fontWeight: "900",
+    color: colors.text,
+    marginBottom: 10,
+    textTransform: "uppercase",
+    letterSpacing: 0.4,
+  },
+
   textInput: {
-    backgroundColor: "#F9F9F9",
+    backgroundColor: "#f6f7f8",
     borderWidth: 1,
-    borderColor: "#E0E0E0",
-    borderRadius: 8,
+    borderColor: "rgba(0,0,0,0.08)",
+    borderRadius: 14,
     padding: 12,
-    minHeight: 100,
+    minHeight: 120,
     textAlignVertical: "top",
     marginBottom: 10,
     color: colors.text,
     fontSize: 12,
   },
-  divider: {
-    height: 1,
-    backgroundColor: "#EEE",
-    marginVertical: 12,
-  },
-  sectionLabel: {
-    fontSize: 12,
-    fontWeight: "bold",
-    color: colors.text,
-    marginBottom: 8,
-    textTransform: "uppercase",
-  },
+
   codeBlock: {
-    backgroundColor: "#F4F6F8",
-    padding: 10,
-    borderRadius: 8,
-    marginBottom: 10,
+    backgroundColor: "#f6f7f8",
+    padding: 12,
+    borderRadius: 14,
+    marginTop: 10,
     borderWidth: 1,
-    borderColor: "#E0E0E0",
+    borderColor: "rgba(0,0,0,0.08)",
   },
   codeTitle: {
     fontSize: 11,
     color: colors.muted,
-    marginBottom: 4,
+    marginBottom: 6,
+    fontWeight: "800",
   },
   codeText: {
     fontSize: 10,
-    fontFamily: "monospace",
+    fontFamily: Platform.select({ ios: "Menlo", android: "monospace", default: "monospace" }),
     color: colors.text,
+    lineHeight: 14,
   },
-  // Menu Items (Legal)
+
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+
+  btnPrimary: {
+    backgroundColor: colors.primary,
+    paddingVertical: 14,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  btnDanger: {
+    backgroundColor: "#D32F2F",
+  },
+  btnPrimaryText: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "900",
+    letterSpacing: 0.2,
+    textAlign: "center",
+    paddingHorizontal: 10,
+  },
+
+  btnSecondary: {
+    backgroundColor: "rgba(0,0,0,0.06)",
+    paddingVertical: 14,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "rgba(0,0,0,0.08)",
+    marginBottom: 10,
+  },
+  btnSecondaryText: {
+    color: colors.text,
+    fontSize: 14,
+    fontWeight: "900",
+    letterSpacing: 0.2,
+    textAlign: "center",
+    paddingHorizontal: 10,
+  },
+
+  btnOutline: {
+    backgroundColor: "#fff",
+    paddingVertical: 14,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "rgba(0,0,0,0.12)",
+    marginBottom: 10,
+  },
+  btnOutlineText: {
+    color: colors.primary,
+    fontSize: 14,
+    fontWeight: "900",
+    letterSpacing: 0.2,
+    textAlign: "center",
+    paddingHorizontal: 10,
+  },
+
   menuItem: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 16,
+    paddingVertical: 14,
   },
   menuItemText: {
-    fontSize: 15,
+    fontSize: 14,
     color: colors.text,
+    fontWeight: "800",
   },
   menuItemArrow: {
-    fontSize: 18,
-    color: "#CCC",
-    fontWeight: "bold",
+    fontSize: 20,
+    color: "rgba(0,0,0,0.35)",
+    fontWeight: "900",
   },
-  // About Content Formatting
-  aboutContent: {
-    marginTop: 6,
+  menuDivider: {
+    height: 1,
+    backgroundColor: "rgba(0,0,0,0.06)",
   },
+
   paragraph: {
     fontSize: 14,
     color: colors.text,
@@ -656,30 +745,31 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   bold: {
-    fontWeight: "bold",
+    fontWeight: "900",
   },
   italic: {
     fontStyle: "italic",
   },
+
   quoteBox: {
-    backgroundColor: "#FFF9F0",
+    backgroundColor: "rgba(4,206,146,0.10)",
     padding: 14,
-    borderRadius: 8,
-    marginTop: 10,
-    marginBottom: 10,
-    borderLeftWidth: 3,
-    borderLeftColor: colors.primary,
+    borderRadius: 14,
+    marginTop: 8,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: "rgba(4,206,146,0.20)",
   },
   quoteText: {
     fontStyle: "italic",
     color: colors.text,
     fontSize: 13,
-    marginBottom: 4,
+    marginBottom: 6,
     lineHeight: 20,
   },
   quoteRef: {
     fontSize: 12,
-    fontWeight: "bold",
+    fontWeight: "900",
     color: colors.primary,
     textAlign: "right",
   },
@@ -688,5 +778,6 @@ const styles = StyleSheet.create({
     color: colors.muted,
     textAlign: "center",
     marginTop: 10,
+    fontWeight: "700",
   },
 });

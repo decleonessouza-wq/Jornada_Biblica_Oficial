@@ -1,16 +1,18 @@
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  Text,
-  View,
-  Pressable,
   Alert,
+  Dimensions,
   Image,
+  Platform,
+  Pressable,
+  SafeAreaView,
   ScrollView,
   StyleSheet,
+  Text,
+  TextInput,
   TouchableOpacity,
-  Dimensions,
-  Platform,
+  View,
 } from "react-native";
-import { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
@@ -98,6 +100,14 @@ function getNonSundaySequence() {
   return readingPlan.filter((d) => !d.isSunday).map((d) => d.reference);
 }
 
+function getEarliestIso(list: string[]): string | null {
+  const valid = list.filter(isIsoDateString);
+  if (valid.length === 0) return null;
+  // ISO YYYY-MM-DD ordena corretamente com sort()
+  valid.sort();
+  return valid[0] ?? null;
+}
+
 type ResolvedDay = {
   isSunday: boolean;
   reference: string;
@@ -136,6 +146,102 @@ function confirmAction(title: string, message: string): Promise<boolean> {
   });
 }
 
+/* ==========================
+   VERSE OF THE DAY (LOCAL)
+========================== */
+
+type VerseItem = {
+  id?: number | string;
+  theme?: string;
+  reference: string;
+  text: string;
+};
+
+/**
+ * ✅ RESERVADO (COLE AQUI SEUS 365 VERSÍCULOS MANUALMENTE)
+ */
+const VERSES_OF_DAY: VerseItem[] = [
+  {
+    id: 1,
+    theme: "Misericórdia",
+    reference: "Lamentações 3:22-23",
+    text: "As misericórdias do Senhor são a causa de não sermos consumidos... renovam-se cada manhã.",
+  },
+  {
+    id: 2,
+    theme: "Palavra",
+    reference: "Hebreus 4:12",
+    text: "Porque a palavra de Deus é viva e eficaz, e mais penetrante do que qualquer espada de dois gumes...",
+  },
+];
+
+function getDayOfYearLocal(d: Date): number {
+  const noon = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 12, 0, 0, 0);
+  const start = new Date(noon.getFullYear(), 0, 0, 12, 0, 0, 0);
+  const diff = noon.getTime() - start.getTime();
+  return Math.floor(diff / (1000 * 60 * 60 * 24));
+}
+
+function pickVerseForToday(now: Date): VerseItem | null {
+  if (!Array.isArray(VERSES_OF_DAY) || VERSES_OF_DAY.length === 0) return null;
+
+  const dayOfYear = getDayOfYearLocal(now);
+  let idx = dayOfYear - 1;
+
+  if (idx >= VERSES_OF_DAY.length) idx = VERSES_OF_DAY.length - 1;
+  if (idx < 0) idx = 0;
+
+  const v = VERSES_OF_DAY[idx];
+  if (!v || !v.reference || !v.text) return null;
+
+  return v;
+}
+
+/* ==========================
+   SMALL UI PRIMITIVES
+========================== */
+
+function Pill({
+  text,
+  variant = "neutral",
+}: {
+  text: string;
+  variant?: "neutral" | "success" | "warning" | "info";
+}) {
+  return (
+    <View
+      style={[
+        styles.pill,
+        variant === "success" && styles.pillSuccess,
+        variant === "warning" && styles.pillWarning,
+        variant === "info" && styles.pillInfo,
+      ]}
+    >
+      <Text style={styles.pillText}>{text}</Text>
+    </View>
+  );
+}
+
+function Card({
+  children,
+  variant = "default",
+}: {
+  children: React.ReactNode;
+  variant?: "default" | "highlight" | "warning";
+}) {
+  return (
+    <View
+      style={[
+        styles.card,
+        variant === "highlight" && styles.cardHighlight,
+        variant === "warning" && styles.cardWarning,
+      ]}
+    >
+      {children}
+    </View>
+  );
+}
+
 export default function HomeScreen() {
   const navigation = useNavigation<NavigationProp>();
 
@@ -165,6 +271,21 @@ export default function HomeScreen() {
   // ✅ Experiência Espiritual: gratidão
   const [gratitudeByDate, setGratitudeByDate] = useState<Record<string, string>>({});
 
+  // ✅ Versículo do dia (modal)
+  const [showVerseModal, setShowVerseModal] = useState(false);
+  const [verseOfDay, setVerseOfDay] = useState<VerseItem | null>(null);
+
+  // ✅ Acessos rápidos recolhível
+  const [quickNavOpen, setQuickNavOpen] = useState(false);
+
+  // ✅ Migração/ajuste do início do plano
+  const [showStartAdjust, setShowStartAdjust] = useState(false);
+  const [startInput, setStartInput] = useState("");
+  const [startWasAutoMigrated, setStartWasAutoMigrated] = useState(false);
+
+  const VERSE_LAST_SHOWN_KEY = "VERSE_TODAY_LAST_SHOWN";
+  const VERSE_HIDE_KEY = "VERSE_TODAY_HIDE";
+
   // ✅ base de "hoje" consistente (real ou mock) — ISO LOCAL (não UTC)
   const today = useMemo(() => {
     if (mockDate && isIsoDateString(mockDate)) return mockDate;
@@ -191,13 +312,12 @@ export default function HomeScreen() {
     return getDailyMessage({ streak, isBeforePlan: false, isAfterPlan: false });
   }, [streak]);
 
-  // ✅ gratidão do dia (badge simples)
+  // ✅ gratidão do dia
   const todayGratitude = useMemo(() => {
     return typeof gratitudeByDate[today] === "string" ? gratitudeByDate[today] : null;
   }, [gratitudeByDate, today]);
 
   const canRegisterGratitudeToday = useMemo(() => true, []);
-
   const todayLabel = useMemo(() => today, [today]);
 
   const loadGratitude = useCallback(async () => {
@@ -261,32 +381,106 @@ export default function HomeScreen() {
     [nonSundaySeq]
   );
 
-  const loadPlanStartAndOverdue = useCallback(async () => {
-    try {
-      const start = await getPlanStartDate();
-      setPlanStartDateState(start);
+  // ✅ Migração automática: se não existe planStartDate, mas já existe completedDays, define início = primeiro dia lido.
+  const migrateLegacyStartIfNeeded = useCallback(
+    async (days: string[]) => {
+      try {
+        const existingStart = await getPlanStartDate();
+        if (existingStart) {
+          setStartWasAutoMigrated(false);
+          return existingStart;
+        }
 
-      const hasStarted = !!start;
+        if (!Array.isArray(days) || days.length === 0) {
+          setStartWasAutoMigrated(false);
+          return null;
+        }
 
-      // ✅ resolve leitura de HOJE (considerando overrides)
-      await loadResolvedForDate(today, hasStarted);
+        const earliest = getEarliestIso(days);
+        if (!earliest) {
+          setStartWasAutoMigrated(false);
+          return null;
+        }
 
-      if (!start) {
+        const start = await ensurePlanStartDate(earliest);
+        setPlanStartDateState(start);
+        setStartInput(start); // já deixa preenchido para ajuste
+        setStartWasAutoMigrated(true);
+
+        setBanner({
+          kind: "info",
+          title: "Plano alinhado automaticamente ✅",
+          message: `Detectei leituras antigas. Início definido como ${start}. Se precisar, ajuste abaixo.`,
+        });
+
+        return start;
+      } catch (err) {
+        console.log("Erro na migração do início do plano", err);
+        setStartWasAutoMigrated(false);
+        return null;
+      }
+    },
+    []
+  );
+
+  const loadPlanStartAndOverdue = useCallback(
+    async (daysForMigration?: string[]) => {
+      try {
+        // tenta pegar start
+        let start = await getPlanStartDate();
+
+        // se não tem start e tem progresso, migra
+        if (!start && Array.isArray(daysForMigration) && daysForMigration.length > 0) {
+          start = await migrateLegacyStartIfNeeded(daysForMigration);
+        }
+
+        setPlanStartDateState(start);
+
+        const hasStarted = !!start;
+
+        // ✅ resolve leitura de HOJE (considerando overrides)
+        await loadResolvedForDate(today, hasStarted);
+
+        if (!start) {
+          setOverdueCount(0);
+          setOldestOverdue(null);
+          return;
+        }
+
+        const overdue = await getOverdueDates({ todayIso: today, includeToday: false });
+        setOverdueCount(overdue.length);
+        setOldestOverdue(overdue.length > 0 ? overdue[0] : null);
+      } catch (err) {
+        console.log("Erro ao carregar planStart/overdue", err);
         setOverdueCount(0);
         setOldestOverdue(null);
-        return;
+        await loadResolvedForDate(today, false);
       }
+    },
+    [today, loadResolvedForDate, migrateLegacyStartIfNeeded]
+  );
 
-      const overdue = await getOverdueDates({ todayIso: today, includeToday: false });
-      setOverdueCount(overdue.length);
-      setOldestOverdue(overdue.length > 0 ? overdue[0] : null);
+  const loadVerseOfDayIfNeeded = useCallback(async () => {
+    try {
+      if (!Array.isArray(VERSES_OF_DAY) || VERSES_OF_DAY.length === 0) return;
+
+      const hidden = await AsyncStorage.getItem(VERSE_HIDE_KEY);
+      if (hidden === today) return;
+
+      const lastShown = await AsyncStorage.getItem(VERSE_LAST_SHOWN_KEY);
+      if (lastShown === today) return;
+
+      const verse = pickVerseForToday(new Date());
+      if (!verse) return;
+
+      setVerseOfDay(verse);
+      setShowVerseModal(true);
+
+      await AsyncStorage.setItem(VERSE_LAST_SHOWN_KEY, today);
     } catch (err) {
-      console.log("Erro ao carregar planStart/overdue", err);
-      setOverdueCount(0);
-      setOldestOverdue(null);
-      await loadResolvedForDate(today, false);
+      console.log("Erro ao carregar versículo do dia", err);
     }
-  }, [today, loadResolvedForDate]);
+  }, [today]);
 
   useEffect(() => {
     (async () => {
@@ -300,19 +494,35 @@ export default function HomeScreen() {
         });
       }
 
-      await loadProgress();
+      // carrega progresso
+      const days = await getCompletedDays();
+      setCompletedDays(days);
+      setLastRead(getLastRead(days));
+      const base = new Date();
+      base.setHours(12, 0, 0, 0);
+      setStreak(calculateStreak(days, base));
+
       await loadGratitude();
-      await loadPlanStartAndOverdue();
+      await loadPlanStartAndOverdue(days);
       await runAutoBackup();
+      await loadVerseOfDayIfNeeded();
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     (async () => {
-      await loadProgress();
+      // recarrega progresso e start quando “today” muda (mock/real)
+      const days = await getCompletedDays();
+      setCompletedDays(days);
+      setLastRead(getLastRead(days));
+      const base = new Date();
+      base.setHours(12, 0, 0, 0);
+      setStreak(calculateStreak(days, base));
+
       await loadGratitude();
-      await loadPlanStartAndOverdue();
+      await loadPlanStartAndOverdue(days);
+      await loadVerseOfDayIfNeeded();
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [today]);
@@ -322,10 +532,8 @@ export default function HomeScreen() {
       const start = await ensurePlanStartDate(today);
       setPlanStartDateState(start);
 
-      // após iniciar, resolve novamente (agora com plano iniciado)
       await loadResolvedForDate(today, true);
 
-      // ✅ pega a referência efetiva do dia (evita usar estado “antigo”)
       const eff = await getEffectiveReferenceForDate(today);
 
       navigation.navigate("Reading", {
@@ -336,6 +544,40 @@ export default function HomeScreen() {
     } catch {
       notify("Erro", "Não foi possível iniciar o plano agora.");
       setBanner({ kind: "error", title: "Erro", message: "Não foi possível iniciar o plano agora." });
+    }
+  }
+
+  async function applyManualStartDate() {
+    const iso = startInput.trim();
+    if (!isIsoDateString(iso)) {
+      notify("Data inválida", "Use o formato AAAA-MM-DD (ex: 2026-01-05).");
+      return;
+    }
+
+    const ok = await confirmAction(
+      "Definir data de início?",
+      `Isso vai alinhar o plano como se você tivesse começado em ${iso}.\n\nSeu progresso (dias concluídos) não será apagado.`
+    );
+    if (!ok) return;
+
+    try {
+      const start = await ensurePlanStartDate(iso);
+      setPlanStartDateState(start);
+      setShowStartAdjust(false);
+
+      setBanner({
+        kind: "success",
+        title: "Data de início atualizada ✅",
+        message: `Seu plano foi alinhado para iniciar em ${start}.`,
+      });
+
+      // recarrega leitura do dia e atrasos com esse início
+      const days = await getCompletedDays();
+      await loadPlanStartAndOverdue(days);
+    } catch (err) {
+      console.log("Erro ao definir data de início manual", err);
+      setBanner({ kind: "error", title: "Erro", message: "Não foi possível definir a data de início." });
+      notify("Erro", "Não foi possível definir a data de início.");
     }
   }
 
@@ -357,11 +599,15 @@ export default function HomeScreen() {
       const newStreak = calculateStreak(days, base);
       setStreak(newStreak);
 
-      await loadPlanStartAndOverdue();
+      await loadPlanStartAndOverdue(days);
 
       if (isMilestone(newStreak)) {
         notify("Marco alcançado ✅", getMilestoneMessage(newStreak));
-        setBanner({ kind: "success", title: "Marco alcançado ✅", message: getMilestoneMessage(newStreak) });
+        setBanner({
+          kind: "success",
+          title: "Marco alcançado ✅",
+          message: getMilestoneMessage(newStreak),
+        });
       } else {
         setBanner({ kind: "success", title: "Leitura marcada ✅" });
       }
@@ -375,12 +621,15 @@ export default function HomeScreen() {
   function openReading() {
     if (resolvedToday.finished) {
       notify("Plano concluído 🎉", "Você pode revisar pelo Plano Anual e Histórico.");
-      setBanner({ kind: "info", title: "Plano concluído 🎉", message: "Você pode revisar pelo Plano Anual e Histórico." });
+      setBanner({
+        kind: "info",
+        title: "Plano concluído 🎉",
+        message: "Você pode revisar pelo Plano Anual e Histórico.",
+      });
       return;
     }
 
     if (!planStartDate) {
-      // no Web o Alert de múltiplos botões pode falhar; aqui usamos confirm cross-platform
       (async () => {
         const ok = await confirmAction(
           "Iniciar plano?",
@@ -439,7 +688,8 @@ export default function HomeScreen() {
       notify("Redistribuição aplicada ✅", msg);
       setBanner({ kind: "success", title: "Redistribuição aplicada ✅", message: msg });
 
-      await loadPlanStartAndOverdue();
+      const days = await getCompletedDays();
+      await loadPlanStartAndOverdue(days);
     } catch (err) {
       console.log("Erro ao redistribuir atrasos", err);
       notify("Erro", "Não foi possível redistribuir as leituras atrasadas.");
@@ -452,168 +702,326 @@ export default function HomeScreen() {
     setDevMode((prev) => !prev);
   }
 
+  const todayStatusPill = useMemo(() => {
+    if (!planStartDate) return { text: "Plano não iniciado", variant: "info" as const };
+    if (todayIsSunday) return { text: "Domingo (livre)", variant: "neutral" as const };
+    if (resolvedToday.source === "OVERRIDE") return { text: "Leitura redistribuída", variant: "info" as const };
+    if (isCompletedToday) return { text: "Concluído hoje", variant: "success" as const };
+    return { text: "Em aberto", variant: "warning" as const };
+  }, [planStartDate, todayIsSunday, resolvedToday.source, isCompletedToday]);
+
+  const quickNavLabel = useMemo(() => (quickNavOpen ? "Ocultar" : "Mostrar"), [quickNavOpen]);
+
+  // Mostra card de alinhamento quando:
+  // - existe progresso (completedDays) e
+  // - planStartDate já existe (migrado ou definido) e
+  // - usuário pode ajustar
+  const hasLegacyProgress = useMemo(() => completedDays.length > 0, [completedDays.length]);
+
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: colors.background }}>
-      <View style={styles.container}>
-        {/* Cabeçalho com ícone */}
-        <View style={styles.header}>
-          <Image source={require("../../assets/icon.png")} style={styles.logo} resizeMode="cover" />
+    <SafeAreaView style={styles.safe}>
+      <View style={styles.safeInner}>
+        <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
+          {/* HEADER */}
+          <View style={styles.headerWrap}>
+            <View style={styles.headerTop}>
+              <View style={styles.logoWrap}>
+                <Image source={require("../../assets/icon.png")} style={styles.logo} resizeMode="cover" />
+              </View>
 
-          <Pressable onLongPress={toggleDevMode} delayLongPress={2000}>
-            <Text style={styles.title}>Jornada Bíblica</Text>
-          </Pressable>
+              <View style={{ flex: 1 }}>
+                <Pressable onLongPress={toggleDevMode} delayLongPress={2000}>
+                  <Text style={styles.title}>Jornada Bíblica</Text>
+                </Pressable>
+                <Text style={styles.subTitle}>Plano Anual • Leitura Bíblica</Text>
+              </View>
+            </View>
 
-          {devMode && <Text style={styles.devMode}>🔧 Modo Desenvolvedor ativo</Text>}
+            {devMode && (
+              <View style={styles.devPanel}>
+                <Text style={styles.devText}>🔧 Modo Desenvolvedor ativo</Text>
 
-          <Text style={styles.subTitle}>Plano Anual • Leitura Bíblica</Text>
-        </View>
-
-        {/* ✅ Banner */}
-        {banner && (
-          <Pressable
-            onPress={() => setBanner(null)}
-            style={[
-              styles.banner,
-              banner.kind === "success" && styles.bannerSuccess,
-              banner.kind === "error" && styles.bannerError,
-              banner.kind === "info" && styles.bannerInfo,
-            ]}
-          >
-            <Text style={styles.bannerTitle}>{banner.title}</Text>
-            {!!banner.message && <Text style={styles.bannerMsg}>{banner.message}</Text>}
-            <Text style={styles.bannerHint}>Toque para fechar</Text>
-          </Pressable>
-        )}
-
-        {/* Card: nível/marcos */}
-        <View style={styles.card}>
-          <Text style={styles.cardMuted}>
-            Nível: <Text style={styles.cardStrong}>{level.title}</Text> • {level.subtitle}
-          </Text>
-
-          {nextMilestone.next ? (
-            <Text style={styles.cardMuted}>
-              Próximo marco: {nextMilestone.next} dias (faltam {nextMilestone.remaining})
-            </Text>
-          ) : (
-            <Text style={styles.cardMuted}>Você já passou por todos os marcos definidos.</Text>
-          )}
-        </View>
-
-        {/* Card: atrasos */}
-        {planStartDate && overdueCount > 0 && (
-          <View style={[styles.card, { borderLeftWidth: 4, borderLeftColor: colors.secondary }]}>
-            <Text style={styles.cardStrong}>⚠️ Leituras atrasadas: {overdueCount}</Text>
-            <Text style={styles.cardMuted}>(Domingos não contam — domingo é livre)</Text>
-
-            <View style={{ height: 10 }} />
-
-            <TouchableOpacity style={styles.primaryBtn} onPress={openOldestOverdue}>
-              <Text style={styles.btnText}>📖 Ler atraso mais antigo</Text>
-            </TouchableOpacity>
-
-            <View style={{ height: 10 }} />
-
-            <TouchableOpacity style={styles.secondaryBtn} onPress={handleRedistributeOverdue}>
-              <Text style={styles.btnText}>🔁 Redistribuir atrasos</Text>
-            </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.devBtn}
+                  onPress={() => {
+                    if (!__DEV__) return;
+                    setMockDate(null);
+                    notify("DEV", "Mock date removido (voltou para hoje real).");
+                  }}
+                >
+                  <Text style={styles.devBtnText}>Remover mockDate</Text>
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
-        )}
 
-        {/* STREAK */}
-        <View style={styles.card}>
-          <Text style={styles.cardStrong}>
-            🔥 Streak atual: {streak} dia{streak !== 1 ? "s" : ""}
-          </Text>
-
-          {lastRead && <Text style={styles.cardMuted}>Última leitura: {lastRead}</Text>}
-
-          <Text style={[styles.cardText, { marginTop: 8 }]}>{dailyMessage}</Text>
-        </View>
-
-        {/* FASE ATUAL */}
-        {currentPhase && (
-          <View style={styles.card}>
-            <Text style={styles.cardStrong}>📘 Fase atual</Text>
-            <Text style={styles.cardText}>{currentPhase.title}</Text>
-            <Text style={styles.cardMuted}>{currentPhase.description}</Text>
-          </View>
-        )}
-
-        {/* LEITURA DO DIA */}
-        <View style={styles.card}>
-          <Text style={styles.cardMuted}>Leitura do dia</Text>
-          <Text style={styles.dateLabel}>{todayLabel}</Text>
-
-          <Pressable onPress={openReading}>
-            <Text style={styles.readingRef}>{resolvedToday.reference}</Text>
-          </Pressable>
-
-          {/* indicador de gratidão do dia */}
-          {canRegisterGratitudeToday && (
-            <Text
-              style={{
-                textAlign: "center",
-                fontSize: 12,
-                color: todayGratitude ? colors.secondary : colors.muted,
-                marginTop: 6,
-              }}
+          {/* BANNER */}
+          {banner && (
+            <Pressable
+              onPress={() => setBanner(null)}
+              style={[
+                styles.banner,
+                banner.kind === "success" && styles.bannerSuccess,
+                banner.kind === "error" && styles.bannerError,
+                banner.kind === "info" && styles.bannerInfo,
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel="Fechar aviso"
             >
-              {todayGratitude ? "🙏 Gratidão registrada" : "✍️ Gratidão: ainda não registrada"}
-            </Text>
+              <Text style={styles.bannerTitle}>{banner.title}</Text>
+              {!!banner.message && <Text style={styles.bannerMsg}>{banner.message}</Text>}
+              <Text style={styles.bannerHint}>Toque para fechar</Text>
+            </Pressable>
           )}
 
-          <View style={{ height: 12 }} />
+          {/* ✅ CARD: ALINHAMENTO (MIGRAÇÃO + AJUSTE) */}
+          {planStartDate && hasLegacyProgress && (
+            <Card>
+              <Text style={styles.sectionTitle}>🧭 Alinhamento do plano</Text>
+              <Text style={styles.sectionMuted}>
+                Início do plano: <Text style={{ fontWeight: "900", color: colors.text }}>{planStartDate}</Text>
+                {startWasAutoMigrated ? " (definido automaticamente)" : ""}
+              </Text>
 
-          {!planStartDate ? (
-            <TouchableOpacity style={styles.primaryBtn} onPress={startPlanNowAndOpen}>
-              <Text style={styles.btnText}>🚀 Começar plano hoje</Text>
-            </TouchableOpacity>
-          ) : resolvedToday.isSunday ? (
-            <TouchableOpacity style={styles.primaryBtn} onPress={openReading}>
-              <Text style={styles.btnText}>🙏 Abrir meditação</Text>
-            </TouchableOpacity>
-          ) : (
-            <>
+              <View style={{ height: 10 }} />
+
+              {!showStartAdjust ? (
+                <TouchableOpacity
+                  style={styles.secondaryBtn}
+                  onPress={() => {
+                    setStartInput(planStartDate);
+                    setShowStartAdjust(true);
+                  }}
+                >
+                  <Text style={styles.btnText}>✏️ Ajustar data de início</Text>
+                </TouchableOpacity>
+              ) : (
+                <View style={styles.startAdjustBox}>
+                  <Text style={styles.startAdjustHint}>
+                    Informe a data em formato <Text style={{ fontWeight: "900" }}>AAAA-MM-DD</Text>
+                  </Text>
+
+                  <TextInput
+                    value={startInput}
+                    onChangeText={setStartInput}
+                    placeholder="Ex: 2026-01-05"
+                    placeholderTextColor="#9aa0a6"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    style={styles.startAdjustInput}
+                  />
+
+                  <View style={{ height: 10 }} />
+
+                  <View style={styles.startAdjustRow}>
+                    <TouchableOpacity style={[styles.primaryBtn, { flex: 1 }]} onPress={applyManualStartDate}>
+                      <Text style={styles.btnText}>Salvar</Text>
+                    </TouchableOpacity>
+
+                    <View style={{ width: 10 }} />
+
+                    <TouchableOpacity
+                      style={[styles.devBtn, { flex: 1 }]}
+                      onPress={() => {
+                        setShowStartAdjust(false);
+                        setStartInput(planStartDate);
+                      }}
+                    >
+                      <Text style={[styles.devBtnText, { color: colors.text }]}>Cancelar</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              )}
+            </Card>
+          )}
+
+          {/* HERO - LEITURA DO DIA (CTA PRINCIPAL) */}
+          <Card variant="highlight">
+            <View style={styles.heroTopRow}>
+              <View>
+                <Text style={styles.heroLabel}>Hoje</Text>
+                <Text style={styles.heroDate}>{todayLabel}</Text>
+              </View>
+
+              <Pill text={todayStatusPill.text} variant={todayStatusPill.variant} />
+            </View>
+
+            <Pressable onPress={openReading} accessibilityRole="button" accessibilityLabel="Abrir leitura do dia">
+              <Text style={styles.heroReference}>{resolvedToday.reference}</Text>
+            </Pressable>
+
+            {canRegisterGratitudeToday && (
+              <Text style={[styles.heroMeta, { color: todayGratitude ? colors.secondary : colors.muted }]}>
+                {todayGratitude ? "🙏 Gratidão registrada" : "✍️ Gratidão: ainda não registrada"}
+              </Text>
+            )}
+
+            <View style={{ height: 12 }} />
+
+            {!planStartDate ? (
+              <TouchableOpacity style={styles.primaryBtn} onPress={startPlanNowAndOpen}>
+                <Text style={styles.btnText}>🚀 Começar plano hoje</Text>
+              </TouchableOpacity>
+            ) : resolvedToday.isSunday ? (
               <TouchableOpacity style={styles.primaryBtn} onPress={openReading}>
-                <Text style={styles.btnText}>📖 Abrir leitura</Text>
+                <Text style={styles.btnText}>🙏 Abrir meditação</Text>
+              </TouchableOpacity>
+            ) : (
+              <View style={styles.heroButtons}>
+                <TouchableOpacity style={[styles.primaryBtn, styles.heroBtn]} onPress={openReading}>
+                  <Text style={styles.btnText}>📖 Abrir</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.secondaryBtn,
+                    styles.heroBtn,
+                    (isCompletedToday || resolvedToday.finished) && styles.btnDisabled,
+                  ]}
+                  onPress={markAsCompleted}
+                  disabled={isCompletedToday || resolvedToday.finished}
+                >
+                  <Text style={styles.btnText}>{isCompletedToday ? "✅ Concluído" : "✔️ Marcar lido"}</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </Card>
+
+          {/* OVERDUE */}
+          {planStartDate && overdueCount > 0 && (
+            <Card variant="warning">
+              <Text style={styles.sectionTitle}>⚠️ Leituras atrasadas</Text>
+              <Text style={styles.sectionMuted}>
+                {overdueCount} pendente{overdueCount !== 1 ? "s" : ""} (domingos não contam — domingo é livre)
+              </Text>
+
+              <View style={{ height: 12 }} />
+
+              <TouchableOpacity style={styles.primaryBtn} onPress={openOldestOverdue}>
+                <Text style={styles.btnText}>📖 Ler atraso mais antigo</Text>
               </TouchableOpacity>
 
               <View style={{ height: 10 }} />
 
-              <TouchableOpacity
-                style={[styles.secondaryBtn, isCompletedToday ? styles.btnDisabled : null]}
-                onPress={markAsCompleted}
-                disabled={isCompletedToday || resolvedToday.finished}
-              >
-                <Text style={styles.btnText}>
-                  {isCompletedToday ? "✅ Leitura concluída" : "✔️ Marcar como lido"}
-                </Text>
+              <TouchableOpacity style={styles.secondaryBtn} onPress={handleRedistributeOverdue}>
+                <Text style={styles.btnText}>🔁 Redistribuir atrasos</Text>
               </TouchableOpacity>
-            </>
+            </Card>
           )}
-        </View>
 
-        {/* Navegação */}
-        <View style={styles.menuGrid}>
-          <TouchableOpacity style={styles.menuBtn} onPress={() => navigation.navigate("Plan")}>
-            <Text style={styles.menuText}>📅 Plano Anual</Text>
+          {/* STATS GRID */}
+          <View style={styles.statsGrid}>
+            <Card>
+              <Text style={styles.kpiLabel}>🔥 Streak</Text>
+              <Text style={styles.kpiValue}>
+                {streak} dia{streak !== 1 ? "s" : ""}
+              </Text>
+              {lastRead ? <Text style={styles.kpiHint}>Última: {lastRead}</Text> : <Text style={styles.kpiHint}>—</Text>}
+            </Card>
+
+            <Card>
+              <Text style={styles.kpiLabel}>🏅 Nível</Text>
+              <Text style={styles.kpiValue}>{level.title}</Text>
+              {nextMilestone.next ? (
+                <Text style={styles.kpiHint}>
+                  Próx.: {nextMilestone.next} (faltam {nextMilestone.remaining})
+                </Text>
+              ) : (
+                <Text style={styles.kpiHint}>Marcos concluídos</Text>
+              )}
+            </Card>
+          </View>
+
+          {/* MENSAGEM DO DIA */}
+          <Card>
+            <Text style={styles.sectionTitle}>💬 Mensagem do dia</Text>
+            <Text style={styles.sectionBody}>{dailyMessage}</Text>
+          </Card>
+
+          {/* FASE ATUAL */}
+          {currentPhase && (
+            <Card>
+              <Text style={styles.sectionTitle}>📘 Fase atual</Text>
+              <Text style={styles.sectionBodyStrong}>{currentPhase.title}</Text>
+              <Text style={styles.sectionMuted}>{currentPhase.description}</Text>
+            </Card>
+          )}
+
+          {/* QUICK NAV (RECOLHÍVEL) */}
+          <TouchableOpacity
+            style={styles.quickNavToggle}
+            onPress={() => setQuickNavOpen((p) => !p)}
+            accessibilityRole="button"
+            accessibilityLabel="Abrir ou fechar acessos rápidos"
+          >
+            <Text style={styles.quickNavToggleTitle}>Acessos rápidos</Text>
+            <View style={styles.quickNavToggleRight}>
+              <Text style={styles.quickNavToggleHint}>{quickNavLabel}</Text>
+              <Text style={styles.quickNavToggleChevron}>{quickNavOpen ? "˄" : "˅"}</Text>
+            </View>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.menuBtn} onPress={() => navigation.navigate("Progress")}>
-            <Text style={styles.menuText}>📊 Progresso</Text>
-          </TouchableOpacity>
+          {quickNavOpen && (
+            <View style={styles.menuGrid}>
+              <TouchableOpacity style={styles.menuBtn} onPress={() => navigation.navigate("Plan")}>
+                <Text style={styles.menuEmoji}>📅</Text>
+                <Text style={styles.menuText}>Plano Anual</Text>
+              </TouchableOpacity>
 
-          <TouchableOpacity style={styles.menuBtn} onPress={() => navigation.navigate("History")}>
-            <Text style={styles.menuText}>📜 Histórico</Text>
-          </TouchableOpacity>
+              <TouchableOpacity style={styles.menuBtn} onPress={() => navigation.navigate("Progress")}>
+                <Text style={styles.menuEmoji}>📊</Text>
+                <Text style={styles.menuText}>Progresso</Text>
+              </TouchableOpacity>
 
-          <TouchableOpacity style={styles.menuBtn} onPress={() => navigation.navigate("Settings")}>
-            <Text style={styles.menuText}>⚙️ Configurações</Text>
-          </TouchableOpacity>
-        </View>
+              <TouchableOpacity style={styles.menuBtn} onPress={() => navigation.navigate("History")}>
+                <Text style={styles.menuEmoji}>📜</Text>
+                <Text style={styles.menuText}>Histórico</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.menuBtn} onPress={() => navigation.navigate("Settings")}>
+                <Text style={styles.menuEmoji}>⚙️</Text>
+                <Text style={styles.menuText}>Configurações</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          <View style={{ height: 10 }} />
+        </ScrollView>
+
+        {/* ✅ MODAL: VERSÍCULO DO DIA */}
+        {showVerseModal && verseOfDay && (
+          <View style={styles.verseOverlay} accessible accessibilityRole="alert" accessibilityLabel="Versículo do dia">
+            <View style={styles.verseModal} accessible>
+              <Text style={styles.verseTitle}>📖 Versículo do Dia</Text>
+
+              {!!verseOfDay.theme && <Text style={styles.verseTheme}>{verseOfDay.theme}</Text>}
+
+              <Text style={styles.verseText}>"{verseOfDay.text}"</Text>
+
+              <Text style={styles.verseRef}>{verseOfDay.reference}</Text>
+
+              <View style={{ height: 16 }} />
+
+              <TouchableOpacity style={styles.primaryBtn} onPress={() => setShowVerseModal(false)}>
+                <Text style={styles.btnText}>Fechar</Text>
+              </TouchableOpacity>
+
+              <View style={{ height: 8 }} />
+
+              <TouchableOpacity
+                style={styles.secondaryBtn}
+                onPress={async () => {
+                  await AsyncStorage.setItem(VERSE_HIDE_KEY, today);
+                  setShowVerseModal(false);
+                }}
+              >
+                <Text style={styles.btnText}>Não mostrar novamente hoje</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
       </View>
-    </ScrollView>
+    </SafeAreaView>
   );
 }
 
@@ -621,44 +1029,91 @@ const { width } = Dimensions.get("window");
 const CARD_MAX = 560;
 
 const styles = StyleSheet.create({
-  container: {
+  safe: {
     flex: 1,
+    backgroundColor: colors.background,
+  },
+  safeInner: {
+    flex: 1,
+    position: "relative",
+  },
+  scroll: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  content: {
     padding: 18,
     alignSelf: "center",
     width: "100%",
     maxWidth: CARD_MAX,
   },
-  header: {
+
+  /* HEADER */
+  headerWrap: {
+    marginTop: 6,
+    marginBottom: 12,
+  },
+  headerTop: {
+    flexDirection: "row",
     alignItems: "center",
-    marginTop: 8,
-    marginBottom: 14,
+    gap: 12,
+  },
+  logoWrap: {
+    width: 52,
+    height: 52,
+    borderRadius: 16,
+    backgroundColor: "#fff",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 2,
   },
   logo: {
-    width: 72,
-    height: 72,
-    borderRadius: 16,
-    marginBottom: 10,
+    width: 44,
+    height: 44,
+    borderRadius: 12,
   },
   title: {
-    fontSize: 24,
-    fontWeight: "bold",
+    fontSize: 22,
+    fontWeight: "800",
     color: colors.primary,
-    textAlign: "center",
   },
   subTitle: {
-    marginTop: 4,
+    marginTop: 2,
     color: colors.muted,
     fontSize: 12,
-    textAlign: "center",
-  },
-  devMode: {
-    marginTop: 6,
-    textAlign: "center",
-    fontSize: 12,
-    color: colors.muted,
   },
 
-  // ✅ Banner
+  devPanel: {
+    marginTop: 10,
+    backgroundColor: "#fff",
+    borderRadius: 14,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: "#eaeaea",
+  },
+  devText: {
+    fontSize: 12,
+    color: colors.muted,
+    textAlign: "center",
+    marginBottom: 10,
+  },
+  devBtn: {
+    paddingVertical: 10,
+    borderRadius: 12,
+    backgroundColor: "#f4f5f7",
+    alignItems: "center",
+  },
+  devBtnText: {
+    color: colors.text,
+    fontWeight: "700",
+    fontSize: 12,
+  },
+
+  /* BANNER */
   banner: {
     backgroundColor: "#fff",
     borderRadius: 14,
@@ -680,7 +1135,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#F2F7FF",
   },
   bannerTitle: {
-    fontWeight: "bold",
+    fontWeight: "800",
     color: colors.text,
     textAlign: "center",
     fontSize: 13,
@@ -699,55 +1154,131 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
 
+  /* CARD */
   card: {
     backgroundColor: "#fff",
-    borderRadius: 14,
+    borderRadius: 18,
     padding: 14,
     marginBottom: 12,
+    shadowColor: "#000",
+    shadowOpacity: 0.04,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 1,
   },
-  cardStrong: {
-    fontWeight: "bold",
-    color: colors.text,
-    textAlign: "center",
-    fontSize: 14,
+  cardHighlight: {
+    borderWidth: 1,
+    borderColor: "#e9eef7",
   },
-  cardMuted: {
+  cardWarning: {
+    borderWidth: 1,
+    borderColor: "#f1ddaa",
+    backgroundColor: "#fffaf0",
+  },
+
+  /* START ADJUST */
+  startAdjustBox: {
+    backgroundColor: "#fff",
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#eaeaea",
+    padding: 12,
+  },
+  startAdjustHint: {
+    fontSize: 12,
     color: colors.muted,
     textAlign: "center",
-    fontSize: 12,
-    marginTop: 4,
+    marginBottom: 10,
   },
-  cardText: {
+  startAdjustInput: {
+    backgroundColor: "#f4f5f7",
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: Platform.OS === "android" ? 10 : 12,
     color: colors.text,
+    fontWeight: "800",
     textAlign: "center",
-    fontSize: 13,
-    marginTop: 6,
-    lineHeight: 18,
+    borderWidth: 1,
+    borderColor: "#e6e6e6",
   },
-  dateLabel: {
+  startAdjustRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+
+  /* HERO */
+  heroTopRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
+    marginBottom: 10,
+  },
+  heroLabel: {
+    fontSize: 12,
+    color: colors.muted,
+    fontWeight: "700",
+  },
+  heroDate: {
     fontSize: 16,
     color: colors.text,
-    textAlign: "center",
-    marginTop: 8,
-    marginBottom: 8,
+    fontWeight: "800",
+    marginTop: 2,
   },
-  readingRef: {
+  heroReference: {
     fontSize: 22,
-    fontWeight: "bold",
+    fontWeight: "900",
     color: colors.primary,
     textAlign: "center",
-    marginBottom: 4,
+    marginTop: 2,
   },
+  heroMeta: {
+    textAlign: "center",
+    fontSize: 12,
+    marginTop: 8,
+    fontWeight: "700",
+  },
+  heroButtons: {
+    flexDirection: width < 380 ? "column" : "row",
+    gap: 10,
+  },
+  heroBtn: {
+    flex: 1,
+  },
+
+  /* PILL */
+  pill: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: "#f2f3f5",
+  },
+  pillSuccess: {
+    backgroundColor: "#eaf8ef",
+  },
+  pillWarning: {
+    backgroundColor: "#fff1e0",
+  },
+  pillInfo: {
+    backgroundColor: "#eaf2ff",
+  },
+  pillText: {
+    fontSize: 11,
+    fontWeight: "800",
+    color: colors.text,
+  },
+
+  /* BUTTONS */
   primaryBtn: {
     backgroundColor: colors.primary,
     paddingVertical: 12,
-    borderRadius: 12,
+    borderRadius: 14,
     alignItems: "center",
   },
   secondaryBtn: {
     backgroundColor: colors.secondary,
     paddingVertical: 12,
-    borderRadius: 12,
+    borderRadius: 14,
     alignItems: "center",
   },
   btnDisabled: {
@@ -755,25 +1286,183 @@ const styles = StyleSheet.create({
   },
   btnText: {
     color: "#fff",
-    fontWeight: "bold",
+    fontWeight: "900",
+    textAlign: "center",
+    paddingHorizontal: 8,
   },
+
+  /* SECTIONS */
+  sectionTitle: {
+    fontSize: 14,
+    fontWeight: "900",
+    color: colors.text,
+    textAlign: "center",
+  },
+  sectionMuted: {
+    fontSize: 12,
+    color: colors.muted,
+    textAlign: "center",
+    marginTop: 6,
+    lineHeight: 16,
+  },
+  sectionBody: {
+    fontSize: 13,
+    color: colors.text,
+    textAlign: "center",
+    marginTop: 8,
+    lineHeight: 18,
+  },
+  sectionBodyStrong: {
+    fontSize: 14,
+    color: colors.text,
+    textAlign: "center",
+    marginTop: 8,
+    lineHeight: 18,
+    fontWeight: "900",
+  },
+
+  /* KPIs */
+  statsGrid: {
+    flexDirection: width < 420 ? "column" : "row",
+    gap: 12,
+  },
+  kpiLabel: {
+    fontSize: 12,
+    color: colors.muted,
+    fontWeight: "800",
+    textAlign: "center",
+  },
+  kpiValue: {
+    fontSize: 18,
+    fontWeight: "900",
+    color: colors.text,
+    textAlign: "center",
+    marginTop: 6,
+  },
+  kpiHint: {
+    fontSize: 12,
+    color: colors.muted,
+    textAlign: "center",
+    marginTop: 6,
+  },
+
+  /* QUICK NAV (RECOLHÍVEL) */
+  quickNavToggle: {
+    marginTop: 6,
+    marginBottom: 10,
+    backgroundColor: "#fff",
+    borderRadius: 18,
+    paddingVertical: 14,
+    paddingHorizontal: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    shadowColor: "#000",
+    shadowOpacity: 0.03,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 1,
+  },
+  quickNavToggleTitle: {
+    fontSize: 13,
+    fontWeight: "900",
+    color: colors.text,
+  },
+  quickNavToggleRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  quickNavToggleHint: {
+    fontSize: 12,
+    color: colors.muted,
+    fontWeight: "800",
+  },
+  quickNavToggleChevron: {
+    fontSize: 18,
+    color: colors.muted,
+    fontWeight: "900",
+    marginTop: -2,
+  },
+
   menuGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "space-between",
-    marginTop: 6,
+    gap: 12,
   },
   menuBtn: {
     width: width < 420 ? "100%" : "48%",
     backgroundColor: "#fff",
-    borderRadius: 14,
-    paddingVertical: 14,
+    borderRadius: 18,
+    paddingVertical: 16,
     paddingHorizontal: 14,
-    marginBottom: 12,
+    marginBottom: 0,
     alignItems: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.03,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 1,
+  },
+  menuEmoji: {
+    fontSize: 20,
+    marginBottom: 8,
   },
   menuText: {
     color: colors.text,
-    fontWeight: "bold",
+    fontWeight: "900",
+  },
+
+  /* VERSE MODAL */
+  verseOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0,0,0,0.4)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  verseModal: {
+    backgroundColor: "#fff",
+    borderRadius: 20,
+    padding: 20,
+    width: "100%",
+    maxWidth: 420,
+    shadowColor: "#000",
+    shadowOpacity: 0.2,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  verseTitle: {
+    fontSize: 16,
+    fontWeight: "900",
+    textAlign: "center",
+    marginBottom: 8,
+    color: colors.primary,
+  },
+  verseTheme: {
+    fontSize: 12,
+    textAlign: "center",
+    color: colors.muted,
+    marginBottom: 10,
+    fontStyle: "italic",
+  },
+  verseText: {
+    fontSize: 15,
+    textAlign: "center",
+    color: colors.text,
+    lineHeight: 22,
+    fontWeight: "600",
+  },
+  verseRef: {
+    marginTop: 12,
+    fontSize: 13,
+    textAlign: "center",
+    color: colors.secondary,
+    fontWeight: "800",
   },
 });

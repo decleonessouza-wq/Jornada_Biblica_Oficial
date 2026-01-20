@@ -4,6 +4,8 @@ import {
   ScrollView,
   StyleSheet,
   StatusBar,
+  Platform,
+  useWindowDimensions,
 } from "react-native";
 import { useCallback, useMemo, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -13,11 +15,7 @@ import { colors } from "../theme/colors";
 import { readingPlan } from "../data/readingPlan";
 
 // ✅ plano atemporal
-import {
-  getCompletedDays,
-  calculateStreak,
-  getPlanStartDate,
-} from "../services/progressStore";
+import { getCompletedDays, calculateStreak, getPlanStartDate } from "../services/progressStore";
 
 /* ==========================
    HELPERS
@@ -39,12 +37,6 @@ function dateToIsoLocal(d: Date): string {
   return `${y}-${m}-${day}`;
 }
 
-function addDaysIso(iso: string, days: number): string {
-  const d = isoToLocalNoon(iso);
-  d.setDate(d.getDate() + days);
-  return dateToIsoLocal(d);
-}
-
 function isSundayIso(iso: string): boolean {
   return isoToLocalNoon(iso).getDay() === 0;
 }
@@ -54,11 +46,111 @@ function formatDdMm(iso: string) {
   return `${d}/${m}`;
 }
 
+function clamp(n: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, n));
+}
+
+function shadowCard() {
+  return Platform.select({
+    android: { elevation: 3 },
+    ios: {
+      shadowColor: "#000",
+      shadowOpacity: 0.08,
+      shadowRadius: 10,
+      shadowOffset: { width: 0, height: 4 },
+    },
+    default: {},
+  }) as any;
+}
+
+/* ==========================
+   UI COMPONENTS (LOCAL)
+========================== */
+
+function Card({ children }: { children: React.ReactNode }) {
+  return <View style={[styles.card, shadowCard()]}>{children}</View>;
+}
+
+function SectionTitle({ icon, title, subtitle }: { icon: string; title: string; subtitle?: string }) {
+  return (
+    <View style={{ marginBottom: subtitle ? 10 : 8 }}>
+      <View style={styles.sectionTitleRow}>
+        <Text style={styles.sectionIcon}>{icon}</Text>
+        <Text style={styles.sectionTitle}>{title}</Text>
+      </View>
+      {subtitle ? <Text style={styles.sectionSubtitle}>{subtitle}</Text> : null}
+    </View>
+  );
+}
+
+function StatTile({
+  icon,
+  label,
+  value,
+  helper,
+  tone = "primary",
+}: {
+  icon: string;
+  label: string;
+  value: string;
+  helper?: string;
+  tone?: "primary" | "secondary" | "neutral";
+}) {
+  const bg =
+    tone === "primary"
+      ? "rgba(4,206,146,0.10)"
+      : tone === "secondary"
+      ? "rgba(218,165,32,0.14)"
+      : "rgba(0,0,0,0.05)";
+
+  const fg = tone === "primary" ? colors.primary : tone === "secondary" ? colors.secondary : colors.text;
+
+  return (
+    <View style={[styles.statTile, { backgroundColor: bg }]}>
+      <Text style={styles.statIcon}>{icon}</Text>
+      <Text style={styles.statLabel}>{label}</Text>
+      <Text style={[styles.statValue, { color: fg }]}>{value}</Text>
+      {!!helper && <Text style={styles.statHelper}>{helper}</Text>}
+    </View>
+  );
+}
+
+function WeekChip({
+  label,
+  state,
+}: {
+  label: string;
+  state: "SUNDAY" | "DONE" | "MISS";
+}) {
+  const bg =
+    state === "DONE"
+      ? "rgba(4,206,146,0.12)"
+      : state === "SUNDAY"
+      ? "rgba(0,0,0,0.06)"
+      : "rgba(211,47,47,0.10)";
+
+  const fg =
+    state === "DONE" ? colors.primary : state === "SUNDAY" ? colors.muted : "#B71C1C";
+
+  const dot =
+    state === "DONE" ? "●" : state === "SUNDAY" ? "●" : "●";
+
+  return (
+    <View style={[styles.weekChip, { backgroundColor: bg, borderColor: "rgba(0,0,0,0.06)" }]}>
+      <Text style={[styles.weekChipLabel, { color: fg }]}>{label}</Text>
+      <Text style={[styles.weekChipDot, { color: fg }]}>{dot}</Text>
+    </View>
+  );
+}
+
 /* ==========================
    COMPONENT
 ========================== */
 
 export default function ProgressScreen() {
+  const { width } = useWindowDimensions();
+  const maxWidth = clamp(width, 360, 820);
+
   const [completedDays, setCompletedDays] = useState<string[]>([]);
   const [streak, setStreak] = useState(0);
   const [planStartDate, setPlanStartDate] = useState<string | null>(null);
@@ -78,7 +170,8 @@ export default function ProgressScreen() {
     try {
       const raw = await AsyncStorage.getItem("gratitudeByDate");
       const parsed = raw ? JSON.parse(raw) : {};
-      setGratitudeCount(Object.keys(parsed).length);
+      const safe = parsed && typeof parsed === "object" ? parsed : {};
+      setGratitudeCount(Object.keys(safe).length);
     } catch {
       setGratitudeCount(0);
     }
@@ -94,10 +187,7 @@ export default function ProgressScreen() {
      PROGRESSO ATEMPORAL
   ========================== */
 
-  const totalUsefulDays = useMemo(
-    () => readingPlan.filter((d) => !d.isSunday).length,
-    []
-  );
+  const totalUsefulDays = useMemo(() => readingPlan.filter((d) => !d.isSunday).length, []);
 
   const completedUsefulDays = useMemo(() => {
     if (!planStartDate) return 0;
@@ -108,10 +198,6 @@ export default function ProgressScreen() {
     if (!planStartDate || totalUsefulDays === 0) return 0;
     return Math.round((completedUsefulDays / totalUsefulDays) * 100);
   }, [completedUsefulDays, totalUsefulDays, planStartDate]);
-
-  /* ==========================
-     SEMANA ATUAL
-  ========================== */
 
   const todayIso = dateToIsoLocal(new Date());
 
@@ -126,92 +212,118 @@ export default function ProgressScreen() {
     );
   }, [todayIso]);
 
+  const planStatusText = useMemo(() => {
+    if (!planStartDate || !isIsoDateString(planStartDate)) return "Plano ainda não iniciado";
+    return `Início do plano: ${formatDdMm(planStartDate)} (atemp.)`;
+  }, [planStartDate]);
+
   /* ==========================
      RENDER
   ========================== */
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F4F6F8" />
+      <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={{ marginBottom: 20 }}>
-          <Text style={styles.screenTitle}>Progresso</Text>
-          <Text style={styles.screenSubtitle}>
-            Acompanhe sua constância e evolução na leitura.
-          </Text>
-        </View>
+      <ScrollView
+        contentContainerStyle={[styles.scrollContent, { paddingHorizontal: width >= 700 ? 24 : 16 }]}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={[styles.contentWrap, { maxWidth, alignSelf: "center" }]}>
+          {/* HERO */}
+          <View style={styles.hero}>
+            <Text style={styles.heroTitle}>Progresso</Text>
+            <Text style={styles.heroSubtitle}>Acompanhe sua constância e evolução na leitura.</Text>
+            <Text style={styles.heroHint}>{planStatusText}</Text>
+          </View>
 
-        {/* PROGRESSO GERAL */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>📈 Progresso Geral</Text>
-          <Text style={styles.percent}>{percent}%</Text>
-
-          <View style={{ height: 10 }} />
-
-          <View style={styles.progressBarBackground}>
-            <View
-              style={[
-                styles.progressBarFill,
-                { width: `${percent}%` },
-              ]}
+          {/* MÉTRICAS (grid) */}
+          <View style={styles.statsGrid}>
+            <StatTile
+              icon="📈"
+              label="Progresso"
+              value={`${percent}%`}
+              helper={`${completedUsefulDays} de ${totalUsefulDays}`}
+              tone="primary"
+            />
+            <StatTile
+              icon="🔥"
+              label="Streak"
+              value={`${streak}`}
+              helper="dias consecutivos"
+              tone="secondary"
+            />
+            <StatTile
+              icon="🙏"
+              label="Gratidão"
+              value={`${gratitudeCount}`}
+              helper="registros salvos"
+              tone="neutral"
             />
           </View>
 
-          <Text style={styles.cardMuted}>
-            {completedUsefulDays} de {totalUsefulDays} leituras concluídas
-          </Text>
+          {/* PROGRESSO DETALHADO */}
+          <Card>
+            <SectionTitle icon="📊" title="Progresso geral" subtitle="Sua barra de avanço no plano (dias úteis)" />
+
+            <View style={styles.progressRow}>
+              <Text style={styles.progressPercent}>{percent}%</Text>
+              <Text style={styles.progressMeta}>
+                {completedUsefulDays} / {totalUsefulDays}
+              </Text>
+            </View>
+
+            <View style={styles.progressBarBackground}>
+              <View style={[styles.progressBarFill, { width: `${percent}%` }]} />
+            </View>
+
+            <Text style={styles.mutedCenter}>
+              Domingos não contam como leitura obrigatória (dia livre).
+            </Text>
+          </Card>
+
+          {/* SEMANA ATUAL */}
+          <Card>
+            <SectionTitle icon="🗓️" title="Semana atual" subtitle="Visão rápida da constância nesta semana" />
+
+            <View style={styles.weekWrap}>
+              {weekDates.map((dIso) => {
+                const sunday = isSundayIso(dIso);
+                const done = completedDays.includes(dIso);
+
+                const state: "SUNDAY" | "DONE" | "MISS" = sunday ? "SUNDAY" : done ? "DONE" : "MISS";
+
+                return <WeekChip key={dIso} label={formatDdMm(dIso)} state={state} />;
+              })}
+            </View>
+
+            <View style={styles.legendRow}>
+              <View style={styles.legendItem}>
+                <View style={[styles.legendDot, { backgroundColor: "rgba(4,206,146,0.35)" }]} />
+                <Text style={styles.legendText}>Lido</Text>
+              </View>
+              <View style={styles.legendItem}>
+                <View style={[styles.legendDot, { backgroundColor: "rgba(0,0,0,0.16)" }]} />
+                <Text style={styles.legendText}>Domingo</Text>
+              </View>
+              <View style={styles.legendItem}>
+                <View style={[styles.legendDot, { backgroundColor: "rgba(211,47,47,0.28)" }]} />
+                <Text style={styles.legendText}>Pendente</Text>
+              </View>
+            </View>
+          </Card>
+
+          {/* NOTAS / ENCORAJAMENTO */}
+          <Card>
+            <SectionTitle icon="🧭" title="Constância" subtitle="Pequenos passos, todos os dias úteis" />
+            <Text style={styles.paragraph}>
+              Continue firme: uma leitura por vez. Se cair um dia, retome no próximo — a jornada é constância,
+              não perfeição.
+            </Text>
+          </Card>
+
+          <View style={{ height: 26 }} />
         </View>
-
-        {/* STREAK */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>🔥 Streak</Text>
-          <Text style={styles.cardBig}>{streak}</Text>
-          <Text style={styles.cardMuted}>dias consecutivos</Text>
-        </View>
-
-        {/* SEMANA */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>🗓️ Semana atual</Text>
-
-          <View style={styles.weekRow}>
-            {weekDates.map((dIso) => {
-              const isSunday = isSundayIso(dIso);
-              const done = completedDays.includes(dIso);
-
-              return (
-                <View key={dIso} style={styles.weekItem}>
-                  <Text style={styles.weekLabel}>{formatDdMm(dIso)}</Text>
-                  <Text
-                    style={[
-                      styles.weekDot,
-                      isSunday
-                        ? styles.weekDotSunday
-                        : done
-                        ? styles.weekDotDone
-                        : styles.weekDotMiss,
-                    ]}
-                  >
-                    ●
-                  </Text>
-                </View>
-              );
-            })}
-          </View>
-
-          <Text style={[styles.cardMuted, { marginTop: 10 }]}>
-            ● Cinza = domingo • verde = lido • vermelho = pendente
-          </Text>
-        </View>
-
-        {/* GRATIDÃO */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>🙏 Diário de Gratidão</Text>
-          <Text style={styles.cardBig}>{gratitudeCount}</Text>
-          <Text style={styles.cardMuted}>registros salvos no seu celular</Text>
-        </View>
-
-        <View style={{ height: 40 }} />
       </ScrollView>
     </View>
   );
@@ -224,91 +336,189 @@ export default function ProgressScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F4F6F8",
+    backgroundColor: colors.background, // usa o tema
   },
   scrollContent: {
-    padding: 20,
     paddingTop: 10,
+    paddingBottom: 20,
   },
-  screenTitle: {
-    fontSize: 28,
-    fontWeight: "bold",
-    color: colors.primary,
-    marginBottom: 4,
+  contentWrap: {
+    width: "100%",
+    gap: 12,
   },
-  screenSubtitle: {
-    fontSize: 14,
-    color: colors.muted,
-  },
-  card: {
+
+  hero: {
     backgroundColor: "#fff",
-    borderRadius: 16,
+    borderRadius: 18,
     padding: 16,
-    marginBottom: 16,
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 5,
-    shadowOffset: { width: 0, height: 2 },
+    ...shadowCard(),
   },
-  cardTitle: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: colors.text,
+  heroTitle: {
+    fontSize: 28,
+    fontWeight: "900",
+    color: colors.primary,
     marginBottom: 6,
   },
-  cardBig: {
-    fontSize: 22,
-    fontWeight: "bold",
-    color: colors.primary,
-    textAlign: "center",
-    marginTop: 6,
+  heroSubtitle: {
+    fontSize: 14,
+    color: colors.muted,
+    lineHeight: 19,
   },
-  cardMuted: {
+  heroHint: {
+    marginTop: 10,
     fontSize: 12,
     color: colors.muted,
-    textAlign: "center",
-    marginTop: 6,
   },
-  percent: {
-    fontSize: 32,
-    fontWeight: "bold",
+
+  statsGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+  },
+  statTile: {
+    flexGrow: 1,
+    flexBasis: "31%",
+    minWidth: 120,
+    borderRadius: 18,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: "rgba(0,0,0,0.06)",
+  },
+  statIcon: {
+    fontSize: 18,
+    marginBottom: 6,
+  },
+  statLabel: {
+    fontSize: 12,
+    color: colors.muted,
+    fontWeight: "700",
+  },
+  statValue: {
+    marginTop: 6,
+    fontSize: 22,
+    fontWeight: "900",
+  },
+  statHelper: {
+    marginTop: 4,
+    fontSize: 12,
+    color: colors.muted,
+  },
+
+  card: {
+    backgroundColor: "#fff",
+    borderRadius: 18,
+    padding: 16,
+  },
+
+  sectionTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 4,
+  },
+  sectionIcon: {
+    fontSize: 16,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: "900",
+    color: colors.text,
+  },
+  sectionSubtitle: {
+    fontSize: 12,
+    color: colors.muted,
+    lineHeight: 16,
+  },
+
+  progressRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "baseline",
+    marginTop: 6,
+    marginBottom: 10,
+  },
+  progressPercent: {
+    fontSize: 26,
+    fontWeight: "900",
     color: colors.primary,
-    textAlign: "center",
+  },
+  progressMeta: {
+    fontSize: 12,
+    color: colors.muted,
+    fontWeight: "700",
   },
   progressBarBackground: {
     height: 10,
-    backgroundColor: "#F0F0F0",
-    borderRadius: 5,
+    backgroundColor: "rgba(0,0,0,0.06)",
+    borderRadius: 999,
     overflow: "hidden",
   },
   progressBarFill: {
     height: "100%",
     backgroundColor: colors.primary,
+    borderRadius: 999,
   },
-  weekRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  weekItem: {
-    width: "14%",
-    alignItems: "center",
-  },
-  weekLabel: {
-    fontSize: 10,
+  mutedCenter: {
+    marginTop: 10,
+    fontSize: 12,
     color: colors.muted,
+    textAlign: "center",
+    lineHeight: 16,
   },
-  weekDot: {
-    fontSize: 18,
+
+  weekWrap: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
     marginTop: 6,
   },
-  weekDotSunday: {
-    color: "#999",
+  weekChip: {
+    minWidth: 72,
+    flexGrow: 1,
+    borderRadius: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
-  weekDotDone: {
-    color: "green",
+  weekChipLabel: {
+    fontSize: 12,
+    fontWeight: "800",
   },
-  weekDotMiss: {
-    color: "#D32F2F",
+  weekChipDot: {
+    fontSize: 14,
+    fontWeight: "900",
+  },
+
+  legendRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: 10,
+    marginTop: 12,
+  },
+  legendItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    flexGrow: 1,
+  },
+  legendDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 999,
+  },
+  legendText: {
+    fontSize: 12,
+    color: colors.muted,
+    fontWeight: "700",
+  },
+
+  paragraph: {
+    marginTop: 4,
+    fontSize: 14,
+    color: colors.text,
+    lineHeight: 20,
   },
 });
