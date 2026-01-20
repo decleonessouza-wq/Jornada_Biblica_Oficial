@@ -2,15 +2,13 @@ import {
   View,
   Text,
   ScrollView,
+  Button,
   Alert,
   Linking,
   Pressable,
   ActivityIndicator,
   TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  SafeAreaView,
-  Platform, // <--- Adicionado para detectar se é Web ou App
+  Platform,
 } from "react-native";
 import { useEffect, useMemo, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -23,10 +21,18 @@ import { readingPlan } from "../data/readingPlan";
 import { phases } from "../data/phases";
 import type { RootStackParamList } from "../app_router_off";
 
+// ✅ centralizado no progressStore (plano atemporal + atrasos + overrides)
+import {
+  addCompletedDay,
+  getPlanStartDate,
+  getEffectiveReferenceForDate,
+  PLAN_START_DATE_KEY,
+} from "../services/progressStore";
+
 type Props = {
   route: {
     params?: {
-      date?: string;
+      date?: string; // ISO local YYYY-MM-DD
       reference?: string;
       isSunday?: boolean;
     };
@@ -65,9 +71,41 @@ function uniqueSortedIsoDates(list: unknown[]): string[] {
   return Array.from(set).sort();
 }
 
-/**
- * Extrai "Livro" e "Capítulo/intervalo"
- */
+/* ==========================
+   DATE UTILS (LOCAL SAFE)
+========================== */
+
+function isoToLocalNoon(iso: string): Date {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+  if (!m) return new Date(iso);
+  const y = Number(m[1]);
+  const mo = Number(m[2]) - 1;
+  const d = Number(m[3]);
+  return new Date(y, mo, d, 12, 0, 0, 0);
+}
+
+function dateToIsoLocal(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function addDaysIso(iso: string, days: number): string {
+  const d = isoToLocalNoon(iso);
+  d.setDate(d.getDate() + days);
+  return dateToIsoLocal(d);
+}
+
+function isSundayIso(iso: string): boolean {
+  const d = isoToLocalNoon(iso);
+  return d.getDay() === 0;
+}
+
+/* ==========================
+   REFERENCE PARSERS
+========================== */
+
 function parseReference(reference: string) {
   const raw = reference.trim();
   const parts = raw.split(/\s+/);
@@ -77,12 +115,10 @@ function parseReference(reference: string) {
   const book = parts.slice(0, parts.length - 1).join(" ");
 
   if (!/^\d/.test(last)) return { book: raw, chapter: "", raw };
+
   return { book, chapter: last, raw };
 }
 
-/**
- * Detecta multi-passagens
- */
 function isMultiPassage(reference: string) {
   const r = reference.trim();
   return r.includes(";") || r.includes(",");
@@ -117,7 +153,11 @@ function ensureChapterForSingleChapterBooks(passage: string) {
   return trimmed;
 }
 
+/**
+ * Map de livros/abreviações -> BibliaOnline
+ */
 const bibliaOnlineBookMap: Record<string, string> = {
+  // AT
   gn: "gn",
   ex: "ex",
   lv: "lv",
@@ -157,6 +197,8 @@ const bibliaOnlineBookMap: Record<string, string> = {
   ag: "ag",
   zc: "zc",
   ml: "ml",
+
+  // NT
   mt: "mt",
   mc: "mc",
   lc: "lc",
@@ -184,6 +226,8 @@ const bibliaOnlineBookMap: Record<string, string> = {
   "3jo": "3jo",
   jd: "jd",
   ap: "ap",
+
+  // nomes comuns
   genesis: "gn",
   exodo: "ex",
   levitico: "lv",
@@ -270,6 +314,7 @@ function getBibliaOnlineBookAbbr(bookRaw: string) {
 
 function buildBibliaOnlineUrl(reference: string, versionPath: "acf" | "bkj") {
   const parsed = parseReference(reference);
+
   if (!parsed.chapter || !/^\d+(-\d+)?$/.test(parsed.chapter)) return null;
 
   const abbr = getBibliaOnlineBookAbbr(parsed.book);
@@ -291,95 +336,86 @@ function buildReadingUrl(reference: string, isSunday: boolean, version: BibleVer
   if (version === "NVI") return buildBibleGatewayUrl(reference, "NVI");
 
   if (version === "ACF") {
-    return (
-      buildBibliaOnlineUrl(reference, "acf") ??
-      buildGoogleSearchUrl(`Bíblia Online ACF ${reference}`)
-    );
+    return buildBibliaOnlineUrl(reference, "acf") ?? buildGoogleSearchUrl(`Bíblia Online ACF ${reference}`);
   }
 
-  return (
-    buildBibliaOnlineUrl(reference, "bkj") ??
-    buildGoogleSearchUrl(`Bíblia BKJ ${reference}`)
-  );
+  return buildBibliaOnlineUrl(reference, "bkj") ?? buildGoogleSearchUrl(`Bíblia BKJ ${reference}`);
 }
 
 /* ==========================
-   EXPERIÊNCIA ESPIRITUAL
+   EXPERIÊNCIA ESPIRITUAL (FIXO, SEM IA)
 ========================== */
+
 const DEFAULT_PRAYER =
   "Senhor, abre os meus olhos para ver as maravilhas da tua Palavra. Dá-me um coração humilde, obediente e cheio de fé. Amém.";
 
 const DEFAULT_REFLECTION =
   "Enquanto lê, observe: (1) O que Deus revela sobre Si mesmo? (2) O que isso revela sobre o coração humano? (3) Qual é a resposta prática de obediência e fé para hoje?";
 
-const PHASE_SPIRITUAL: Record<string, { prayer: string; reflection: string }> = {
-  "1": {
+const PHASE_SPIRITUAL: Record<number, { prayer: string; reflection: string }> = {
+  1: {
     prayer:
-      "Pai, firma em mim os fundamentos da fé. Abre meus olhos para ver tua glória desde o princípio e dá-me coragem para obedecer. Amém.",
+      "Pai, firma meus fundamentos na tua Palavra. Dá-me fé obediente e coração humilde para começar bem esta jornada. Amém.",
     reflection:
-      "Hoje, procure: (1) o que Deus revela sobre Si; (2) como o pecado aparece e como a graça responde; (3) um passo simples de obediência para praticar ainda hoje.",
+      "Procure hoje: o que Deus ordena, o que Deus promete e como Ele conduz Seu povo. Pergunte: qual passo simples de obediência eu preciso dar hoje?",
   },
-  "2": {
+  2: {
     prayer:
-      "Senhor, enquanto tu preparas teu povo, prepara também meu coração. Ensina-me a confiar nas tuas promessas e a andar em aliança contigo. Amém.",
+      "Senhor, enquanto preparas o teu povo, prepara também o meu coração. Que eu confie nas tuas alianças e no teu cuidado. Amém.",
     reflection:
-      "Observe as alianças, a direção de Deus e os sinais da redenção. Pergunte: onde preciso confiar mais e alinhar minha vida à vontade do Senhor?",
+      "Observe alianças, promessas e direção. Pergunte: onde Deus está me chamando a confiar mais e a obedecer com constância?",
   },
-  "3": {
+  3: {
     prayer:
-      "Deus santo, dá-me arrependimento verdadeiro e esperança viva. Que tua Palavra corrija meus caminhos e reacenda minha confiança no Messias. Amém.",
+      "Deus Santo, dá-me arrependimento verdadeiro e esperança firme no Messias prometido. Amém.",
     reflection:
-      "Procure o chamado ao arrependimento e a promessa de restauração. Qual área da sua vida precisa ser trazida à luz, com humildade e fé?",
+      "Veja alertas, convites ao arrependimento e sinais de esperança. Pergunte: que ajuste Deus está pedindo hoje no meu coração?",
   },
-  "4": {
+  4: {
     prayer:
-      "Senhor, mesmo quando parece haver silêncio, tu estás trabalhando. Dá-me paciência, perseverança e olhos para esperar com confiança. Amém.",
+      "Senhor, ensina-me a esperar em silêncio confiante. Mesmo quando não vejo, eu sei que estás trabalhando. Amém.",
     reflection:
-      "Espere com propósito: Deus prepara o tempo certo. O que você precisa entregar a Deus hoje, sem pressa, com fidelidade diária?",
+      "Reflita: como lidar com o silêncio e a espera com fidelidade? O que você precisa sustentar em oração?",
   },
-  "5": {
+  5: {
     prayer:
-      "Jesus, eu me coloco aos teus pés. Ensina-me teus caminhos, molda meu coração e faz-me amar o que tu amas. Amém.",
+      "Jesus, eu me coloco aos teus pés. Fala comigo pelos Evangelhos e transforma meu coração. Amém.",
     reflection:
-      "Nos Evangelhos, observe o caráter de Cristo: compaixão, verdade e autoridade. Qual atitude de Jesus você precisa imitar hoje?",
+      "Observe o caráter de Cristo e seus chamados. Pergunte: o que eu preciso imitar de Jesus hoje?",
   },
-  "6": {
+  6: {
     prayer:
-      "Espírito Santo, fortalece minha fé e meu testemunho. Faz-me parte viva da tua Igreja, com coragem, amor e mansidão. Amém.",
+      "Espírito Santo, fortalece minha fé e meu testemunho. Que eu viva como parte viva da tua Igreja. Amém.",
     reflection:
-      "Veja como o Evangelho se espalha e como Deus sustenta seus servos. Onde Deus quer que você seja fiel no pouco — hoje?",
+      "Veja como Deus guia e fortalece a Igreja. Pergunte: como posso ser mais fiel e ativo no corpo de Cristo?",
   },
-  "7": {
+  7: {
     prayer:
-      "Senhor, dá-me mente renovada e vida prática. Que a verdade do Evangelho organize minhas escolhas, palavras e relacionamentos. Amém.",
+      "Senhor, renova minha mente e minha prática. Que eu viva uma fé real, consistente e santa. Amém.",
     reflection:
-      "As cartas unem doutrina e prática. Qual verdade você precisa lembrar hoje? E qual prática concreta deve mudar por causa dela?",
+      "Observe instruções práticas. Pergunte: qual prática eu preciso aplicar hoje (perdão, disciplina, oração, santidade)?",
   },
-  "8": {
+  8: {
     prayer:
-      "Pai, sustenta-me nas provações. Dá-me perseverança, maturidade e alegria firme em Cristo, mesmo quando o caminho é difícil. Amém.",
+      "Pai, sustenta-me na perseverança. Dá-me maturidade e firmeza nas provações. Amém.",
     reflection:
-      "Perseverar é continuar fazendo o bem. Qual hábito espiritual simples você vai manter hoje, custe o que custar?",
+      "Procure encorajamentos à fidelidade. Pergunte: o que eu preciso manter firme, mesmo quando é difícil?",
   },
-  "9": {
+  9: {
     prayer:
-      "Senhor Jesus, firma minha esperança na tua vitória final. Livra-me do medo e faz-me viver com os olhos na eternidade. Amém.",
+      "Jesus, fortalece minha esperança na tua vitória final. Dá-me olhos para a eternidade. Amém.",
     reflection:
-      "Contemple a justiça e o triunfo de Cristo. Como sua esperança futura muda suas escolhas e prioridades no presente?",
+      "Observe vitória, justiça e consumação. Pergunte: o que muda na minha rotina quando eu lembro que Cristo reina?",
   },
-  "10": {
+  10: {
     prayer:
-      "Deus eterno, obrigado porque toda a história converge em Cristo. Faz-me terminar esta jornada com gratidão, humildade e amor renovado. Amém.",
+      "Senhor, fixa meu coração na esperança eterna. Que eu termine esta jornada amando mais a ti e à tua Palavra. Amém.",
     reflection:
-      "Relembre a redenção: o que Deus fez em você ao longo do caminho? Escreva um compromisso simples para manter a comunhão diária.",
+      "Reflita: como a eternidade muda minhas prioridades? O que preciso ajustar para viver com propósito e fidelidade?",
   },
 };
 
-function getSpiritualContent(params: {
-  phaseId?: string | null;
-  isSunday: boolean;
-  isNatal: boolean;
-}) {
+function getSpiritualContent(params: { phaseId?: number | null; isSunday: boolean; isNatal: boolean }) {
   const { phaseId, isSunday, isNatal } = params;
 
   if (isSunday) {
@@ -400,7 +436,7 @@ function getSpiritualContent(params: {
     };
   }
 
-  const hit = phaseId ? PHASE_SPIRITUAL[phaseId] : null;
+  const hit = typeof phaseId === "number" ? PHASE_SPIRITUAL[phaseId] : null;
 
   return {
     prayer: hit?.prayer ?? DEFAULT_PRAYER,
@@ -408,15 +444,61 @@ function getSpiritualContent(params: {
   };
 }
 
+/* ==========================
+   ✅ RESOLVE DO DIA (COM OVERRIDES)
+========================== */
+
+type Resolved = {
+  isSunday: boolean;
+  reference: string;
+  finished: boolean;
+  source: "BASE" | "OVERRIDE" | "NOT_STARTED";
+  planStartDate: string | null;
+};
+
+async function resolveForDate(dateIso: string, fallbackReference: string): Promise<Resolved> {
+  const start = await getPlanStartDate();
+
+  if (!start) {
+    // plano ainda não iniciado
+    return {
+      isSunday: isSundayIso(dateIso),
+      reference: isSundayIso(dateIso) ? "Meditar" : fallbackReference,
+      finished: false,
+      source: "NOT_STARTED",
+      planStartDate: null,
+    };
+  }
+
+  const eff = await getEffectiveReferenceForDate(dateIso);
+  return {
+    isSunday: eff.isSunday,
+    reference: eff.reference,
+    finished: eff.finished,
+    source: eff.source,
+    planStartDate: start,
+  };
+}
+
 export default function ReadingScreen({ route }: Props) {
   const navigation = useNavigation<Nav>();
 
-  const date = route?.params?.date ?? "";
-  const reference = route?.params?.reference ?? "Leitura do dia";
-  const isSunday = !!route?.params?.isSunday;
+  const routeDate = route?.params?.date ?? "";
+  const routeReference = route?.params?.reference ?? "Leitura do dia";
+
+  const [resolved, setResolved] = useState<Resolved>({
+    isSunday: !!route?.params?.isSunday,
+    reference: routeReference,
+    finished: false,
+    source: "NOT_STARTED",
+    planStartDate: null,
+  });
+
+  const date = routeDate;
+  const reference = resolved.reference;
+  const isSunday = resolved.isSunday;
 
   const isNatal = useMemo(() => /natal/i.test(reference.trim()), [reference]);
-
   const parsed = useMemo(() => parseReference(reference), [reference]);
 
   const [version, setVersion] = useState<BibleVersion>("ARC");
@@ -437,16 +519,19 @@ export default function ReadingScreen({ route }: Props) {
 
   const [selectedPassageIndex, setSelectedPassageIndex] = useState(0);
 
-  const planIndex = useMemo(() => {
-    if (!date) return -1;
-    return readingPlan.findIndex((d) => d.date === date);
+  // ✅ fase por data (informativa)
+  const currentPhase = useMemo(() => {
+    if (!date) return null;
+    return phases.find((p) => date >= p.startDate && date <= p.endDate) ?? null;
   }, [date]);
 
-  const prevItem = planIndex > 0 ? readingPlan[planIndex - 1] : null;
-  const nextItem =
-    planIndex >= 0 && planIndex < readingPlan.length - 1
-      ? readingPlan[planIndex + 1]
-      : null;
+  const spiritual = useMemo(() => {
+    return getSpiritualContent({
+      phaseId: (currentPhase as any)?.id ?? null,
+      isSunday,
+      isNatal,
+    });
+  }, [currentPhase, isSunday, isNatal]);
 
   const canMarkRead = useMemo(() => {
     if (!date) return false;
@@ -460,24 +545,24 @@ export default function ReadingScreen({ route }: Props) {
     return completedDays.includes(date);
   }, [completedDays, date]);
 
-  // ✅ fase por data
-  const currentPhase = useMemo(() => {
-    if (!date) return null;
-    return phases.find((p) => date >= p.startDate && date <= p.endDate) ?? null;
-  }, [date]);
-
-  const spiritual = useMemo(() => {
-    return getSpiritualContent({
-      phaseId: currentPhase ? String(currentPhase.id) : null,
-      isSunday,
-      isNatal,
-    });
-  }, [currentPhase, isSunday, isNatal]);
+  // ✅ navegação por calendário
+  const prevDate = useMemo(() => (date ? addDaysIso(date, -1) : null), [date]);
+  const nextDate = useMemo(() => (date ? addDaysIso(date, 1) : null), [date]);
 
   useEffect(() => {
     setSelectedPassageIndex(0);
     setShowWebView(false);
   }, [reference]);
+
+  // ✅ resolve sempre pelo progressStore (inclui overrides)
+  useEffect(() => {
+    (async () => {
+      if (!date) return;
+      const res = await resolveForDate(date, routeReference);
+      setResolved(res);
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [date]);
 
   useEffect(() => {
     (async () => {
@@ -544,21 +629,26 @@ export default function ReadingScreen({ route }: Props) {
     }
   }
 
+  function notify(title: string, message?: string) {
+    if (Platform.OS === "web") window.alert(message ? `${title}\n\n${message}` : title);
+    else Alert.alert(title, message);
+  }
+
   async function saveGratitude() {
     if (!date) {
-      Alert.alert("Sem data", "Não foi possível salvar gratidão sem a data do dia.");
+      notify("Sem data", "Não foi possível salvar gratidão sem a data do dia.");
       return;
     }
 
     const text = gratitudeText.trim();
 
     if (text.length === 0) {
-      Alert.alert("Campo vazio", "Escreva 1 frase de gratidão (ou deixe como estava).");
+      notify("Campo vazio", "Escreva 1 frase de gratidão (ou deixe como estava).");
       return;
     }
 
     if (text.length > 140) {
-      Alert.alert("Muito longo", "Tente resumir em até 140 caracteres (1 frase).");
+      notify("Muito longo", "Tente resumir em até 140 caracteres (1 frase).");
       return;
     }
 
@@ -572,9 +662,9 @@ export default function ReadingScreen({ route }: Props) {
       await AsyncStorage.setItem(GRATITUDE_KEY, JSON.stringify(map));
       setSavedGratitude(text);
 
-      Alert.alert("Salvo ✅", "Sua gratidão foi registrada.");
+      notify("Salvo ✅", "Sua gratidão foi registrada.");
     } catch {
-      Alert.alert("Erro", "Não foi possível salvar sua gratidão.");
+      notify("Erro", "Não foi possível salvar sua gratidão.");
     }
   }
 
@@ -591,9 +681,9 @@ export default function ReadingScreen({ route }: Props) {
       setSavedGratitude(null);
       setGratitudeText("");
 
-      Alert.alert("Removido", "Gratidão do dia removida.");
+      notify("Removido", "Gratidão do dia removida.");
     } catch {
-      Alert.alert("Erro", "Não foi possível remover.");
+      notify("Erro", "Não foi possível remover.");
     }
   }
 
@@ -629,22 +719,17 @@ export default function ReadingScreen({ route }: Props) {
     if (!date) return;
 
     try {
-      const stored = await AsyncStorage.getItem(COMPLETED_KEY);
-      const parsedStored = stored ? JSON.parse(stored) : [];
-      const current = uniqueSortedIsoDates(Array.isArray(parsedStored) ? parsedStored : []);
+      const result = await addCompletedDay(date);
 
-      if (current.includes(date)) {
-        Alert.alert("Já marcado", "Este dia já está como concluído ✅");
+      if (!result.added) {
+        notify("Já marcado", "Este dia já está como concluído ✅");
         return;
       }
 
-      const updated = uniqueSortedIsoDates([...current, date]);
-      await AsyncStorage.setItem(COMPLETED_KEY, JSON.stringify(updated));
-      setCompletedDays(updated);
-
-      Alert.alert("Concluído ✅", "Leitura marcada como lida!");
+      setCompletedDays(result.days);
+      notify("Concluído ✅", "Leitura marcada como lida!");
     } catch {
-      Alert.alert("Erro", "Não foi possível marcar como lido.");
+      notify("Erro", "Não foi possível marcar como lido.");
     }
   }
 
@@ -666,7 +751,7 @@ export default function ReadingScreen({ route }: Props) {
       if (!can) throw new Error("cannot-open");
       await Linking.openURL(readingUrl);
     } catch {
-      Alert.alert("Não foi possível abrir", "Seu dispositivo não conseguiu abrir o link da leitura.");
+      notify("Não foi possível abrir", "Seu dispositivo não conseguiu abrir o link da leitura.");
     }
   }
 
@@ -685,7 +770,6 @@ export default function ReadingScreen({ route }: Props) {
     KJ: "KJ (PT)",
   };
 
-  // Componente Visual "Chip" melhorado
   function Chip({
     label,
     selected,
@@ -698,584 +782,360 @@ export default function ReadingScreen({ route }: Props) {
     tone?: "primary" | "secondary";
   }) {
     const bgSelected = tone === "primary" ? colors.primary : colors.secondary;
-    const bgUnselected = "#EFEFEF";
 
     return (
-      <TouchableOpacity
+      <Pressable
         onPress={onPress}
         style={{
-          paddingVertical: 8,
-          paddingHorizontal: 16,
-          borderRadius: 20, // Pílula arredondada
-          backgroundColor: selected ? bgSelected : bgUnselected,
+          paddingVertical: 10,
+          paddingHorizontal: 12,
+          borderRadius: 10,
+          backgroundColor: selected ? bgSelected : "#eee",
           marginRight: 8,
           marginBottom: 8,
-          borderWidth: 1,
-          borderColor: selected ? "transparent" : "#DDD",
         }}
       >
-        <Text style={{ 
-            color: selected ? "#fff" : colors.text, 
-            fontWeight: selected ? "bold" : "500",
-            fontSize: 13
-        }}>
-          {label}
-        </Text>
-      </TouchableOpacity>
+        <Text style={{ color: selected ? "#fff" : colors.text, fontWeight: "bold" }}>{label}</Text>
+      </Pressable>
     );
   }
 
-  // --- RENDER WEBVIEW (Layout Clean) ---
+  // ==========
+  // WebView
+  // ==========
   if (showWebView) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: "#fff" }}>
-        <View style={styles.webViewHeader}>
-          <Text style={styles.webViewTitle} numberOfLines={1}>
+      <View style={{ flex: 1, backgroundColor: colors.background }}>
+        <View style={{ padding: 12, backgroundColor: "#fff" }}>
+          <Text style={{ fontWeight: "bold", color: colors.text }}>
             {selectedReferenceRaw} • {versionLabel[version]}
           </Text>
-          <Text style={styles.webViewSubtitle}>
-            Problemas para carregar? Use "Abrir no navegador".
+
+          <Text style={{ fontSize: 12, color: colors.muted, marginTop: 4 }}>
+            Se não carregar, volte e use “Abrir no navegador”.
           </Text>
-          <TouchableOpacity 
-            style={styles.backButton}
-            onPress={() => setShowWebView(false)}
-          >
-            <Text style={styles.backButtonText}>⬅️ Voltar ao App</Text>
-          </TouchableOpacity>
+
+          <View style={{ height: 10 }} />
+          <Button title="⬅️ Voltar" onPress={() => setShowWebView(false)} />
         </View>
 
-        {/* SOLUÇÃO DO ERRO: 
-            Se for WEB, usamos iframe HTML padrão.
-            Se for NATIVO (Celular), usamos o WebView do pacote.
-        */}
-        {Platform.OS === 'web' ? (
-          <View style={{ flex: 1 }}>
-            {/* @ts-ignore */}
-            <iframe
-              src={readingUrl}
-              style={{ width: '100%', height: '100%', border: 'none' }}
-              title="Leitura Bíblica"
-            />
-          </View>
-        ) : (
-          <WebView
-            source={{ uri: readingUrl }}
-            startInLoadingState
-            renderLoading={() => (
-              <View style={styles.loadingContainer}>
-                <ActivityIndicator color={colors.primary} size="large" />
-                <Text style={styles.loadingText}>Carregando leitura...</Text>
-              </View>
-            )}
-            onError={() => {
-              setShowWebView(false);
-              Alert.alert("Erro", "Não foi possível carregar a leitura aqui.");
-            }}
-          />
-        )}
-      </SafeAreaView>
+        <WebView
+          source={{ uri: readingUrl }}
+          startInLoadingState
+          renderLoading={() => (
+            <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+              <ActivityIndicator />
+              <Text style={{ marginTop: 10, color: colors.muted }}>Carregando leitura...</Text>
+            </View>
+          )}
+          onError={() => {
+            setShowWebView(false);
+            notify("Não carregou no app", "Não foi possível carregar a leitura aqui. Quer abrir no navegador?");
+          }}
+          onHttpError={() => {
+            setShowWebView(false);
+            notify("Erro ao carregar", "O site retornou erro. Quer abrir no navegador?");
+          }}
+        />
+      </View>
     );
   }
 
-  // --- RENDER PRINCIPAL ---
+  // ==========
+  // Preview
+  // ==========
   return (
-    <ScrollView 
-        style={styles.container}
-        contentContainerStyle={{ paddingBottom: 40 }}
-        showsVerticalScrollIndicator={false}
-    >
-      
-      {/* 1. HEADER CARD (Data e Referência) */}
-      <View style={styles.card}>
-        <View style={styles.headerTopRow}>
-            <Text style={styles.dateBadge}>
-                {date ? `📅 ${date}` : "📅 HOJE"}
-            </Text>
-            {isReadToday && <Text style={styles.completedBadge}>✅ LIDO</Text>}
-        </View>
+    <ScrollView style={{ flex: 1, backgroundColor: colors.background, padding: 24 }}>
+      <Text style={{ fontSize: 14, color: colors.muted, textAlign: "center", marginBottom: 8 }}>
+        {date ? `📅 ${date}` : "📅"}
+      </Text>
 
-        <Text style={styles.referenceTitle}>
-             {reference}
-        </Text>
+      <Text style={{ fontSize: 24, fontWeight: "bold", color: colors.primary, textAlign: "center", marginBottom: 8 }}>
+        {reference}
+      </Text>
 
-        <Text style={styles.phaseSubtitle}>
-            {isSunday
-            ? "📖 Domingo de meditação e oração"
-            : isNatal
-            ? "🎄 Natal — O Nascimento de Jesus"
-            : parsed.book && parsed.chapter 
-            ? `${parsed.book} • Capítulo ${parsed.chapter}`
-            : "Leitura Bíblica"}
+      {isSunday ? (
+        <Text style={{ fontSize: 16, color: colors.secondary, textAlign: "center", marginBottom: 18 }}>
+          📖 Domingo de meditação e oração
         </Text>
+      ) : isNatal ? (
+        <Text style={{ fontSize: 16, color: colors.secondary, textAlign: "center", marginBottom: 18 }}>
+          🎄 Natal — leituras sobre o nascimento de Jesus
+        </Text>
+      ) : (
+        <Text style={{ fontSize: 14, color: colors.muted, textAlign: "center", marginBottom: 18 }}>
+          {parsed.book}
+          {parsed.chapter ? ` • ${parsed.chapter}` : ""}
+        </Text>
+      )}
+
+      {/* Oração */}
+      <View style={{ backgroundColor: "#fff", borderRadius: 12, padding: 12, marginBottom: 12 }}>
+        <Text style={{ fontWeight: "bold", color: colors.primary }}>🙏 Oração Inicial</Text>
+        <Text style={{ marginTop: 8, color: colors.text, lineHeight: 20 }}>{spiritual.prayer}</Text>
       </View>
 
-
-      {/* 2. ESPIRITUALIDADE (Oração e Reflexão) */}
-      <View style={styles.card}>
-        <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>🙏 Oração Inicial</Text>
-        </View>
-        <Text style={styles.bodyText}>{spiritual.prayer}</Text>
-
-        <View style={styles.divider} />
-
-        <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>🧭 Reflexão Guiada</Text>
-        </View>
-        <Text style={styles.bodyText}>{spiritual.reflection}</Text>
+      {/* Reflexão */}
+      <View style={{ backgroundColor: "#fff", borderRadius: 12, padding: 12, marginBottom: 12 }}>
+        <Text style={{ fontWeight: "bold", color: colors.primary }}>🧭 Reflexão Guiada</Text>
+        <Text style={{ marginTop: 8, color: colors.text, lineHeight: 20 }}>{spiritual.reflection}</Text>
 
         {currentPhase && !isSunday && !isNatal && (
-          <Text style={styles.phaseTag}>
-             Fase atual: {currentPhase.title}
+          <Text style={{ marginTop: 10, fontSize: 12, color: colors.muted }}>
+            Fase atual: {(currentPhase as any)?.title ?? "—"}
           </Text>
         )}
       </View>
 
-
-      {/* 3. GRATIDÃO (Input Moderno) */}
+      {/* Gratidão */}
       {!!date && (
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>✍️ Gratidão do Dia</Text>
-          <Text style={styles.helperText}>
-             Escreva 1 motivo de gratidão (até 140 caracteres).
+        <View style={{ backgroundColor: "#fff", borderRadius: 12, padding: 12, marginBottom: 12 }}>
+          <Text style={{ fontWeight: "bold", color: colors.primary }}>✍️ Gratidão (1 frase)</Text>
+
+          <Text style={{ marginTop: 6, fontSize: 12, color: colors.muted }}>
+            Uma frase curta (até 140 caracteres). Fica salva apenas no seu celular.
           </Text>
 
           <TextInput
             value={gratitudeText}
             onChangeText={setGratitudeText}
-            placeholder="Senhor, obrigado por..."
+            placeholder="Ex: Obrigado Senhor por..."
             maxLength={140}
             multiline
-            style={styles.textInput}
-            placeholderTextColor={colors.muted}
+            style={{
+              minHeight: 60,
+              marginTop: 10,
+              backgroundColor: "#f4f4f4",
+              borderRadius: 10,
+              padding: 10,
+              color: colors.text,
+            }}
           />
 
-          <View style={styles.row}>
-            <TouchableOpacity 
-                style={[styles.smallButton, { backgroundColor: colors.secondary, marginRight: 10 }]}
-                onPress={saveGratitude}
-            >
-                <Text style={styles.smallButtonText}>💾 Salvar</Text>
-            </TouchableOpacity>
+          <View style={{ height: 10 }} />
 
-            <TouchableOpacity 
-                style={[styles.smallButton, { backgroundColor: "transparent", borderWidth: 1, borderColor: "#DDD" }]}
+          <View style={{ flexDirection: "row" }}>
+            <View style={{ flex: 1, marginRight: 8 }}>
+              <Button title="Salvar gratidão" onPress={saveGratitude} />
+            </View>
+
+            <View style={{ flex: 1 }}>
+              <Button
+                title="Remover"
                 onPress={() => {
                   if (!savedGratitude) {
-                     Alert.alert("Ops", "Nada para remover."); 
-                     return; 
+                    notify("Nada para remover", "Você ainda não salvou gratidão hoje.");
+                    return;
                   }
-                  deleteGratitude();
+                  Alert.alert("Remover gratidão?", "Deseja remover a gratidão deste dia?", [
+                    { text: "Cancelar", style: "cancel" },
+                    { text: "Remover", style: "destructive", onPress: deleteGratitude },
+                  ]);
                 }}
-            >
-                <Text style={[styles.smallButtonText, { color: colors.muted }]}>🗑️ Limpar</Text>
-            </TouchableOpacity>
+              />
+            </View>
           </View>
 
           {savedGratitude && (
-            <View style={styles.savedFeedback}>
-                 <Text style={{color: "green", fontSize: 12}}>✅ Salvo: {savedGratitude}</Text>
-            </View>
+            <Text style={{ marginTop: 10, fontSize: 12, color: colors.muted }}>✅ Salvo: {savedGratitude}</Text>
           )}
         </View>
       )}
 
-
-      {/* 4. CONFIGURAÇÕES (Multi-passagens + Versão + Modo) */}
-      {!isSunday && (
-        <View style={styles.card}>
-            {/* Multi-passagens */}
-            {!isNatal && passages.length > 1 && (
-                <View style={{marginBottom: 16}}>
-                    <Text style={styles.settingLabel}>Escolha a passagem:</Text>
-                    <View style={styles.chipsContainer}>
-                        {passages.map((p, idx) => (
-                        <Chip
-                            key={`${p}-${idx}`}
-                            label={p}
-                            selected={idx === selectedPassageIndex}
-                            tone="secondary"
-                            onPress={() => {
-                                setSelectedPassageIndex(idx);
-                                setShowWebView(false);
-                            }}
-                        />
-                        ))}
-                    </View>
-                </View>
-            )}
-
-            {/* Versão */}
-            <Text style={styles.settingLabel}>Versão Bíblica:</Text>
-            <View style={styles.chipsContainer}>
-                {(["ARC", "NVI", "ACF", "KJ"] as BibleVersion[]).map((v) => (
-                    <Chip
-                        key={v}
-                        label={versionLabel[v]}
-                        selected={v === version}
-                        tone="primary"
-                        onPress={() => selectVersion(v)}
-                    />
-                ))}
-            </View>
-            
-            {/* Modo de Abertura */}
-            <View style={{ marginTop: 12 }}>
-                <Text style={styles.settingLabel}>Abrir onde?</Text>
-                <View style={styles.chipsContainer}>
-                    <Chip
-                        label="📱 No App"
-                        selected={openMode === "IN_APP"}
-                        tone="secondary"
-                        onPress={() => selectOpenMode("IN_APP")}
-                    />
-                    <Chip
-                        label="🌐 Navegador"
-                        selected={openMode === "BROWSER"}
-                        tone="secondary"
-                        onPress={() => selectOpenMode("BROWSER")}
-                    />
-                </View>
-            </View>
+      {/* Status */}
+      {!!date && !isSunday && (
+        <View style={{ backgroundColor: "#fff", borderRadius: 12, padding: 12, marginBottom: 12 }}>
+          <Text style={{ fontWeight: "bold", color: colors.text }}>Status do dia</Text>
+          <Text style={{ marginTop: 6, color: colors.muted }}>
+            {isReadToday ? "✅ Já concluído" : "⏳ Ainda não marcado como lido"}
+          </Text>
         </View>
       )}
 
+      {/* Navegação */}
+      {(prevDate || nextDate) && (
+        <View style={{ backgroundColor: "#fff", borderRadius: 12, padding: 12, marginBottom: 12 }}>
+          <Text style={{ fontWeight: "bold", marginBottom: 10, color: colors.text }}>Navegação rápida</Text>
 
-      {/* 5. AÇÕES PRINCIPAIS (Botões Grandes) */}
-      <View style={{ paddingHorizontal: 4 }}>
-         {/* Texto explicativo antes do botão */}
-         <Text style={styles.actionExplainer}>
-            {isSunday
-                ? "Revise leituras atrasadas e ore."
-                : `Leitura: ${selectedReferenceRaw} (${versionLabel[version]})`}
-         </Text>
-
-         {/* BOTÃO PRINCIPAL: ABRIR */}
-         <TouchableOpacity
-            style={styles.primaryButton}
-            onPress={openAccordingToMode}
-            activeOpacity={0.8}
-         >
-            <Text style={styles.primaryButtonText}>
-                {isSunday 
-                  ? "🙏 Abrir Meditação" 
-                  : openMode === "IN_APP" 
-                  ? "📖 Ler Agora no App" 
-                  : "🌐 Ler no Navegador"}
-            </Text>
-         </TouchableOpacity>
-
-         {/* Alternativa */}
-         {!isSunday && (
-             <TouchableOpacity
-                style={styles.secondaryButton}
+          <View style={{ flexDirection: "row" }}>
+            <View style={{ flex: 1, marginRight: 8 }}>
+              <Button
+                title="⬅️ Anterior"
+                disabled={!prevDate}
                 onPress={() => {
-                    if (openMode === "IN_APP") openInBrowser();
-                    else setShowWebView(true);
+                  if (!prevDate) return;
+                  navigation.navigate("Reading", {
+                    date: prevDate,
+                    reference: routeReference,
+                    isSunday: isSundayIso(prevDate),
+                  });
                 }}
-             >
-                <Text style={styles.secondaryButtonText}>
-                    {openMode === "IN_APP" ? "Ou abrir no Navegador ↗" : "Ou tentar no App 📱"}
-                </Text>
-             </TouchableOpacity>
-         )}
+              />
+            </View>
 
-         {/* MARCAR COMO LIDO */}
-         {canMarkRead && (
-            <TouchableOpacity
-                style={[
-                    styles.checkButton, 
-                    isReadToday ? { backgroundColor: "#E6F7E9", borderColor: "green" } : {}
-                ]}
-                disabled={isReadToday}
-                onPress={markAsRead}
-            >
-                <Text style={[
-                    styles.checkButtonText,
-                    isReadToday ? { color: "green" } : {}
-                ]}>
-                    {isReadToday ? "✅ Leitura Concluída!" : "✔️ Marcar como Concluído"}
-                </Text>
-            </TouchableOpacity>
-         )}
-         
-         {canMarkRead && (
-            <Pressable onPress={refreshCompleted} style={{ alignSelf: "center", marginTop: 10 }}>
-                <Text style={{ fontSize: 11, color: colors.muted }}>Atualizar status</Text>
-            </Pressable>
-         )}
+            <View style={{ flex: 1 }}>
+              <Button
+                title="Próxima ➡️"
+                disabled={!nextDate}
+                onPress={() => {
+                  if (!nextDate) return;
+                  navigation.navigate("Reading", {
+                    date: nextDate,
+                    reference: routeReference,
+                    isSunday: isSundayIso(nextDate),
+                  });
+                }}
+              />
+            </View>
+          </View>
+        </View>
+      )}
+
+      {/* Multi-passagens */}
+      {!isSunday && !isNatal && passages.length > 1 && (
+        <View style={{ backgroundColor: "#fff", borderRadius: 12, padding: 12, marginBottom: 12 }}>
+          <Text style={{ fontWeight: "bold", marginBottom: 10, color: colors.text }}>
+            Leitura com {passages.length} partes — escolha uma:
+          </Text>
+
+          <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
+            {passages.map((p, idx) => (
+              <Chip
+                key={`${p}-${idx}`}
+                label={p}
+                selected={idx === selectedPassageIndex}
+                tone="secondary"
+                onPress={() => {
+                  setSelectedPassageIndex(idx);
+                  setShowWebView(false);
+                }}
+              />
+            ))}
+          </View>
+
+          <Text style={{ marginTop: 6, fontSize: 12, color: colors.muted }}>
+            Obs.: livros de 1 capítulo (Ob, Fm, Jd, 2Jo, 3Jo) abrem direto como “capítulo 1”.
+          </Text>
+        </View>
+      )}
+
+      {/* Versão */}
+      {!isSunday && (
+        <View style={{ backgroundColor: "#fff", borderRadius: 12, padding: 12, marginBottom: 12 }}>
+          <Text style={{ fontWeight: "bold", marginBottom: 10, color: colors.text }}>
+            Versão bíblica (padrão: ARC)
+          </Text>
+
+          <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
+            {(["ARC", "NVI", "ACF", "KJ"] as BibleVersion[]).map((v) => (
+              <Chip
+                key={v}
+                label={{ ARC: "ARC", NVI: "NVI", ACF: "ACF", KJ: "KJ (PT)" }[v]}
+                selected={v === version}
+                tone="primary"
+                onPress={() => selectVersion(v)}
+              />
+            ))}
+          </View>
+
+          <Text style={{ marginTop: 6, fontSize: 12, color: colors.muted }}>
+            Você pode alternar a versão a qualquer momento.
+          </Text>
+        </View>
+      )}
+
+      {/* Preferência */}
+      {!isSunday && (
+        <View style={{ backgroundColor: "#fff", borderRadius: 12, padding: 12, marginBottom: 12 }}>
+          <Text style={{ fontWeight: "bold", marginBottom: 10, color: colors.text }}>Preferência de abertura</Text>
+
+          <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
+            <Chip
+              label="Abrir no app"
+              selected={openMode === "IN_APP"}
+              tone="secondary"
+              onPress={() => selectOpenMode("IN_APP")}
+            />
+            <Chip
+              label="Abrir no navegador"
+              selected={openMode === "BROWSER"}
+              tone="secondary"
+              onPress={() => selectOpenMode("BROWSER")}
+            />
+          </View>
+
+          <Text style={{ marginTop: 6, fontSize: 12, color: colors.muted }}>
+            Isso fica salvo para as próximas leituras.
+          </Text>
+        </View>
+      )}
+
+      {/* Texto */}
+      <View style={{ backgroundColor: "#fff", borderRadius: 12, padding: 16, marginBottom: 16 }}>
+        <Text style={{ color: colors.text, lineHeight: 22 }}>
+          {isSunday
+            ? "Use este dia para revisar leituras atrasadas, orar e meditar no que Deus falou com você nesta semana."
+            : isNatal
+            ? "Hoje é dia de Natal 🎄. Você pode ler textos sobre o nascimento de Jesus e profecias messiânicas. Toque em abrir para ver sugestões."
+            : `Parte selecionada: ${selectedReferenceRaw} • Versão: ${versionLabel[version]}.`}
+        </Text>
+
+        {!isSunday && !isNatal && selectedReferenceForUrl !== selectedReferenceRaw && (
+          <Text style={{ marginTop: 8, fontSize: 12, color: colors.muted }}>
+            Ajuste automático: abrindo como “{selectedReferenceForUrl}”
+          </Text>
+        )}
+
+        {resolved.planStartDate && (
+          <Text style={{ marginTop: 10, fontSize: 11, color: colors.muted, textAlign: "center" }}>
+            Plano atemporal • início: {resolved.planStartDate} (chave {PLAN_START_DATE_KEY}) • fonte: {resolved.source}
+          </Text>
+        )}
       </View>
 
+      {/* Botões principais */}
+      <Button
+        title={
+          isSunday
+            ? "🙏 Abrir meditação"
+            : openMode === "IN_APP"
+            ? `📖 Abrir no app (${versionLabel[version]})`
+            : `🌐 Abrir no navegador (${versionLabel[version]})`
+        }
+        onPress={openAccordingToMode}
+      />
 
-      {/* 6. NAVEGAÇÃO ENTRE DIAS */}
-      {(prevItem || nextItem) && (
-        <View style={[styles.card, { marginTop: 24, flexDirection: "row", justifyContent: "space-between" }]}>
-            <TouchableOpacity
-                style={[styles.navButton, !prevItem && { opacity: 0.3 }]}
-                disabled={!prevItem}
-                onPress={() => {
-                    if (!prevItem) return;
-                    navigation.navigate("Reading", {
-                    date: prevItem.date,
-                    reference: prevItem.reference,
-                    isSunday: !!prevItem.isSunday,
-                    });
-                }}
-            >
-                <Text style={styles.navButtonText}>⬅️ Anterior</Text>
-            </TouchableOpacity>
-
-            <View style={{width: 1, backgroundColor: "#EEE"}}/>
-
-            <TouchableOpacity
-                style={[styles.navButton, !nextItem && { opacity: 0.3 }]}
-                disabled={!nextItem}
-                onPress={() => {
-                    if (!nextItem) return;
-                    navigation.navigate("Reading", {
-                    date: nextItem.date,
-                    reference: nextItem.reference,
-                    isSunday: !!nextItem.isSunday,
-                    });
-                }}
-            >
-                <Text style={styles.navButtonText}>Próxima ➡️</Text>
-            </TouchableOpacity>
-        </View>
+      {!isSunday && (
+        <>
+          <View style={{ height: 12 }} />
+          <Button
+            title={openMode === "IN_APP" ? "🌐 Abrir no navegador (alternativa)" : "📖 Abrir no app (alternativa)"}
+            onPress={() => {
+              if (openMode === "IN_APP") openInBrowser();
+              else setShowWebView(true);
+            }}
+          />
+        </>
       )}
 
+      {/* Marcar como lido */}
+      {canMarkRead && (
+        <>
+          <View style={{ height: 16 }} />
+          <Button
+            title={isReadToday ? "✅ Já marcado como lido" : "✔️ Marcar como lido"}
+            disabled={isReadToday}
+            onPress={markAsRead}
+          />
+
+          <View style={{ height: 10 }} />
+          <Pressable onPress={refreshCompleted} style={{ alignSelf: "center", paddingVertical: 8 }}>
+            <Text style={{ fontSize: 12, color: colors.muted }}>Atualizar status (se necessário)</Text>
+          </Pressable>
+        </>
+      )}
+
+      <View style={{ height: 18 }} />
     </ScrollView>
   );
 }
-
-// === ESTILOS ===
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#F4F6F8", // Fundo cinza moderno
-    padding: 20,
-  },
-  card: {
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 16,
-    // Sombra
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 5,
-    shadowOffset: { width: 0, height: 2 },
-  },
-  // Header Card
-  headerTopRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 8,
-  },
-  dateBadge: {
-    fontSize: 12,
-    fontWeight: "bold",
-    color: colors.muted,
-    textTransform: "uppercase",
-  },
-  completedBadge: {
-    fontSize: 10,
-    fontWeight: "bold",
-    color: "green",
-    backgroundColor: "#E6F7E9",
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  referenceTitle: {
-    fontSize: 26,
-    fontWeight: "bold",
-    color: colors.primary,
-    marginBottom: 4,
-  },
-  phaseSubtitle: {
-    fontSize: 14,
-    color: colors.secondary,
-    fontWeight: "500",
-  },
-  
-  // Sections
-  sectionHeader: {
-    marginBottom: 6,
-  },
-  sectionTitle: {
-    fontSize: 14,
-    fontWeight: "bold",
-    color: colors.text,
-    textTransform: "uppercase",
-    marginBottom: 8,
-  },
-  bodyText: {
-    fontSize: 15,
-    color: "#444",
-    lineHeight: 22,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: "#EEE",
-    marginVertical: 12,
-  },
-  phaseTag: {
-    marginTop: 10,
-    fontSize: 11,
-    color: colors.muted,
-    fontStyle: "italic",
-    alignSelf: "flex-end",
-  },
-  
-  // Gratidão
-  helperText: {
-    fontSize: 12,
-    color: colors.muted,
-    marginBottom: 10,
-  },
-  textInput: {
-    backgroundColor: "#F9F9F9",
-    borderRadius: 12,
-    padding: 12,
-    color: colors.text,
-    fontSize: 14,
-    minHeight: 80,
-    textAlignVertical: "top",
-    borderWidth: 1,
-    borderColor: "#EEE",
-    marginBottom: 12,
-  },
-  row: {
-    flexDirection: "row",
-  },
-  smallButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  smallButtonText: {
-    color: "#fff",
-    fontWeight: "bold",
-    fontSize: 12,
-  },
-  savedFeedback: {
-    marginTop: 10, 
-    padding: 8, 
-    backgroundColor: "#F0FFF4", 
-    borderRadius: 8
-  },
-  
-  // Settings
-  settingLabel: {
-    fontSize: 12,
-    color: colors.muted,
-    marginBottom: 6,
-    fontWeight: "600",
-  },
-  chipsContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-  },
-  
-  // Buttons Principais
-  actionExplainer: {
-    textAlign: "center",
-    fontSize: 12,
-    color: colors.muted,
-    marginBottom: 8,
-  },
-  primaryButton: {
-    backgroundColor: colors.primary,
-    paddingVertical: 16,
-    borderRadius: 14,
-    alignItems: "center",
-    shadowColor: colors.primary,
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 4,
-    marginBottom: 10,
-  },
-  primaryButtonText: {
-    color: "#fff",
-    fontSize: 17,
-    fontWeight: "bold",
-  },
-  secondaryButton: {
-    paddingVertical: 12,
-    alignItems: "center",
-    marginBottom: 16,
-  },
-  secondaryButtonText: {
-    color: colors.muted,
-    fontSize: 14,
-    textDecorationLine: "underline",
-  },
-  checkButton: {
-    backgroundColor: "#fff",
-    borderWidth: 1,
-    borderColor: colors.text,
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: "center",
-  },
-  checkButtonText: {
-    color: colors.text,
-    fontWeight: "bold",
-    fontSize: 15,
-  },
-  
-  // Nav Buttons
-  navButton: {
-    flex: 1,
-    paddingVertical: 10,
-    alignItems: "center",
-  },
-  navButtonText: {
-    color: colors.primary,
-    fontWeight: "bold",
-  },
-  
-  // WebView Styles
-  webViewHeader: {
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "#EEE",
-    backgroundColor: "#fff",
-  },
-  webViewTitle: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: colors.text,
-  },
-  webViewSubtitle: {
-    fontSize: 12,
-    color: colors.muted,
-    marginVertical: 4,
-  },
-  backButton: {
-    marginTop: 8,
-    backgroundColor: "#F4F6F8",
-    padding: 10,
-    borderRadius: 8,
-    alignItems: "center",
-  },
-  backButtonText: {
-    color: colors.primary,
-    fontWeight: "bold",
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#fff",
-  },
-  loadingText: {
-    marginTop: 10,
-    color: colors.muted,
-  },
-});

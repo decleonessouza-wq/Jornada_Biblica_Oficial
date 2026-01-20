@@ -13,7 +13,6 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect } from "@react-navigation/native";
 
 import { colors } from "../theme/colors";
-import { readingPlan } from "../data/readingPlan";
 import { restoreFromAutoBackup } from "../services/backupRestore";
 import { APP_INFO } from "../constants/appInfo";
 
@@ -22,11 +21,13 @@ import {
   resetProgress,
   markAutoRestoreDone,
   setCompletedDays,
+  calculateStreak as calcStreakFromStore,
+  // ✅ plano atemporal/overrides
+  getEffectiveReferenceForDate,
 } from "../services/progressStore";
 
 // ✅ gamificação centralizada (leve)
 import { getLevelForStreak, getNextMilestone } from "../constants/gamification";
-import { calculateStreak as calcStreakFromStore } from "../services/progressStore";
 
 // --- TIPOS ---
 type HistoryItem = {
@@ -98,10 +99,7 @@ export default function HistoryScreen() {
     [history]
   );
 
-  const gratitudeCount = useMemo(
-    () => Object.keys(gratitudeByDate).length,
-    [gratitudeByDate]
-  );
+  const gratitudeCount = useMemo(() => Object.keys(gratitudeByDate).length, [gratitudeByDate]);
 
   const loadLastBackupInfo = useCallback(async () => {
     try {
@@ -122,30 +120,52 @@ export default function HistoryScreen() {
     }
   }, []);
 
-  const buildHistory = useCallback((completed: string[]) => {
-    const completedSet = new Set(completed);
-
-    const completedReadings = readingPlan
-      .filter((day) => completedSet.has(day.date))
-      .sort((a, b) => b.date.localeCompare(a.date));
-
+  /**
+   * ✅ Histórico ATEMPORAL:
+   * - completedDays = datas reais (YYYY-MM-DD)
+   * - para cada data, resolve a referência efetiva (considera overrides da redistribuição)
+   * - ignora domingos reais (não contam como leitura)
+   */
+  const buildHistory = useCallback(async (completed: string[]) => {
     const grouped: Record<string, HistoryItem[]> = {};
 
-    for (const item of completedReadings) {
-      const month = item.date.slice(0, 7);
-      if (!grouped[month]) grouped[month] = [];
-      grouped[month].push({
-        date: item.date,
-        reference: item.reference,
-      });
+    const sorted = [...completed]
+      .filter(isIsoDateString)
+      .sort((a, b) => b.localeCompare(a)); // mais recente primeiro
+
+    for (const dateIso of sorted) {
+      try {
+        const eff = await getEffectiveReferenceForDate(dateIso);
+
+        // domingo real não entra como "leitura concluída"
+        if (eff.isSunday) continue;
+
+        const month = dateIso.slice(0, 7);
+        if (!grouped[month]) grouped[month] = [];
+
+        grouped[month].push({
+          date: dateIso,
+          reference: eff.reference,
+        });
+      } catch {
+        // fallback seguro: não quebra
+        const month = dateIso.slice(0, 7);
+        if (!grouped[month]) grouped[month] = [];
+
+        grouped[month].push({
+          date: dateIso,
+          reference: "Leitura concluída",
+        });
+      }
     }
+
     setHistory(grouped);
   }, []);
 
   const loadHistory = useCallback(async () => {
     try {
       const completed = await getCompletedDays();
-      buildHistory(completed);
+      await buildHistory(completed);
 
       // streak (meio-dia local p/ evitar bug UTC)
       const base = new Date();
@@ -153,7 +173,7 @@ export default function HistoryScreen() {
       setStreak(calcStreakFromStore(completed, base));
     } catch (err) {
       console.log("Erro ao carregar histórico", err);
-      buildHistory([]);
+      await buildHistory([]);
       setStreak(0);
     }
   }, [buildHistory]);
@@ -186,7 +206,9 @@ export default function HistoryScreen() {
       setExportJson(JSON.stringify(data, null, 2));
       Alert.alert(
         "Backup gerado",
-        `Backup gerado como texto abaixo.\nLeituras: ${completed.length}\nGratidões: ${Object.keys(gratitudeClean).length}`
+        `Backup gerado como texto abaixo.\nLeituras: ${completed.length}\nGratidões: ${
+          Object.keys(gratitudeClean).length
+        }`
       );
     } catch (err) {
       console.log("Erro ao exportar", err);
@@ -213,35 +235,37 @@ export default function HistoryScreen() {
       }
 
       const hasGratitudeInFile =
-        parsed && typeof parsed === "object" && Object.prototype.hasOwnProperty.call(parsed, "gratitudeByDate");
+        parsed &&
+        typeof parsed === "object" &&
+        Object.prototype.hasOwnProperty.call(parsed, "gratitudeByDate");
 
       const g = hasGratitudeInFile ? sanitizeGratitudeMap(parsed?.gratitudeByDate) : null;
 
       await setCompletedDays(validDates);
 
+      let gCount = 0;
+
       if (g) {
         await AsyncStorage.setItem(GRATITUDE_KEY, JSON.stringify(g));
         setGratitudeByDate(g);
+        gCount = Object.keys(g).length;
       } else {
         await loadGratitude();
+        gCount = Object.keys(gratitudeByDate).length;
       }
 
       await markAutoRestoreDone();
 
       setImportText("");
       setExportJson(null);
-      buildHistory(validDates);
+
+      await buildHistory(validDates);
 
       const base = new Date();
       base.setHours(12, 0, 0, 0);
       setStreak(calcStreakFromStore(validDates, base));
 
-      Alert.alert(
-        "Sucesso",
-        `${validDates.length} leituras restauradas 🙏\nGratidões: ${
-          g ? Object.keys(g).length : Object.keys(gratitudeByDate).length
-        }`
-      );
+      Alert.alert("Sucesso", `${validDates.length} leituras restauradas 🙏\nGratidões: ${gCount}`);
     } catch (err) {
       console.log("Erro ao importar", err);
       Alert.alert("Erro", "JSON inválido ou incompatível com a Jornada Bíblica.");
@@ -282,14 +306,10 @@ export default function HistoryScreen() {
   }
 
   function confirmResetFinal() {
-    Alert.alert(
-      "Confirmação final",
-      "Tem certeza? Suas leituras concluídas serão apagadas agora.",
-      [
-        { text: "Cancelar", style: "cancel" },
-        { text: "Apagar", style: "destructive", onPress: resetProgressNow },
-      ]
-    );
+    Alert.alert("Confirmação final", "Tem certeza? Suas leituras concluídas serão apagadas agora.", [
+      { text: "Cancelar", style: "cancel" },
+      { text: "Apagar", style: "destructive", onPress: resetProgressNow },
+    ]);
   }
 
   async function resetProgressNow() {
@@ -315,149 +335,143 @@ export default function HistoryScreen() {
   const level = useMemo(() => getLevelForStreak(streak), [streak]);
   const nextMilestone = useMemo(() => getNextMilestone(streak), [streak]);
 
-  const lastBackupLabel = lastBackupAt
-    ? formatIsoDate(lastBackupAt)
-    : "Nunca";
+  const lastBackupLabel = lastBackupAt ? formatIsoDate(lastBackupAt) : "Nunca";
 
   // --- RENDER ---
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#F4F6F8" />
-      
-      <ScrollView 
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        
+
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* HEADER */}
         <View style={{ marginBottom: 20 }}>
-            <Text style={styles.screenTitle}>Histórico & Backup</Text>
-            <Text style={styles.screenSubtitle}>
-                Gerencie seus dados e reveja sua jornada.
-            </Text>
+          <Text style={styles.screenTitle}>Histórico & Backup</Text>
+          <Text style={styles.screenSubtitle}>Gerencie seus dados e reveja sua jornada.</Text>
         </View>
 
         {/* STATUS CARD */}
         <View style={styles.card}>
-            <View style={styles.statusRow}>
-                <View style={styles.statusItem}>
-                     <Text style={styles.statusLabel}>Nível Atual</Text>
-                     <Text style={styles.statusValue}>{level.title}</Text>
-                </View>
-                <View style={styles.dividerVertical} />
-                <View style={styles.statusItem}>
-                     <Text style={styles.statusLabel}>Backup Auto</Text>
-                     <Text style={styles.statusValue}>{lastBackupLabel}</Text>
-                </View>
+          <View style={styles.statusRow}>
+            <View style={styles.statusItem}>
+              <Text style={styles.statusLabel}>Nível Atual</Text>
+              <Text style={styles.statusValue}>{level.title}</Text>
             </View>
-            
-            <View style={styles.dividerHorizontal} />
-            
-            <View style={styles.milestoneBox}>
-                {nextMilestone.next ? (
-                    <Text style={styles.milestoneText}>
-                        🚀 Próximo marco: {nextMilestone.next} dias (Faltam {nextMilestone.remaining})
-                    </Text>
-                ) : (
-                    <Text style={styles.milestoneText}>🏆 Jornada completa!</Text>
-                )}
+            <View style={styles.dividerVertical} />
+            <View style={styles.statusItem}>
+              <Text style={styles.statusLabel}>Backup Auto</Text>
+              <Text style={styles.statusValue}>{lastBackupLabel}</Text>
             </View>
+          </View>
+
+          <View style={styles.dividerHorizontal} />
+
+          <View style={styles.milestoneBox}>
+            {nextMilestone.next ? (
+              <Text style={styles.milestoneText}>
+                🚀 Próximo marco: {nextMilestone.next} dias (Faltam {nextMilestone.remaining})
+              </Text>
+            ) : (
+              <Text style={styles.milestoneText}>🏆 Jornada completa!</Text>
+            )}
+          </View>
+
+          <Text style={{ marginTop: 10, fontSize: 12, color: colors.muted, textAlign: "center" }}>
+            🙏 Gratidões registradas: {gratitudeCount}
+          </Text>
         </View>
 
         {/* CONTROLES DE DADOS (CARDS) */}
-        
+
         {/* 1. Backup Manual */}
         <View style={styles.card}>
-            <Text style={styles.cardTitle}>📥 Backup Manual (Texto)</Text>
-            <Text style={styles.cardDesc}>
-                Gere um código de texto para salvar seus dados ou cole um código para restaurar.
-            </Text>
+          <Text style={styles.cardTitle}>📥 Backup Manual (Texto)</Text>
+          <Text style={styles.cardDesc}>
+            Gere um código de texto para salvar seus dados ou cole um código para restaurar.
+          </Text>
 
-            <TouchableOpacity style={styles.buttonOutline} onPress={exportAsText}>
-                <Text style={styles.buttonOutlineText}>📄 Gerar código de backup</Text>
-            </TouchableOpacity>
+          <TouchableOpacity style={styles.buttonOutline} onPress={exportAsText}>
+            <Text style={styles.buttonOutlineText}>📄 Gerar código de backup</Text>
+          </TouchableOpacity>
 
-            {exportJson && (
-                <View style={styles.codeBlock}>
-                    <Text style={styles.codeTitle}>Copie o código abaixo:</Text>
-                    <Text selectable style={styles.codeText}>
-                        {exportJson}
-                    </Text>
-                </View>
-            )}
-
-            <View style={styles.inputContainer}>
-                 <Text style={styles.inputLabel}>Importar dados:</Text>
-                 <TextInput
-                    value={importText}
-                    onChangeText={setImportText}
-                    multiline
-                    placeholder="{ 'completedDays': ... }"
-                    placeholderTextColor="#999"
-                    style={styles.textInput}
-                 />
+          {exportJson && (
+            <View style={styles.codeBlock}>
+              <Text style={styles.codeTitle}>Copie o código abaixo:</Text>
+              <Text selectable style={styles.codeText}>
+                {exportJson}
+              </Text>
             </View>
+          )}
 
-            <TouchableOpacity style={styles.buttonPrimary} onPress={importProgress}>
-                <Text style={styles.buttonPrimaryText}>Restaurar via Texto</Text>
-            </TouchableOpacity>
+          <View style={styles.inputContainer}>
+            <Text style={styles.inputLabel}>Importar dados:</Text>
+            <TextInput
+              value={importText}
+              onChangeText={setImportText}
+              multiline
+              placeholder='{ "completedDays": ["2026-01-01", ...] }'
+              placeholderTextColor="#999"
+              style={styles.textInput}
+            />
+          </View>
+
+          <TouchableOpacity style={styles.buttonPrimary} onPress={importProgress}>
+            <Text style={styles.buttonPrimaryText}>Restaurar via Texto</Text>
+          </TouchableOpacity>
         </View>
 
         {/* 2. Recuperação Automática */}
         <View style={styles.card}>
-            <Text style={styles.cardTitle}>♻️ Recuperação Automática</Text>
-            <Text style={styles.cardDesc}>
-                Tentar recuperar dados salvos automaticamente pelo sistema (semanal).
-            </Text>
-            <TouchableOpacity style={styles.buttonSecondary} onPress={restoreAutoBackupNow}>
-                <Text style={styles.buttonSecondaryText}>Buscar Backup Automático</Text>
-            </TouchableOpacity>
+          <Text style={styles.cardTitle}>♻️ Recuperação Automática</Text>
+          <Text style={styles.cardDesc}>
+            Tentar recuperar dados salvos automaticamente pelo sistema (semanal).
+          </Text>
+          <TouchableOpacity style={styles.buttonSecondary} onPress={restoreAutoBackupNow}>
+            <Text style={styles.buttonSecondaryText}>Buscar Backup Automático</Text>
+          </TouchableOpacity>
         </View>
 
         {/* 3. Zona de Perigo */}
         <View style={[styles.card, styles.dangerCard]}>
-            <Text style={[styles.cardTitle, { color: "#D32F2F" }]}>⚠️ Zona de Perigo</Text>
-            <Text style={styles.cardDesc}>
-                Apagar todo o progresso, gratidões e histórico do aplicativo.
-            </Text>
-            <TouchableOpacity style={styles.buttonDanger} onPress={confirmReset}>
-                <Text style={styles.buttonDangerText}>Apagar Tudo</Text>
-            </TouchableOpacity>
+          <Text style={[styles.cardTitle, { color: "#D32F2F" }]}>⚠️ Zona de Perigo</Text>
+          <Text style={styles.cardDesc}>
+            Apagar todo o progresso, gratidões e histórico do aplicativo.
+          </Text>
+          <TouchableOpacity style={styles.buttonDanger} onPress={confirmReset}>
+            <Text style={styles.buttonDangerText}>Apagar Tudo</Text>
+          </TouchableOpacity>
         </View>
 
         {/* LISTA DE HISTÓRICO */}
         <Text style={styles.sectionHeader}>Sua Linha do Tempo</Text>
 
         {months.length === 0 ? (
-             <View style={styles.emptyState}>
-                 <Text style={styles.emptyStateText}>Nenhuma leitura concluída ainda.</Text>
-             </View>
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyStateText}>Nenhuma leitura concluída ainda.</Text>
+          </View>
         ) : (
-            months.map((month) => (
-                <View key={month} style={{ marginBottom: 20 }}>
-                    <Text style={styles.monthLabel}>{month}</Text>
-                    
-                    {history[month].map((item) => {
-                        const gratitude = gratitudeByDate[item.date];
-                        return (
-                            <View key={item.date} style={styles.historyItemCard}>
-                                <View style={styles.historyHeader}>
-                                    <Text style={styles.historyRef}>{item.reference}</Text>
-                                    <Text style={styles.historyDate}>{item.date}</Text>
-                                </View>
-                                
-                                {!!gratitude && (
-                                    <View style={styles.gratitudeBox}>
-                                        <Text style={styles.gratitudeText}>
-                                            🙏 "{gratitude}"
-                                        </Text>
-                                    </View>
-                                )}
-                            </View>
-                        );
-                    })}
-                </View>
-            ))
+          months.map((month) => (
+            <View key={month} style={{ marginBottom: 20 }}>
+              <Text style={styles.monthLabel}>{month}</Text>
+
+              {history[month].map((item) => {
+                const gratitude = gratitudeByDate[item.date];
+                return (
+                  <View key={item.date} style={styles.historyItemCard}>
+                    <View style={styles.historyHeader}>
+                      <Text style={styles.historyRef}>{item.reference}</Text>
+                      <Text style={styles.historyDate}>{item.date}</Text>
+                    </View>
+
+                    {!!gratitude && (
+                      <View style={styles.gratitudeBox}>
+                        <Text style={styles.gratitudeText}>🙏 "{gratitude}"</Text>
+                      </View>
+                    )}
+                  </View>
+                );
+              })}
+            </View>
+          ))
         )}
 
         <View style={{ height: 40 }} />
@@ -468,241 +482,241 @@ export default function HistoryScreen() {
 
 // === ESTILOS ===
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: "#F4F6F8",
-    },
-    scrollContent: {
-        padding: 20,
-        paddingTop: 10,
-    },
-    // Typography
-    screenTitle: {
-        fontSize: 28,
-        fontWeight: "bold",
-        color: colors.primary,
-        marginBottom: 4,
-    },
-    screenSubtitle: {
-        fontSize: 14,
-        color: colors.muted,
-        marginBottom: 8,
-    },
-    sectionHeader: {
-        fontSize: 20,
-        fontWeight: "bold",
-        color: colors.primary,
-        marginTop: 10,
-        marginBottom: 16,
-    },
-    // Cards
-    card: {
-        backgroundColor: "#fff",
-        borderRadius: 16,
-        padding: 16,
-        marginBottom: 16,
-        elevation: 2,
-        shadowColor: "#000",
-        shadowOpacity: 0.05,
-        shadowRadius: 5,
-        shadowOffset: { width: 0, height: 2 },
-    },
-    dangerCard: {
-        borderLeftWidth: 4,
-        borderLeftColor: "#D32F2F",
-    },
-    cardTitle: {
-        fontSize: 16,
-        fontWeight: "bold",
-        color: colors.text,
-        marginBottom: 4,
-    },
-    cardDesc: {
-        fontSize: 13,
-        color: colors.muted,
-        marginBottom: 12,
-        lineHeight: 18,
-    },
-    // Status Row in Card
-    statusRow: {
-        flexDirection: "row",
-        justifyContent: "space-around",
-        alignItems: "center",
-        marginBottom: 12,
-    },
-    statusItem: {
-        alignItems: "center",
-        flex: 1,
-    },
-    statusLabel: {
-        fontSize: 11,
-        textTransform: "uppercase",
-        color: colors.muted,
-        fontWeight: "bold",
-    },
-    statusValue: {
-        fontSize: 14,
-        fontWeight: "bold",
-        color: colors.primary,
-        marginTop: 2,
-    },
-    dividerVertical: {
-        width: 1,
-        height: 30,
-        backgroundColor: "#EEE",
-    },
-    dividerHorizontal: {
-        height: 1,
-        backgroundColor: "#EEE",
-        marginBottom: 12,
-    },
-    milestoneBox: {
-        backgroundColor: "#FFF9F0",
-        padding: 8,
-        borderRadius: 8,
-        alignItems: "center",
-    },
-    milestoneText: {
-        fontSize: 12,
-        color: colors.secondary,
-        fontWeight: "600",
-    },
-    // Buttons
-    buttonPrimary: {
-        backgroundColor: colors.primary,
-        paddingVertical: 12,
-        borderRadius: 10,
-        alignItems: "center",
-        marginTop: 8,
-    },
-    buttonPrimaryText: {
-        color: "#fff",
-        fontWeight: "bold",
-        fontSize: 14,
-    },
-    buttonSecondary: {
-        backgroundColor: "#F0F0F0",
-        paddingVertical: 12,
-        borderRadius: 10,
-        alignItems: "center",
-    },
-    buttonSecondaryText: {
-        color: colors.text,
-        fontWeight: "bold",
-        fontSize: 14,
-    },
-    buttonOutline: {
-        borderWidth: 1,
-        borderColor: colors.primary,
-        paddingVertical: 10,
-        borderRadius: 10,
-        alignItems: "center",
-        marginBottom: 12,
-    },
-    buttonOutlineText: {
-        color: colors.primary,
-        fontWeight: "bold",
-        fontSize: 14,
-    },
-    buttonDanger: {
-        backgroundColor: "#FFEBEE",
-        paddingVertical: 12,
-        borderRadius: 10,
-        alignItems: "center",
-    },
-    buttonDangerText: {
-        color: "#D32F2F",
-        fontWeight: "bold",
-        fontSize: 14,
-    },
-    // Inputs & Code
-    inputContainer: {
-        marginBottom: 8,
-    },
-    inputLabel: {
-        fontSize: 12,
-        fontWeight: "bold",
-        color: colors.text,
-        marginBottom: 6,
-    },
-    textInput: {
-        backgroundColor: "#F9F9F9",
-        borderWidth: 1,
-        borderColor: "#E0E0E0",
-        borderRadius: 8,
-        padding: 12,
-        minHeight: 100,
-        fontSize: 12,
-        textAlignVertical: "top",
-        color: colors.text,
-    },
-    codeBlock: {
-        backgroundColor: "#F4F6F8",
-        padding: 10,
-        borderRadius: 8,
-        marginBottom: 16,
-        borderWidth: 1,
-        borderColor: "#E0E0E0",
-    },
-    codeTitle: {
-        fontSize: 11,
-        color: colors.muted,
-        marginBottom: 4,
-    },
-    codeText: {
-        fontSize: 10,
-        fontFamily: "monospace",
-        color: colors.text,
-    },
-    // History List
-    monthLabel: {
-        fontSize: 16,
-        fontWeight: "bold",
-        color: colors.secondary,
-        marginBottom: 8,
-        marginLeft: 4,
-    },
-    historyItemCard: {
-        backgroundColor: "#fff",
-        padding: 14,
-        borderRadius: 12,
-        marginBottom: 8,
-        borderWidth: 1,
-        borderColor: "#F0F0F0",
-    },
-    historyHeader: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        alignItems: "center",
-    },
-    historyRef: {
-        fontSize: 15,
-        fontWeight: "bold",
-        color: colors.text,
-    },
-    historyDate: {
-        fontSize: 12,
-        color: colors.muted,
-    },
-    gratitudeBox: {
-        marginTop: 8,
-        backgroundColor: "#FFF9C4", // Amarelo suave
-        paddingHorizontal: 10,
-        paddingVertical: 6,
-        borderRadius: 6,
-        alignSelf: "flex-start",
-    },
-    gratitudeText: {
-        fontSize: 12,
-        color: "#5D4037", // Marrom escuro para contraste
-        fontStyle: "italic",
-    },
-    emptyState: {
-        padding: 20,
-        alignItems: "center",
-    },
-    emptyStateText: {
-        color: colors.muted,
-        fontStyle: "italic",
-    },
+  container: {
+    flex: 1,
+    backgroundColor: "#F4F6F8",
+  },
+  scrollContent: {
+    padding: 20,
+    paddingTop: 10,
+  },
+  // Typography
+  screenTitle: {
+    fontSize: 28,
+    fontWeight: "bold",
+    color: colors.primary,
+    marginBottom: 4,
+  },
+  screenSubtitle: {
+    fontSize: 14,
+    color: colors.muted,
+    marginBottom: 8,
+  },
+  sectionHeader: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: colors.primary,
+    marginTop: 10,
+    marginBottom: 16,
+  },
+  // Cards
+  card: {
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
+    shadowOffset: { width: 0, height: 2 },
+  },
+  dangerCard: {
+    borderLeftWidth: 4,
+    borderLeftColor: "#D32F2F",
+  },
+  cardTitle: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: colors.text,
+    marginBottom: 4,
+  },
+  cardDesc: {
+    fontSize: 13,
+    color: colors.muted,
+    marginBottom: 12,
+    lineHeight: 18,
+  },
+  // Status Row in Card
+  statusRow: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  statusItem: {
+    alignItems: "center",
+    flex: 1,
+  },
+  statusLabel: {
+    fontSize: 11,
+    textTransform: "uppercase",
+    color: colors.muted,
+    fontWeight: "bold",
+  },
+  statusValue: {
+    fontSize: 14,
+    fontWeight: "bold",
+    color: colors.primary,
+    marginTop: 2,
+  },
+  dividerVertical: {
+    width: 1,
+    height: 30,
+    backgroundColor: "#EEE",
+  },
+  dividerHorizontal: {
+    height: 1,
+    backgroundColor: "#EEE",
+    marginBottom: 12,
+  },
+  milestoneBox: {
+    backgroundColor: "#FFF9F0",
+    padding: 8,
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  milestoneText: {
+    fontSize: 12,
+    color: colors.secondary,
+    fontWeight: "600",
+  },
+  // Buttons
+  buttonPrimary: {
+    backgroundColor: colors.primary,
+    paddingVertical: 12,
+    borderRadius: 10,
+    alignItems: "center",
+    marginTop: 8,
+  },
+  buttonPrimaryText: {
+    color: "#fff",
+    fontWeight: "bold",
+    fontSize: 14,
+  },
+  buttonSecondary: {
+    backgroundColor: "#F0F0F0",
+    paddingVertical: 12,
+    borderRadius: 10,
+    alignItems: "center",
+  },
+  buttonSecondaryText: {
+    color: colors.text,
+    fontWeight: "bold",
+    fontSize: 14,
+  },
+  buttonOutline: {
+    borderWidth: 1,
+    borderColor: colors.primary,
+    paddingVertical: 10,
+    borderRadius: 10,
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  buttonOutlineText: {
+    color: colors.primary,
+    fontWeight: "bold",
+    fontSize: 14,
+  },
+  buttonDanger: {
+    backgroundColor: "#FFEBEE",
+    paddingVertical: 12,
+    borderRadius: 10,
+    alignItems: "center",
+  },
+  buttonDangerText: {
+    color: "#D32F2F",
+    fontWeight: "bold",
+    fontSize: 14,
+  },
+  // Inputs & Code
+  inputContainer: {
+    marginBottom: 8,
+  },
+  inputLabel: {
+    fontSize: 12,
+    fontWeight: "bold",
+    color: colors.text,
+    marginBottom: 6,
+  },
+  textInput: {
+    backgroundColor: "#F9F9F9",
+    borderWidth: 1,
+    borderColor: "#E0E0E0",
+    borderRadius: 8,
+    padding: 12,
+    minHeight: 100,
+    fontSize: 12,
+    textAlignVertical: "top",
+    color: colors.text,
+  },
+  codeBlock: {
+    backgroundColor: "#F4F6F8",
+    padding: 10,
+    borderRadius: 8,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: "#E0E0E0",
+  },
+  codeTitle: {
+    fontSize: 11,
+    color: colors.muted,
+    marginBottom: 4,
+  },
+  codeText: {
+    fontSize: 10,
+    fontFamily: "monospace",
+    color: colors.text,
+  },
+  // History List
+  monthLabel: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: colors.secondary,
+    marginBottom: 8,
+    marginLeft: 4,
+  },
+  historyItemCard: {
+    backgroundColor: "#fff",
+    padding: 14,
+    borderRadius: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: "#F0F0F0",
+  },
+  historyHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  historyRef: {
+    fontSize: 15,
+    fontWeight: "bold",
+    color: colors.text,
+  },
+  historyDate: {
+    fontSize: 12,
+    color: colors.muted,
+  },
+  gratitudeBox: {
+    marginTop: 8,
+    backgroundColor: "#FFF9C4", // Amarelo suave
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 6,
+    alignSelf: "flex-start",
+  },
+  gratitudeText: {
+    fontSize: 12,
+    color: "#5D4037", // Marrom escuro para contraste
+    fontStyle: "italic",
+  },
+  emptyState: {
+    padding: 20,
+    alignItems: "center",
+  },
+  emptyStateText: {
+    color: colors.muted,
+    fontStyle: "italic",
+  },
 });
