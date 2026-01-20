@@ -4,9 +4,11 @@ import {
   ScrollView,
   TextInput,
   Alert,
-  TouchableOpacity,
+  Pressable,
   StyleSheet,
   StatusBar,
+  Platform,
+  useWindowDimensions,
 } from "react-native";
 import { useCallback, useMemo, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -47,7 +49,9 @@ type ExportData = {
 const LAST_BACKUP_KEY = "lastAutoBackupDate";
 const GRATITUDE_KEY = "gratitudeByDate";
 
-// --- HELPERS (Lógica preservada) ---
+/* ==========================
+   HELPERS (LÓGICA PRESERVADA)
+========================== */
 
 function isIsoDateString(s: unknown): s is string {
   return typeof s === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s);
@@ -82,7 +86,176 @@ function sanitizeGratitudeMap(input: unknown): Record<string, string> {
   return out;
 }
 
+function clamp(n: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, n));
+}
+
+function shadowCard() {
+  return Platform.select({
+    android: { elevation: 3 },
+    ios: {
+      shadowColor: "#000",
+      shadowOpacity: 0.08,
+      shadowRadius: 10,
+      shadowOffset: { width: 0, height: 4 },
+    },
+    default: {},
+  }) as any;
+}
+
+function formatMonthLabel(yyyyMm: string) {
+  // "2026-01" -> "01/2026"
+  const [y, m] = yyyyMm.split("-");
+  if (!y || !m) return yyyyMm;
+  return `${m}/${y}`;
+}
+
+/* ==========================
+   UI (LOCAL)
+========================== */
+
+function Card({ children, tone }: { children: React.ReactNode; tone?: "normal" | "danger" }) {
+  return (
+    <View
+      style={[
+        styles.card,
+        shadowCard(),
+        tone === "danger" && styles.cardDanger,
+      ]}
+    >
+      {children}
+    </View>
+  );
+}
+
+function SectionTitle({
+  icon,
+  title,
+  subtitle,
+}: {
+  icon: string;
+  title: string;
+  subtitle?: string;
+}) {
+  return (
+    <View style={{ marginBottom: subtitle ? 10 : 8 }}>
+      <View style={styles.sectionTitleRow}>
+        <Text style={styles.sectionIcon}>{icon}</Text>
+        <Text style={styles.sectionTitle}>{title}</Text>
+      </View>
+      {subtitle ? <Text style={styles.sectionSubtitle}>{subtitle}</Text> : null}
+    </View>
+  );
+}
+
+function StatTile({
+  icon,
+  label,
+  value,
+  helper,
+  tone = "primary",
+}: {
+  icon: string;
+  label: string;
+  value: string;
+  helper?: string;
+  tone?: "primary" | "secondary" | "neutral";
+}) {
+  const bg =
+    tone === "primary"
+      ? "rgba(4,206,146,0.10)"
+      : tone === "secondary"
+      ? "rgba(218,165,32,0.14)"
+      : "rgba(0,0,0,0.05)";
+
+  const fg =
+    tone === "primary"
+      ? colors.primary
+      : tone === "secondary"
+      ? colors.secondary
+      : colors.text;
+
+  return (
+    <View style={[styles.statTile, { backgroundColor: bg }]}>
+      <Text style={styles.statIcon}>{icon}</Text>
+      <Text style={styles.statLabel}>{label}</Text>
+      <Text style={[styles.statValue, { color: fg }]}>{value}</Text>
+      {!!helper && <Text style={styles.statHelper}>{helper}</Text>}
+    </View>
+  );
+}
+
+function PrimaryButton({
+  title,
+  onPress,
+  danger,
+}: {
+  title: string;
+  onPress: () => void;
+  danger?: boolean;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.btnPrimary,
+        danger && { backgroundColor: "#D32F2F" },
+        pressed && { opacity: 0.95, transform: [{ scale: 0.99 }] },
+      ]}
+    >
+      <Text style={styles.btnPrimaryText}>{title}</Text>
+    </Pressable>
+  );
+}
+
+function SecondaryButton({
+  title,
+  onPress,
+}: {
+  title: string;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.btnSecondary,
+        pressed && { opacity: 0.96, transform: [{ scale: 0.99 }] },
+      ]}
+    >
+      <Text style={styles.btnSecondaryText}>{title}</Text>
+    </Pressable>
+  );
+}
+
+function OutlineButton({
+  title,
+  onPress,
+}: {
+  title: string;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.btnOutline,
+        pressed && { opacity: 0.96, transform: [{ scale: 0.99 }] },
+      ]}
+    >
+      <Text style={styles.btnOutlineText}>{title}</Text>
+    </Pressable>
+  );
+}
+
+/* ==========================
+   SCREEN
+========================== */
+
 export default function HistoryScreen() {
+  const { width } = useWindowDimensions();
+  const maxWidth = clamp(width, 360, 820);
+
   const [history, setHistory] = useState<Record<string, HistoryItem[]>>({});
   const [exportJson, setExportJson] = useState<string | null>(null);
   const [importText, setImportText] = useState("");
@@ -99,7 +272,10 @@ export default function HistoryScreen() {
     [history]
   );
 
-  const gratitudeCount = useMemo(() => Object.keys(gratitudeByDate).length, [gratitudeByDate]);
+  const gratitudeCount = useMemo(
+    () => Object.keys(gratitudeByDate).length,
+    [gratitudeByDate]
+  );
 
   const loadLastBackupInfo = useCallback(async () => {
     try {
@@ -340,383 +516,449 @@ export default function HistoryScreen() {
   // --- RENDER ---
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F4F6F8" />
+      <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {/* HEADER */}
-        <View style={{ marginBottom: 20 }}>
-          <Text style={styles.screenTitle}>Histórico & Backup</Text>
-          <Text style={styles.screenSubtitle}>Gerencie seus dados e reveja sua jornada.</Text>
-        </View>
+      <ScrollView
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingHorizontal: width >= 700 ? 24 : 16 },
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={[styles.contentWrap, { width: "100%", maxWidth, alignSelf: "center" }]}>
+          {/* HERO */}
+          <View style={styles.hero}>
+            <Text style={styles.heroTitle}>Histórico</Text>
+            <Text style={styles.heroSubtitle}>
+              Releia sua jornada, veja sua constância e gerencie backups com segurança.
+            </Text>
 
-        {/* STATUS CARD */}
-        <View style={styles.card}>
-          <View style={styles.statusRow}>
-            <View style={styles.statusItem}>
-              <Text style={styles.statusLabel}>Nível Atual</Text>
-              <Text style={styles.statusValue}>{level.title}</Text>
+            <View style={styles.statsGrid}>
+              <StatTile
+                icon="🔥"
+                label="Streak"
+                value={`${streak}`}
+                helper="dias úteis seguidos"
+                tone="secondary"
+              />
+              <StatTile
+                icon="🏅"
+                label="Nível"
+                value={level.title}
+                helper={nextMilestone.next ? `Próximo: ${nextMilestone.next} (faltam ${nextMilestone.remaining})` : "Jornada completa"}
+                tone="primary"
+              />
+              <StatTile
+                icon="🙏"
+                label="Gratidões"
+                value={`${gratitudeCount}`}
+                helper="registros"
+                tone="neutral"
+              />
             </View>
-            <View style={styles.dividerVertical} />
-            <View style={styles.statusItem}>
-              <Text style={styles.statusLabel}>Backup Auto</Text>
-              <Text style={styles.statusValue}>{lastBackupLabel}</Text>
-            </View>
+
+            <Text style={styles.heroHint}>♻️ Último backup automático: {lastBackupLabel}</Text>
           </View>
 
-          <View style={styles.dividerHorizontal} />
+          {/* BACKUP MANUAL */}
+          <Card>
+            <SectionTitle
+              icon="📥"
+              title="Backup manual (texto)"
+              subtitle="Gere um código e guarde em local seguro. Para restaurar, cole o código e toque em restaurar."
+            />
 
-          <View style={styles.milestoneBox}>
-            {nextMilestone.next ? (
-              <Text style={styles.milestoneText}>
-                🚀 Próximo marco: {nextMilestone.next} dias (Faltam {nextMilestone.remaining})
-              </Text>
-            ) : (
-              <Text style={styles.milestoneText}>🏆 Jornada completa!</Text>
+            <OutlineButton title="📄 Gerar código de backup" onPress={exportAsText} />
+
+            {!!exportJson && (
+              <View style={styles.codeBlock}>
+                <Text style={styles.codeTitle}>Copie o código abaixo:</Text>
+                <Text selectable style={styles.codeText}>
+                  {exportJson}
+                </Text>
+              </View>
             )}
-          </View>
 
-          <Text style={{ marginTop: 10, fontSize: 12, color: colors.muted, textAlign: "center" }}>
-            🙏 Gratidões registradas: {gratitudeCount}
-          </Text>
-        </View>
+            <View style={{ height: 10 }} />
 
-        {/* CONTROLES DE DADOS (CARDS) */}
-
-        {/* 1. Backup Manual */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>📥 Backup Manual (Texto)</Text>
-          <Text style={styles.cardDesc}>
-            Gere um código de texto para salvar seus dados ou cole um código para restaurar.
-          </Text>
-
-          <TouchableOpacity style={styles.buttonOutline} onPress={exportAsText}>
-            <Text style={styles.buttonOutlineText}>📄 Gerar código de backup</Text>
-          </TouchableOpacity>
-
-          {exportJson && (
-            <View style={styles.codeBlock}>
-              <Text style={styles.codeTitle}>Copie o código abaixo:</Text>
-              <Text selectable style={styles.codeText}>
-                {exportJson}
-              </Text>
-            </View>
-          )}
-
-          <View style={styles.inputContainer}>
-            <Text style={styles.inputLabel}>Importar dados:</Text>
+            <Text style={styles.inputLabel}>Importar / restaurar (cole o JSON):</Text>
             <TextInput
               value={importText}
               onChangeText={setImportText}
               multiline
-              placeholder='{ "completedDays": ["2026-01-01", ...] }'
-              placeholderTextColor="#999"
-              style={styles.textInput}
+              placeholder='{ "completedDays": ["2026-01-01", "..."], "gratitudeByDate": { "2026-01-01": "..." } }'
+              placeholderTextColor="#9aa0a6"
+              style={styles.textArea}
             />
-          </View>
 
-          <TouchableOpacity style={styles.buttonPrimary} onPress={importProgress}>
-            <Text style={styles.buttonPrimaryText}>Restaurar via Texto</Text>
-          </TouchableOpacity>
-        </View>
+            <View style={{ height: 10 }} />
+            <PrimaryButton title="✅ Restaurar via texto" onPress={importProgress} />
+          </Card>
 
-        {/* 2. Recuperação Automática */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>♻️ Recuperação Automática</Text>
-          <Text style={styles.cardDesc}>
-            Tentar recuperar dados salvos automaticamente pelo sistema (semanal).
-          </Text>
-          <TouchableOpacity style={styles.buttonSecondary} onPress={restoreAutoBackupNow}>
-            <Text style={styles.buttonSecondaryText}>Buscar Backup Automático</Text>
-          </TouchableOpacity>
-        </View>
+          {/* BACKUP AUTOMÁTICO */}
+          <Card>
+            <SectionTitle
+              icon="♻️"
+              title="Recuperação automática"
+              subtitle="Busca um backup automático semanal (se existir) e restaura com segurança."
+            />
+            <SecondaryButton title="Buscar backup automático" onPress={restoreAutoBackupNow} />
+          </Card>
 
-        {/* 3. Zona de Perigo */}
-        <View style={[styles.card, styles.dangerCard]}>
-          <Text style={[styles.cardTitle, { color: "#D32F2F" }]}>⚠️ Zona de Perigo</Text>
-          <Text style={styles.cardDesc}>
-            Apagar todo o progresso, gratidões e histórico do aplicativo.
-          </Text>
-          <TouchableOpacity style={styles.buttonDanger} onPress={confirmReset}>
-            <Text style={styles.buttonDangerText}>Apagar Tudo</Text>
-          </TouchableOpacity>
-        </View>
+          {/* ZONA DE PERIGO */}
+          <Card tone="danger">
+            <SectionTitle
+              icon="⚠️"
+              title="Zona de perigo"
+              subtitle="Apaga leituras concluídas, streak, histórico e gratidões."
+            />
+            <PrimaryButton title="🧨 Apagar tudo" onPress={confirmReset} danger />
+            <Text style={styles.dangerHint}>
+              Essa ação não pode ser desfeita.
+            </Text>
+          </Card>
 
-        {/* LISTA DE HISTÓRICO */}
-        <Text style={styles.sectionHeader}>Sua Linha do Tempo</Text>
+          {/* LINHA DO TEMPO */}
+          <Card>
+            <SectionTitle
+              icon="🗓️"
+              title="Sua linha do tempo"
+              subtitle="Leituras concluídas (domingos não entram) + gratidão quando houver."
+            />
 
-        {months.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyStateText}>Nenhuma leitura concluída ainda.</Text>
-          </View>
-        ) : (
-          months.map((month) => (
-            <View key={month} style={{ marginBottom: 20 }}>
-              <Text style={styles.monthLabel}>{month}</Text>
-
-              {history[month].map((item) => {
-                const gratitude = gratitudeByDate[item.date];
-                return (
-                  <View key={item.date} style={styles.historyItemCard}>
-                    <View style={styles.historyHeader}>
-                      <Text style={styles.historyRef}>{item.reference}</Text>
-                      <Text style={styles.historyDate}>{item.date}</Text>
+            {months.length === 0 ? (
+              <View style={styles.emptyBox}>
+                <Text style={styles.emptyText}>Nenhuma leitura concluída ainda.</Text>
+              </View>
+            ) : (
+              <View style={{ gap: 14 }}>
+                {months.map((month) => (
+                  <View key={month} style={styles.monthBlock}>
+                    <View style={styles.monthHeaderRow}>
+                      <Text style={styles.monthTitle}>{formatMonthLabel(month)}</Text>
+                      <Text style={styles.monthCount}>{history[month]?.length ?? 0} itens</Text>
                     </View>
 
-                    {!!gratitude && (
-                      <View style={styles.gratitudeBox}>
-                        <Text style={styles.gratitudeText}>🙏 "{gratitude}"</Text>
-                      </View>
-                    )}
-                  </View>
-                );
-              })}
-            </View>
-          ))
-        )}
+                    <View style={{ gap: 10 }}>
+                      {history[month].map((item) => {
+                        const gratitude = gratitudeByDate[item.date];
 
-        <View style={{ height: 40 }} />
+                        return (
+                          <View key={item.date} style={styles.historyItemCard}>
+                            <View style={styles.historyHeader}>
+                              <Text style={styles.historyRef} numberOfLines={2}>
+                                {item.reference}
+                              </Text>
+                              <Text style={styles.historyDate}>{item.date}</Text>
+                            </View>
+
+                            {!!gratitude && (
+                              <View style={styles.gratitudeBox}>
+                                <Text style={styles.gratitudeTitle}>🙏 Gratidão</Text>
+                                <Text style={styles.gratitudeText}>"{gratitude}"</Text>
+                              </View>
+                            )}
+                          </View>
+                        );
+                      })}
+                    </View>
+                  </View>
+                ))}
+              </View>
+            )}
+          </Card>
+
+          {/* INFO APP */}
+          <Text style={styles.footerInfo}>
+            {APP_INFO.name} • v{APP_INFO.version}
+          </Text>
+
+          <View style={{ height: 26 }} />
+        </View>
       </ScrollView>
     </View>
   );
 }
 
-// === ESTILOS ===
+/* ==========================
+   STYLES
+========================== */
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F4F6F8",
+    backgroundColor: colors.background,
   },
   scrollContent: {
-    padding: 20,
     paddingTop: 10,
+    paddingBottom: 20,
   },
-  // Typography
-  screenTitle: {
+  contentWrap: {
+    gap: 12,
+  },
+
+  hero: {
+    backgroundColor: "#fff",
+    borderRadius: 18,
+    padding: 16,
+    ...shadowCard(),
+  },
+  heroTitle: {
     fontSize: 28,
-    fontWeight: "bold",
+    fontWeight: "900",
     color: colors.primary,
-    marginBottom: 4,
+    marginBottom: 6,
   },
-  screenSubtitle: {
+  heroSubtitle: {
     fontSize: 14,
     color: colors.muted,
-    marginBottom: 8,
+    lineHeight: 19,
   },
-  sectionHeader: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: colors.primary,
+  heroHint: {
     marginTop: 10,
-    marginBottom: 16,
+    fontSize: 12,
+    color: colors.muted,
   },
-  // Cards
+
+  statsGrid: {
+    marginTop: 12,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+  },
+  statTile: {
+    flexGrow: 1,
+    flexBasis: "31%",
+    minWidth: 120,
+    borderRadius: 18,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: "rgba(0,0,0,0.06)",
+  },
+  statIcon: {
+    fontSize: 18,
+    marginBottom: 6,
+  },
+  statLabel: {
+    fontSize: 12,
+    color: colors.muted,
+    fontWeight: "800",
+  },
+  statValue: {
+    marginTop: 6,
+    fontSize: 16,
+    fontWeight: "900",
+  },
+  statHelper: {
+    marginTop: 4,
+    fontSize: 12,
+    color: colors.muted,
+    lineHeight: 16,
+  },
+
   card: {
     backgroundColor: "#fff",
-    borderRadius: 16,
+    borderRadius: 18,
     padding: 16,
-    marginBottom: 16,
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 5,
-    shadowOffset: { width: 0, height: 2 },
   },
-  dangerCard: {
+  cardDanger: {
     borderLeftWidth: 4,
     borderLeftColor: "#D32F2F",
   },
-  cardTitle: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: colors.text,
+
+  sectionTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
     marginBottom: 4,
   },
-  cardDesc: {
-    fontSize: 13,
-    color: colors.muted,
-    marginBottom: 12,
-    lineHeight: 18,
+  sectionIcon: {
+    fontSize: 16,
   },
-  // Status Row in Card
-  statusRow: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    alignItems: "center",
-    marginBottom: 12,
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: "900",
+    color: colors.text,
   },
-  statusItem: {
-    alignItems: "center",
-    flex: 1,
-  },
-  statusLabel: {
-    fontSize: 11,
-    textTransform: "uppercase",
-    color: colors.muted,
-    fontWeight: "bold",
-  },
-  statusValue: {
-    fontSize: 14,
-    fontWeight: "bold",
-    color: colors.primary,
-    marginTop: 2,
-  },
-  dividerVertical: {
-    width: 1,
-    height: 30,
-    backgroundColor: "#EEE",
-  },
-  dividerHorizontal: {
-    height: 1,
-    backgroundColor: "#EEE",
-    marginBottom: 12,
-  },
-  milestoneBox: {
-    backgroundColor: "#FFF9F0",
-    padding: 8,
-    borderRadius: 8,
-    alignItems: "center",
-  },
-  milestoneText: {
+  sectionSubtitle: {
     fontSize: 12,
-    color: colors.secondary,
-    fontWeight: "600",
+    color: colors.muted,
+    lineHeight: 16,
   },
-  // Buttons
-  buttonPrimary: {
+
+  btnPrimary: {
     backgroundColor: colors.primary,
-    paddingVertical: 12,
-    borderRadius: 10,
+    paddingVertical: 14,
+    borderRadius: 14,
     alignItems: "center",
-    marginTop: 8,
+    justifyContent: "center",
   },
-  buttonPrimaryText: {
+  btnPrimaryText: {
     color: "#fff",
-    fontWeight: "bold",
     fontSize: 14,
+    fontWeight: "900",
+    letterSpacing: 0.2,
   },
-  buttonSecondary: {
-    backgroundColor: "#F0F0F0",
-    paddingVertical: 12,
-    borderRadius: 10,
+
+  btnSecondary: {
+    backgroundColor: "rgba(0,0,0,0.06)",
+    paddingVertical: 14,
+    borderRadius: 14,
     alignItems: "center",
+    justifyContent: "center",
   },
-  buttonSecondaryText: {
+  btnSecondaryText: {
     color: colors.text,
-    fontWeight: "bold",
     fontSize: 14,
+    fontWeight: "900",
+    letterSpacing: 0.2,
   },
-  buttonOutline: {
+
+  btnOutline: {
     borderWidth: 1,
-    borderColor: colors.primary,
-    paddingVertical: 10,
-    borderRadius: 10,
+    borderColor: "rgba(0,0,0,0.12)",
+    paddingVertical: 12,
+    borderRadius: 14,
     alignItems: "center",
-    marginBottom: 12,
+    justifyContent: "center",
   },
-  buttonOutlineText: {
+  btnOutlineText: {
     color: colors.primary,
-    fontWeight: "bold",
     fontSize: 14,
+    fontWeight: "900",
   },
-  buttonDanger: {
-    backgroundColor: "#FFEBEE",
-    paddingVertical: 12,
-    borderRadius: 10,
-    alignItems: "center",
-  },
-  buttonDangerText: {
-    color: "#D32F2F",
-    fontWeight: "bold",
-    fontSize: 14,
-  },
-  // Inputs & Code
-  inputContainer: {
-    marginBottom: 8,
-  },
-  inputLabel: {
-    fontSize: 12,
-    fontWeight: "bold",
-    color: colors.text,
-    marginBottom: 6,
-  },
-  textInput: {
-    backgroundColor: "#F9F9F9",
-    borderWidth: 1,
-    borderColor: "#E0E0E0",
-    borderRadius: 8,
-    padding: 12,
-    minHeight: 100,
-    fontSize: 12,
-    textAlignVertical: "top",
-    color: colors.text,
-  },
+
   codeBlock: {
-    backgroundColor: "#F4F6F8",
-    padding: 10,
-    borderRadius: 8,
-    marginBottom: 16,
+    marginTop: 12,
+    backgroundColor: "#f6f7f8",
+    borderRadius: 14,
+    padding: 12,
     borderWidth: 1,
-    borderColor: "#E0E0E0",
+    borderColor: "rgba(0,0,0,0.06)",
   },
   codeTitle: {
-    fontSize: 11,
+    fontSize: 12,
     color: colors.muted,
-    marginBottom: 4,
+    marginBottom: 6,
+    fontWeight: "800",
   },
   codeText: {
     fontSize: 10,
-    fontFamily: "monospace",
+    fontFamily: Platform.select({ ios: "Menlo", android: "monospace", default: "monospace" }),
     color: colors.text,
   },
-  // History List
-  monthLabel: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: colors.secondary,
-    marginBottom: 8,
-    marginLeft: 4,
+
+  inputLabel: {
+    fontSize: 12,
+    fontWeight: "800",
+    color: colors.text,
+    marginBottom: 6,
   },
+  textArea: {
+    minHeight: 120,
+    backgroundColor: "#f6f7f8",
+    borderRadius: 14,
+    padding: 12,
+    color: colors.text,
+    borderWidth: 1,
+    borderColor: "rgba(0,0,0,0.06)",
+    textAlignVertical: "top",
+  },
+
+  dangerHint: {
+    marginTop: 10,
+    fontSize: 12,
+    color: "#B71C1C",
+    fontWeight: "700",
+    textAlign: "center",
+  },
+
+  emptyBox: {
+    backgroundColor: "rgba(0,0,0,0.04)",
+    padding: 14,
+    borderRadius: 14,
+    alignItems: "center",
+  },
+  emptyText: {
+    color: colors.muted,
+    fontStyle: "italic",
+  },
+
+  monthBlock: {
+    borderWidth: 1,
+    borderColor: "rgba(0,0,0,0.06)",
+    borderRadius: 16,
+    padding: 12,
+  },
+  monthHeaderRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "baseline",
+    marginBottom: 10,
+  },
+  monthTitle: {
+    fontSize: 14,
+    fontWeight: "900",
+    color: colors.secondary,
+  },
+  monthCount: {
+    fontSize: 12,
+    color: colors.muted,
+    fontWeight: "800",
+  },
+
   historyItemCard: {
     backgroundColor: "#fff",
-    padding: 14,
-    borderRadius: 12,
-    marginBottom: 8,
+    borderRadius: 14,
+    padding: 12,
     borderWidth: 1,
-    borderColor: "#F0F0F0",
+    borderColor: "rgba(0,0,0,0.06)",
   },
   historyHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
+    gap: 10,
+    alignItems: "flex-start",
   },
   historyRef: {
-    fontSize: 15,
-    fontWeight: "bold",
+    flex: 1,
+    fontSize: 14,
+    fontWeight: "900",
     color: colors.text,
+    lineHeight: 19,
   },
   historyDate: {
     fontSize: 12,
     color: colors.muted,
+    fontWeight: "700",
   },
+
   gratitudeBox: {
-    marginTop: 8,
-    backgroundColor: "#FFF9C4", // Amarelo suave
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 6,
-    alignSelf: "flex-start",
+    marginTop: 10,
+    backgroundColor: "rgba(218,165,32,0.14)",
+    padding: 10,
+    borderRadius: 14,
+    borderLeftWidth: 4,
+    borderLeftColor: colors.secondary,
+  },
+  gratitudeTitle: {
+    fontSize: 12,
+    fontWeight: "900",
+    color: colors.secondary,
+    marginBottom: 6,
+    textTransform: "uppercase",
   },
   gratitudeText: {
+    fontSize: 13,
+    color: colors.text,
+    lineHeight: 18,
+    fontStyle: "italic",
+  },
+
+  footerInfo: {
+    marginTop: 2,
+    textAlign: "center",
     fontSize: 12,
-    color: "#5D4037", // Marrom escuro para contraste
-    fontStyle: "italic",
-  },
-  emptyState: {
-    padding: 20,
-    alignItems: "center",
-  },
-  emptyStateText: {
     color: colors.muted,
-    fontStyle: "italic",
   },
 });

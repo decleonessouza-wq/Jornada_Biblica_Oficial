@@ -1,160 +1,208 @@
-import { View, ScrollView, Text, StyleSheet, StatusBar } from "react-native";
+import React from "react";
+import { View, ScrollView, Text, StyleSheet, StatusBar, Platform } from "react-native";
 import { APP_INFO } from "../constants/appInfo";
 import { colors } from "../theme/colors";
 
-export default function PrivacyScreen() {
-  const updatedAt = "2026-01-07"; // Data de atualização
+const UPDATED_AT = "2026-01-07";
 
+function shadowCard() {
+  return Platform.select({
+    android: { elevation: 3 },
+    ios: {
+      shadowColor: "#000",
+      shadowOpacity: 0.08,
+      shadowRadius: 14,
+      shadowOffset: { width: 0, height: 8 },
+    },
+    default: {},
+  }) as any;
+}
+
+export default function PrivacyScreen() {
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F4F6F8" />
-      
-      <ScrollView 
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        
-        {/* HEADER */}
-        <View style={{ marginBottom: 20, alignItems: "center" }}>
-          <Text style={styles.screenTitle}>Política de Privacidade</Text>
-          <Text style={styles.screenSubtitle}>
+      <StatusBar barStyle="dark-content" backgroundColor={stylesTokens.bg} />
+
+      {/* Glow decorativo */}
+      <View pointerEvents="none" style={styles.glowTopLeft} />
+      <View pointerEvents="none" style={styles.glowMidRight} />
+
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        {/* HERO */}
+        <View style={[styles.hero, shadowCard()]}>
+          <Text style={styles.title}>Política de Privacidade</Text>
+          <Text style={styles.subtitle}>
             {APP_INFO.name} • v{APP_INFO.version}
           </Text>
-          <Text style={styles.updatedAt}>Atualizado em {updatedAt}</Text>
+          <Text style={styles.updatedAt}>Atualizado em {UPDATED_AT}</Text>
         </View>
 
-        {/* CARD DE CONTEÚDO */}
-        <View style={styles.card}>
-          
-          <View style={styles.section}>
-             <Text style={styles.sectionTitle}>1) Dados coletados</Text>
-             <Text style={styles.paragraph}>
-               O {APP_INFO.name} não coleta dados pessoais para servidores próprios. O app salva localmente no seu dispositivo informações de uso necessárias para funcionar, como: dias concluídos (“completedDays”) e preferências (ex.: versão bíblica selecionada).
-             </Text>
-          </View>
+        {/* CARD PRINCIPAL */}
+        <View style={[styles.card, shadowCard()]}>
+          <Section title="1) Dados coletados">
+            O {APP_INFO.name} não coleta dados pessoais para servidores próprios. O app salva localmente no
+            seu dispositivo apenas informações necessárias para funcionamento, como dias concluídos
+            (“completedDays”) e preferências de leitura.
+          </Section>
 
-          <View style={styles.section}>
-             <Text style={styles.sectionTitle}>2) Onde os dados ficam</Text>
-             <Text style={styles.paragraph}>
-               Os dados ficam armazenados no armazenamento local do seu dispositivo (AsyncStorage). Eles podem ser apagados se você remover o app, limpar dados do app ou executar o “reset” nas configurações.
-             </Text>
-          </View>
+          <Section title="2) Onde os dados ficam">
+            Os dados ficam armazenados localmente no seu dispositivo (AsyncStorage). Eles podem ser apagados
+            ao remover o app, limpar dados do aplicativo ou executar o reset nas configurações.
+          </Section>
 
-          <View style={styles.section}>
-             <Text style={styles.sectionTitle}>3) Compartilhamento</Text>
-             <Text style={styles.paragraph}>
-               O app não compartilha seus dados com terceiros. Quando você exporta backup como texto, você escolhe se irá copiar/guardar/compartilhar esse conteúdo por conta própria.
-             </Text>
-          </View>
+          <Section title="3) Compartilhamento">
+            O app não compartilha dados com terceiros. Caso você exporte um backup, o controle sobre
+            armazenamento ou envio desse conteúdo é exclusivamente seu.
+          </Section>
 
-          <View style={styles.section}>
-             <Text style={styles.sectionTitle}>4) Links e conteúdo de terceiros</Text>
-             <Text style={styles.paragraph}>
-               O app pode abrir conteúdo bíblico em sites de terceiros (ex.: BibleGateway, Bíblia Online), dentro do WebView ou navegador. Esses serviços podem coletar dados de navegação conforme as políticas deles. Ao acessar sites externos, você estará sujeito aos termos e políticas desses provedores.
-             </Text>
-          </View>
+          <Section title="4) Conteúdo e links externos">
+            O aplicativo pode abrir conteúdos bíblicos em sites de terceiros (como BibleGateway ou Bíblia
+            Online). Esses serviços seguem suas próprias políticas de privacidade e podem coletar dados de
+            navegação.
+          </Section>
 
-          <View style={styles.section}>
-             <Text style={styles.sectionTitle}>5) Segurança</Text>
-             <Text style={styles.paragraph}>
-               O app não envia dados para um servidor próprio. Ainda assim, nenhum sistema é 100% seguro. Você é responsável por manter seu dispositivo protegido e por guardar backups exportados com cuidado.
-             </Text>
-          </View>
+          <Section title="5) Segurança">
+            Nenhum sistema é 100% seguro. Embora o {APP_INFO.name} não envie dados para servidores próprios,
+            você é responsável por proteger seu dispositivo e guardar seus backups com cuidado.
+          </Section>
 
-          <View style={styles.section}>
-             <Text style={styles.sectionTitle}>6) Seus controles</Text>
-             <Text style={styles.paragraph}>
-               Você pode: (a) exportar seu backup; (b) importar um backup; (c) restaurar do backup automático; (d) resetar e apagar todo o progresso usando a tela de Configurações.
-             </Text>
-          </View>
+          <Section title="6) Seus controles">
+            Você pode exportar e importar backups, restaurar backups automáticos e apagar todo o progresso
+            diretamente pela tela de Configurações.
+          </Section>
 
-          <View style={styles.section}>
-             <Text style={styles.sectionTitle}>7) Alterações desta política</Text>
-             <Text style={styles.paragraph}>
-               Esta Política pode ser atualizada. A data de atualização será revisada nesta tela. O uso contínuo do app após alterações indica aceitação da versão atual.
-             </Text>
-          </View>
+          <Section title="7) Alterações desta política">
+            Esta Política de Privacidade pode ser atualizada periodicamente. A data da última atualização
+            estará sempre visível nesta tela.
+          </Section>
 
-          {/* Seção de Contato Destacada */}
+          {/* CONTATO */}
           <View style={styles.contactBox}>
-             <Text style={[styles.sectionTitle, { color: colors.primary, marginBottom: 8 }]}>
-                8) Contato
-             </Text>
-             
-             <Text style={styles.contactText}>
-                @2026 - Direitos Reservados.
-             </Text>
-             
-             <View style={styles.divider} />
-             
-             <Text style={styles.contactLabel}>Responsável:</Text>
-             <Text style={styles.contactValue}>Decleones Andrade de Souza</Text>
+            <Text style={styles.contactTitle}>8) Contato</Text>
 
-             <Text style={styles.contactLabel}>Cel/WhatsApp:</Text>
-             <Text style={styles.contactValue}>+55 66 99640-6038</Text>
+            <Text style={styles.contactHighlight}>© {new Date().getFullYear()} – Direitos Reservados</Text>
 
-             <Text style={styles.contactLabel}>E-mail:</Text>
-             <Text style={styles.contactValue}>Decleones@gmail.com</Text>
+            <View style={styles.divider} />
+
+            <ContactRow label="Responsável" value="Decleones Andrade de Souza" />
+            <ContactRow label="WhatsApp" value="+55 66 99640-6038" />
+            <ContactRow label="E-mail" value="Decleones@gmail.com" />
           </View>
 
           <Text style={styles.footerText}>
             © {new Date().getFullYear()} {APP_INFO.name}
           </Text>
-
         </View>
 
-        <View style={{ height: 40 }} />
+        <View style={{ height: 30 }} />
       </ScrollView>
     </View>
   );
 }
 
-// === ESTILOS ===
+/* ======================
+   COMPONENTES AUX
+====================== */
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <View style={styles.section}>
+      <Text style={styles.sectionTitle}>{title}</Text>
+      <Text style={styles.paragraph}>{children}</Text>
+    </View>
+  );
+}
+
+function ContactRow({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={{ marginBottom: 8 }}>
+      <Text style={styles.contactLabel}>{label}</Text>
+      <Text style={styles.contactValue}>{value}</Text>
+    </View>
+  );
+}
+
+/* ======================
+   STYLES
+====================== */
+
+const stylesTokens = {
+  bg: "#F4F6F8",
+  card: "#FFFFFF",
+  border: "rgba(0,0,0,0.06)",
+};
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F4F6F8",
+    backgroundColor: stylesTokens.bg,
   },
   scrollContent: {
-    padding: 20,
-    paddingTop: 10,
+    paddingHorizontal: 16,
+    paddingTop: 18,
+    paddingBottom: 24,
   },
-  // Header
-  screenTitle: {
-    fontSize: 24,
-    fontWeight: "bold",
+
+  // glow
+  glowTopLeft: {
+    position: "absolute",
+    top: -160,
+    left: -150,
+    width: 360,
+    height: 360,
+    borderRadius: 999,
+    backgroundColor: "rgba(4,206,146,0.10)",
+  },
+  glowMidRight: {
+    position: "absolute",
+    top: 240,
+    right: -180,
+    width: 420,
+    height: 420,
+    borderRadius: 999,
+    backgroundColor: "rgba(218,165,32,0.10)",
+  },
+
+  hero: {
+    backgroundColor: "#fff",
+    borderRadius: 18,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: stylesTokens.border,
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  title: {
+    fontSize: 26,
+    fontWeight: "900",
     color: colors.primary,
   },
-  screenSubtitle: {
-    fontSize: 14,
+  subtitle: {
+    marginTop: 4,
+    fontSize: 13,
     color: colors.muted,
-    marginTop: 2,
   },
   updatedAt: {
+    marginTop: 6,
     fontSize: 12,
     color: colors.muted,
-    marginTop: 4,
     fontStyle: "italic",
   },
-  // Card Principal
+
   card: {
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    padding: 20,
-    marginTop: 16,
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 5,
-    shadowOffset: { width: 0, height: 2 },
+    backgroundColor: stylesTokens.card,
+    borderRadius: 22,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: stylesTokens.border,
   },
-  // Seções de Texto
+
   section: {
     marginBottom: 16,
   },
   sectionTitle: {
     fontSize: 15,
-    fontWeight: "bold",
+    fontWeight: "900",
     color: colors.text,
     marginBottom: 6,
   },
@@ -164,38 +212,42 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     textAlign: "justify",
   },
-  // Box de Contato
+
   contactBox: {
-    backgroundColor: "#F9F9F9",
+    backgroundColor: "rgba(4,206,146,0.08)",
+    borderRadius: 18,
     padding: 16,
-    borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#EEE",
+    borderColor: "rgba(4,206,146,0.16)",
     marginTop: 10,
-    marginBottom: 10,
   },
-  contactText: {
-    fontSize: 14,
+  contactTitle: {
+    fontSize: 15,
+    fontWeight: "900",
+    color: colors.primary,
+    marginBottom: 8,
+  },
+  contactHighlight: {
+    fontSize: 13,
+    fontWeight: "700",
     color: colors.text,
     textAlign: "center",
-    fontWeight: "bold",
   },
   divider: {
     height: 1,
-    backgroundColor: "#E0E0E0",
+    backgroundColor: "rgba(0,0,0,0.12)",
     marginVertical: 10,
   },
   contactLabel: {
     fontSize: 12,
     color: colors.muted,
-    marginTop: 6,
   },
   contactValue: {
     fontSize: 14,
     color: colors.text,
-    fontWeight: "500",
+    fontWeight: "600",
   },
-  // Footer
+
   footerText: {
     fontSize: 12,
     color: colors.muted,

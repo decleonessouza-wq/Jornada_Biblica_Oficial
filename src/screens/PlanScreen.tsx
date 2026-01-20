@@ -3,9 +3,11 @@ import {
   Text,
   ScrollView,
   Modal,
-  TouchableOpacity,
+  Pressable,
   StyleSheet,
   StatusBar,
+  Platform,
+  useWindowDimensions,
 } from "react-native";
 import { useCallback, useMemo, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -86,12 +88,28 @@ function formatDdMm(iso: string) {
   return `${parts[2]}/${parts[1]}`;
 }
 
+function clamp(n: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, n));
+}
+
+function shadowCard() {
+  return Platform.select({
+    android: { elevation: 3 },
+    ios: {
+      shadowColor: "#000",
+      shadowOpacity: 0.08,
+      shadowRadius: 10,
+      shadowOffset: { width: 0, height: 4 },
+    },
+    default: {},
+  }) as any;
+}
+
 /**
  * Mapeia as fases "legadas" (por datas 2026) para offsets do readingPlan atual.
  * Assim, cada fase vira um intervalo fixo do PLANO (offsets), e a data real depende do planStartDate.
  */
 function buildPhaseOffsetMap() {
-  // cache simples por execução
   const dateToOffset = new Map<string, number>();
   for (let i = 0; i < readingPlan.length; i++) {
     const d = readingPlan[i]?.date;
@@ -118,14 +136,113 @@ function buildPhaseOffsetMap() {
   });
 }
 
+/* ==========================
+   UI (LOCAL)
+========================== */
+
+function Card({ children }: { children: React.ReactNode }) {
+  return <View style={[styles.card, shadowCard()]}>{children}</View>;
+}
+
+function SectionTitle({
+  icon,
+  title,
+  subtitle,
+}: {
+  icon: string;
+  title: string;
+  subtitle?: string;
+}) {
+  return (
+    <View style={{ marginBottom: subtitle ? 10 : 8 }}>
+      <View style={styles.sectionTitleRow}>
+        <Text style={styles.sectionIcon}>{icon}</Text>
+        <Text style={styles.sectionTitle}>{title}</Text>
+      </View>
+      {subtitle ? <Text style={styles.sectionSubtitle}>{subtitle}</Text> : null}
+    </View>
+  );
+}
+
+function StatTile({
+  icon,
+  label,
+  value,
+  helper,
+  tone = "primary",
+}: {
+  icon: string;
+  label: string;
+  value: string;
+  helper?: string;
+  tone?: "primary" | "secondary" | "neutral";
+}) {
+  const bg =
+    tone === "primary"
+      ? "rgba(4,206,146,0.10)"
+      : tone === "secondary"
+      ? "rgba(218,165,32,0.14)"
+      : "rgba(0,0,0,0.05)";
+
+  const fg =
+    tone === "primary"
+      ? colors.primary
+      : tone === "secondary"
+      ? colors.secondary
+      : colors.text;
+
+  return (
+    <View style={[styles.statTile, { backgroundColor: bg }]}>
+      <Text style={styles.statIcon}>{icon}</Text>
+      <Text style={styles.statLabel}>{label}</Text>
+      <Text style={[styles.statValue, { color: fg }]}>{value}</Text>
+      {!!helper && <Text style={styles.statHelper}>{helper}</Text>}
+    </View>
+  );
+}
+
+function Pill({
+  label,
+  tone = "neutral",
+}: {
+  label: string;
+  tone?: "neutral" | "info" | "warn";
+}) {
+  const bg =
+    tone === "info"
+      ? "rgba(4,206,146,0.12)"
+      : tone === "warn"
+      ? "rgba(218,165,32,0.18)"
+      : "rgba(0,0,0,0.06)";
+  const fg =
+    tone === "info"
+      ? colors.primary
+      : tone === "warn"
+      ? colors.secondary
+      : colors.muted;
+
+  return (
+    <View style={[styles.pill, { backgroundColor: bg }]}>
+      <Text style={[styles.pillText, { color: fg }]}>{label}</Text>
+    </View>
+  );
+}
+
+/* ==========================
+   SCREEN
+========================== */
+
 export default function PlanScreen() {
+  const { width } = useWindowDimensions();
+  const maxWidth = clamp(width, 360, 820);
+
   const [completedDays, setCompletedDays] = useState<string[]>([]);
   const [selectedPhase, setSelectedPhase] = useState<Phase | null>(null);
 
   // ✅ plano atemporal
   const [planStartDate, setPlanStartDateState] = useState<string | null>(null);
 
-  // ✅ Experiência Espiritual: gratidão por data
+  // ✅ gratidão por data
   const [gratitudeByDate, setGratitudeByDate] = useState<Record<string, string>>({});
 
   const loadCompletedDays = useCallback(async () => {
@@ -160,7 +277,6 @@ export default function PlanScreen() {
     }
   }, []);
 
-  // ✅ Atualiza sempre que a tela ganhar foco
   useFocusEffect(
     useCallback(() => {
       loadCompletedDays();
@@ -172,6 +288,13 @@ export default function PlanScreen() {
   const totalGratitudes = useMemo(() => Object.keys(gratitudeByDate).length, [gratitudeByDate]);
 
   const phaseOffsetMap = useMemo(() => buildPhaseOffsetMap(), []);
+
+  const totalUsefulDays = useMemo(() => readingPlan.filter((d) => !d.isSunday).length, []);
+  const completedUsefulDays = useMemo(() => completedDays.length, [completedDays]);
+  const totalProgressPercent = useMemo(() => {
+    if (!planStartDate || totalUsefulDays === 0) return 0;
+    return Math.round((completedUsefulDays / totalUsefulDays) * 100);
+  }, [completedUsefulDays, planStartDate, totalUsefulDays]);
 
   /**
    * Progresso por fase (ATEMPORAL):
@@ -186,7 +309,7 @@ export default function PlanScreen() {
     for (let off = startOffset; off <= endOffset; off++) {
       const item = readingPlan[off];
       if (!item) continue;
-      if (item.isSunday) continue; // domingo do plano é livre
+      if (item.isSunday) continue;
 
       total += 1;
       const dateIso = addDaysIso(startIso, off);
@@ -204,22 +327,16 @@ export default function PlanScreen() {
     let count = 0;
     for (const dateIso of Object.keys(gratitudeByDate)) {
       if (dateIso < startDate || dateIso > endDate) continue;
-      // opcional:
-      // if (isSundayIso(dateIso)) continue;
       count += 1;
     }
     return count;
   }
 
-
   function getPhasePeriodLabel(phase: Phase, startOffset: number, endOffset: number) {
-    // sempre mostra "Dia X ao Dia Y"
     const dayStart = startOffset + 1;
     const dayEnd = endOffset + 1;
 
-    if (!planStartDate) {
-      return `📌 Dia ${dayStart} ao Dia ${dayEnd}`;
-    }
+    if (!planStartDate) return `📌 Dia ${dayStart} ao Dia ${dayEnd}`;
 
     const realStart = addDaysIso(planStartDate, startOffset);
     const realEnd = addDaysIso(planStartDate, endOffset);
@@ -227,142 +344,178 @@ export default function PlanScreen() {
     return `📌 Dia ${dayStart} ao Dia ${dayEnd} • 📅 ${formatDdMm(realStart)} até ${formatDdMm(realEnd)}`;
   }
 
-  // --- RENDER ---
+  const heroSubtitle = useMemo(() => {
+    if (planStartDate) {
+      return `Plano anual • início: ${formatDdMm(planStartDate)} (atemp.)`;
+    }
+    return "Plano atemporal • inicia quando você marcar a primeira leitura";
+  }, [planStartDate]);
+
+  // ===== RENDER =====
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F4F6F8" />
+      <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {/* HEADER */}
-        <View style={{ marginBottom: 20 }}>
-          <Text style={styles.screenTitle}>Plano</Text>
+      <ScrollView
+        contentContainerStyle={[styles.scrollContent, { paddingHorizontal: width >= 700 ? 24 : 16 }]}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={[styles.contentWrap, { maxWidth, alignSelf: "center" }]}>
+          {/* HERO */}
+          <View style={styles.hero}>
+            <Text style={styles.heroTitle}>Plano</Text>
+            <Text style={styles.heroSubtitle}>{heroSubtitle}</Text>
 
-          {planStartDate ? (
-            <Text style={styles.screenSubtitle}>
-              Plano Anual de Leitura • início: {formatDdMm(planStartDate)}
-            </Text>
-          ) : (
-            <Text style={styles.screenSubtitle}>
-              Plano atemporal • ainda não iniciado (começa quando você marcar a primeira leitura)
-            </Text>
-          )}
-        </View>
-
-        {/* STATS CARD */}
-        <View style={styles.statsCard}>
-          <Text style={styles.statsEmoji}>🙏</Text>
-          <View>
-            <Text style={styles.statsLabel}>Diário de Gratidão</Text>
-            <Text style={styles.statsValue}>{totalGratitudes} registros</Text>
+            <View style={styles.heroPillsRow}>
+              {planStartDate ? (
+                <Pill label={`📈 ${totalProgressPercent}% do plano`} tone="info" />
+              ) : (
+                <Pill label="ℹ️ ainda não iniciado" tone="neutral" />
+              )}
+              <Pill label={`📖 ${totalUsefulDays} dias úteis`} tone="neutral" />
+              <Pill label={`🙏 ${totalGratitudes} gratidões`} tone="warn" />
+            </View>
           </View>
-        </View>
 
-        {/* LISTA DE FASES */}
-        {phaseOffsetMap.map(({ phase, startOffset, endOffset }) => {
-          const progress = planStartDate
-            ? calculatePhaseProgressAtemporal(planStartDate, startOffset, endOffset)
-            : 0;
+          {/* STATS GRID */}
+          <View style={styles.statsGrid}>
+            <StatTile
+              icon="📈"
+              label="Progresso geral"
+              value={`${totalProgressPercent}%`}
+              helper={planStartDate ? `${completedUsefulDays} de ${totalUsefulDays}` : "inicie para contar"}
+              tone="primary"
+            />
+            <StatTile icon="🙏" label="Gratidão" value={`${totalGratitudes}`} helper="registros" tone="secondary" />
+            <StatTile
+              icon="🗂️"
+              label="Fases"
+              value={`${phaseOffsetMap.length}`}
+              helper="no plano"
+              tone="neutral"
+            />
+          </View>
 
-          const gCount = planStartDate
-            ? countGratitudesInPhaseAtemporal(planStartDate, startOffset, endOffset)
-            : 0;
+          {/* LISTA DE FASES */}
+          <Card>
+            <SectionTitle icon="🧩" title="Fases do plano" subtitle="Toque em uma fase para ver resumo e conexão com Cristo" />
 
-          const isComplete = progress === 100;
+            <View style={{ gap: 12 }}>
+              {phaseOffsetMap.map(({ phase, startOffset, endOffset }) => {
+                const progress = planStartDate ? calculatePhaseProgressAtemporal(planStartDate, startOffset, endOffset) : 0;
 
-          return (
-            <TouchableOpacity
-              key={phase.id}
-              activeOpacity={0.9}
-              onPress={() => setSelectedPhase(phase)}
-              style={styles.phaseCard}
-            >
-              <View style={styles.cardHeader}>
-                <Text style={styles.phaseTitle}>{phase.title}</Text>
-                {isComplete && <Text style={styles.checkIcon}>✅ Concluído</Text>}
-              </View>
+                const gCount = planStartDate
+                  ? countGratitudesInPhaseAtemporal(planStartDate, startOffset, endOffset)
+                  : 0;
 
-              <Text style={styles.phaseDates}>{getPhasePeriodLabel(phase, startOffset, endOffset)}</Text>
+                const isComplete = progress === 100;
 
-              {/* Barra de progresso */}
-              <View style={styles.progressContainer}>
-                <View style={styles.progressBarBackground}>
-                  <View
-                    style={[
-                      styles.progressBarFill,
-                      { width: `${progress}%` },
-                      isComplete && { backgroundColor: "green" },
+                return (
+                  <Pressable
+                    key={phase.id}
+                    onPress={() => setSelectedPhase(phase)}
+                    style={({ pressed }) => [
+                      styles.phaseCard,
+                      pressed && { opacity: 0.96, transform: [{ scale: 0.995 }] },
                     ]}
-                  />
-                </View>
-                <Text style={styles.progressText}>{progress}%</Text>
-              </View>
+                  >
+                    <View style={styles.phaseHeaderRow}>
+                      <Text style={styles.phaseTitle} numberOfLines={2}>
+                        {phase.title}
+                      </Text>
 
-              <View style={styles.cardFooter}>
-                <Text style={styles.gratitudeTag}>🙏 {gCount} gratidões</Text>
-                <Text style={styles.detailsLink}>Ver detalhes ➝</Text>
-              </View>
-            </TouchableOpacity>
-          );
-        })}
+                      {isComplete ? (
+                        <View style={styles.completePill}>
+                          <Text style={styles.completePillText}>✅ Concluído</Text>
+                        </View>
+                      ) : (
+                        <Text style={styles.phaseProgressMini}>{progress}%</Text>
+                      )}
+                    </View>
 
-        <View style={{ height: 100 }} />
+                    <Text style={styles.phaseDates}>{getPhasePeriodLabel(phase, startOffset, endOffset)}</Text>
+
+                    {/* Progress bar */}
+                    <View style={styles.progressBarBackground}>
+                      <View
+                        style={[
+                          styles.progressBarFill,
+                          { width: `${progress}%` },
+                          isComplete && { backgroundColor: "green" },
+                        ]}
+                      />
+                    </View>
+
+                    <View style={styles.phaseFooterRow}>
+                      <Text style={styles.phaseMetaLeft}>🙏 {gCount} gratidões</Text>
+                      <Text style={styles.phaseMetaRight}>Ver detalhes ➝</Text>
+                    </View>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </Card>
+
+          <View style={{ height: 26 }} />
+        </View>
       </ScrollView>
 
-      {/* MODAL DE RESUMO / CONEXÃO */}
-      <Modal
-        visible={!!selectedPhase}
-        animationType="fade"
-        transparent
-        onRequestClose={() => setSelectedPhase(null)}
-      >
+      {/* MODAL DE DETALHES */}
+      <Modal visible={!!selectedPhase} animationType="fade" transparent onRequestClose={() => setSelectedPhase(null)}>
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+          <View style={styles.modalCard}>
             <ScrollView showsVerticalScrollIndicator={false}>
               <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>{selectedPhase?.title}</Text>
-                <TouchableOpacity onPress={() => setSelectedPhase(null)}>
-                  <Text style={styles.closeIcon}>✕</Text>
-                </TouchableOpacity>
+
+                <Pressable
+                  onPress={() => setSelectedPhase(null)}
+                  style={({ pressed }) => [styles.modalCloseBtn, pressed && { opacity: 0.9 }]}
+                >
+                  <Text style={styles.modalCloseText}>✕</Text>
+                </Pressable>
               </View>
 
-              {/* Indicador de Gratidão no Modal */}
+              {/* Info de gratidão por fase */}
               {!!selectedPhase && planStartDate && (
-                <View style={styles.modalStatsRow}>
-                  <Text style={styles.modalStatsText}>
+                <View style={styles.modalInfoBox}>
+                  <Text style={styles.modalInfoText}>
                     ✨ Você registrou{" "}
-                    {
-                      countGratitudesInPhaseAtemporal(
-                        planStartDate,
-                        phaseOffsetMap.find((x) => x.phase.id === selectedPhase.id)?.startOffset ?? 0,
-                        phaseOffsetMap.find((x) => x.phase.id === selectedPhase.id)?.endOffset ??
-                          readingPlan.length - 1
-                      )
-                    }{" "}
+                    {countGratitudesInPhaseAtemporal(
+                      planStartDate,
+                      phaseOffsetMap.find((x) => x.phase.id === selectedPhase.id)?.startOffset ?? 0,
+                      phaseOffsetMap.find((x) => x.phase.id === selectedPhase.id)?.endOffset ?? readingPlan.length - 1
+                    )}{" "}
                     motivos de gratidão nesta fase.
                   </Text>
                 </View>
               )}
 
               {!planStartDate && (
-                <View style={styles.modalStatsRow}>
-                  <Text style={styles.modalStatsText}>
+                <View style={styles.modalInfoBox}>
+                  <Text style={styles.modalInfoText}>
                     ℹ️ Inicie o plano (marque a primeira leitura) para ver progresso e contagem por fase.
                   </Text>
                 </View>
               )}
 
-              <Text style={styles.modalDescription}>{selectedPhase?.description}</Text>
+              {!!selectedPhase && (
+                <Text style={styles.modalDescription}>{selectedPhase.description}</Text>
+              )}
 
-              {selectedPhase?.messianicConnection && (
+              {!!selectedPhase?.messianicConnection && (
                 <View style={styles.messianicBox}>
                   <Text style={styles.messianicTitle}>✝️ Conexão com Cristo</Text>
                   <Text style={styles.messianicText}>{selectedPhase.messianicConnection}</Text>
                 </View>
               )}
 
-              <TouchableOpacity onPress={() => setSelectedPhase(null)} style={styles.closeButton}>
-                <Text style={styles.closeButtonText}>Fechar Resumo</Text>
-              </TouchableOpacity>
+              <Pressable
+                onPress={() => setSelectedPhase(null)}
+                style={({ pressed }) => [styles.modalPrimaryBtn, pressed && { opacity: 0.95 }]}
+              >
+                <Text style={styles.modalPrimaryText}>Fechar</Text>
+              </Pressable>
             </ScrollView>
           </View>
         </View>
@@ -371,194 +524,267 @@ export default function PlanScreen() {
   );
 }
 
-// === ESTILOS ===
+/* ==========================
+   STYLES
+========================== */
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F4F6F8",
+    backgroundColor: colors.background,
   },
   scrollContent: {
-    padding: 20,
     paddingTop: 10,
+    paddingBottom: 20,
   },
-  screenTitle: {
+  contentWrap: {
+    width: "100%",
+    gap: 12,
+  },
+
+  hero: {
+    backgroundColor: "#fff",
+    borderRadius: 18,
+    padding: 16,
+    ...shadowCard(),
+  },
+  heroTitle: {
     fontSize: 28,
-    fontWeight: "bold",
+    fontWeight: "900",
     color: colors.primary,
-    marginBottom: 4,
+    marginBottom: 6,
   },
-  screenSubtitle: {
+  heroSubtitle: {
     fontSize: 14,
     color: colors.muted,
+    lineHeight: 19,
   },
-  statsCard: {
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 20,
+  heroPillsRow: {
+    marginTop: 12,
     flexDirection: "row",
-    alignItems: "center",
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 5,
-    shadowOffset: { width: 0, height: 2 },
+    flexWrap: "wrap",
+    gap: 8,
   },
-  statsEmoji: {
-    fontSize: 24,
-    marginRight: 12,
+
+  pill: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
   },
-  statsLabel: {
+  pillText: {
+    fontSize: 12,
+    fontWeight: "800",
+  },
+
+  statsGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+  },
+  statTile: {
+    flexGrow: 1,
+    flexBasis: "31%",
+    minWidth: 120,
+    borderRadius: 18,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: "rgba(0,0,0,0.06)",
+  },
+  statIcon: {
+    fontSize: 18,
+    marginBottom: 6,
+  },
+  statLabel: {
     fontSize: 12,
     color: colors.muted,
-    textTransform: "uppercase",
-    fontWeight: "bold",
+    fontWeight: "800",
   },
-  statsValue: {
+  statValue: {
+    marginTop: 6,
+    fontSize: 22,
+    fontWeight: "900",
+  },
+  statHelper: {
+    marginTop: 4,
+    fontSize: 12,
+    color: colors.muted,
+  },
+
+  card: {
+    backgroundColor: "#fff",
+    borderRadius: 18,
+    padding: 16,
+  },
+
+  sectionTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 4,
+  },
+  sectionIcon: {
     fontSize: 16,
-    color: colors.text,
-    fontWeight: "600",
   },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: "900",
+    color: colors.text,
+  },
+  sectionSubtitle: {
+    fontSize: 12,
+    color: colors.muted,
+    lineHeight: 16,
+  },
+
   phaseCard: {
     backgroundColor: "#fff",
     borderRadius: 16,
-    padding: 16,
-    marginBottom: 16,
-    elevation: 3,
-    shadowColor: "#000",
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 3 },
+    padding: 14,
+    borderWidth: 1,
+    borderColor: "rgba(0,0,0,0.06)",
   },
-  cardHeader: {
+  phaseHeaderRow: {
     flexDirection: "row",
+    alignItems: "flex-start",
     justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 4,
+    gap: 10,
   },
   phaseTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
+    fontSize: 16,
+    fontWeight: "900",
     color: colors.text,
     flex: 1,
   },
-  checkIcon: {
-    fontSize: 10,
-    fontWeight: "bold",
-    color: "green",
-    backgroundColor: "#E6F7E9",
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 8,
-    marginLeft: 8,
-    overflow: "hidden",
+  phaseProgressMini: {
+    fontSize: 12,
+    fontWeight: "900",
+    color: colors.muted,
+    paddingTop: 2,
   },
+  completePill: {
+    backgroundColor: "rgba(4,206,146,0.12)",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+  },
+  completePillText: {
+    fontSize: 12,
+    fontWeight: "900",
+    color: colors.primary,
+  },
+
   phaseDates: {
+    marginTop: 6,
     fontSize: 12,
     color: colors.muted,
-    marginBottom: 12,
   },
-  progressContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 14,
-  },
+
   progressBarBackground: {
-    flex: 1,
     height: 10,
-    backgroundColor: "#F0F0F0",
-    borderRadius: 5,
+    backgroundColor: "rgba(0,0,0,0.06)",
+    borderRadius: 999,
     overflow: "hidden",
-    marginRight: 10,
+    marginTop: 12,
   },
   progressBarFill: {
     height: "100%",
     backgroundColor: colors.primary,
-    borderRadius: 5,
+    borderRadius: 999,
   },
-  progressText: {
-    fontSize: 12,
-    fontWeight: "bold",
-    color: colors.muted,
-    width: 35,
-    textAlign: "right",
-  },
-  cardFooter: {
+
+  phaseFooterRow: {
+    marginTop: 12,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    borderTopWidth: 1,
-    borderTopColor: "#F5F5F5",
     paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(0,0,0,0.06)",
   },
-  gratitudeTag: {
+  phaseMetaLeft: {
     fontSize: 12,
+    fontWeight: "800",
     color: colors.secondary,
-    fontWeight: "500",
   },
-  detailsLink: {
+  phaseMetaRight: {
     fontSize: 13,
-    fontWeight: "bold",
+    fontWeight: "900",
     color: colors.primary,
   },
+
+  // Modal
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
+    backgroundColor: "rgba(0,0,0,0.45)",
     justifyContent: "center",
-    padding: 20,
+    padding: 18,
   },
-  modalContent: {
+  modalCard: {
     backgroundColor: "#fff",
     borderRadius: 20,
-    padding: 24,
-    maxHeight: "85%",
-    elevation: 5,
+    padding: 18,
+    maxHeight: "86%",
+    ...shadowCard(),
   },
   modalHeader: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "flex-start",
-    marginBottom: 16,
+    justifyContent: "space-between",
+    gap: 10,
+    marginBottom: 12,
   },
   modalTitle: {
-    fontSize: 22,
-    fontWeight: "bold",
+    fontSize: 20,
+    fontWeight: "900",
     color: colors.primary,
     flex: 1,
   },
-  closeIcon: {
-    fontSize: 20,
-    color: colors.muted,
-    padding: 4,
+  modalCloseBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    backgroundColor: "rgba(0,0,0,0.06)",
+    alignItems: "center",
+    justifyContent: "center",
   },
-  modalStatsRow: {
-    marginBottom: 16,
-    padding: 10,
-    backgroundColor: "#FFF9F0",
-    borderRadius: 8,
+  modalCloseText: {
+    fontSize: 18,
+    fontWeight: "900",
+    color: colors.text,
   },
-  modalStatsText: {
+
+  modalInfoBox: {
+    padding: 12,
+    borderRadius: 14,
+    backgroundColor: "rgba(218,165,32,0.12)",
+    marginBottom: 12,
+  },
+  modalInfoText: {
     fontSize: 12,
     color: colors.secondary,
+    fontWeight: "700",
     textAlign: "center",
+    lineHeight: 16,
   },
+
   modalDescription: {
-    fontSize: 16,
+    fontSize: 14,
     color: colors.text,
-    lineHeight: 24,
-    marginBottom: 20,
+    lineHeight: 20,
+    marginBottom: 14,
   },
+
   messianicBox: {
-    backgroundColor: "#F0F4FF",
-    padding: 16,
-    borderRadius: 12,
+    backgroundColor: "rgba(4,206,146,0.10)",
+    padding: 14,
+    borderRadius: 16,
     borderLeftWidth: 4,
     borderLeftColor: colors.primary,
-    marginBottom: 20,
+    marginBottom: 14,
   },
   messianicTitle: {
-    fontSize: 14,
-    fontWeight: "bold",
+    fontSize: 12,
+    fontWeight: "900",
     color: colors.primary,
     marginBottom: 8,
     textTransform: "uppercase",
@@ -566,17 +792,20 @@ const styles = StyleSheet.create({
   messianicText: {
     fontSize: 14,
     color: colors.text,
-    lineHeight: 22,
+    lineHeight: 20,
   },
-  closeButton: {
-    backgroundColor: colors.secondary,
+
+  modalPrimaryBtn: {
+    backgroundColor: colors.primary,
     paddingVertical: 14,
-    borderRadius: 12,
+    borderRadius: 14,
     alignItems: "center",
+    justifyContent: "center",
   },
-  closeButtonText: {
+  modalPrimaryText: {
     color: "#fff",
-    fontSize: 16,
-    fontWeight: "bold",
+    fontSize: 14,
+    fontWeight: "900",
+    letterSpacing: 0.2,
   },
 });
