@@ -18,6 +18,9 @@ import { restoreFromAutoBackup } from "../services/backupRestore";
 import { APP_INFO } from "../constants/appInfo";
 import type { RootStackParamList } from "../app_router_off";
 
+// ✅ usar as rotinas oficiais do app para não deixar chaves “penduradas”
+import { resetProgress, setCompletedDays, markAutoRestoreDone } from "../services/progressStore";
+
 // --- TIPOS E INTERFACES ---
 type ExportData = {
   app: string;
@@ -33,12 +36,11 @@ type NavigationProp = NativeStackNavigationProp<RootStackParamList, "Settings">;
 
 // --- CONSTANTES ---
 const LAST_BACKUP_KEY = "lastAutoBackupDate";
-const AUTO_RESTORE_DONE_KEY = "autoRestoreDone";
 const USER_NAME_KEY = "userName";
 const HAS_ONBOARDED_KEY = "hasOnboarded";
 const GRATITUDE_KEY = "gratitudeByDate";
 
-// --- HELPERS (Lógica preservada) ---
+// --- HELPERS ---
 function formatIsoDate(iso: string | null) {
   if (!iso) return null;
   if (iso.includes("T")) return iso.split("T")[0];
@@ -81,6 +83,7 @@ export default function SettingsScreen() {
 
   useEffect(() => {
     loadLastBackupInfo();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function loadLastBackupInfo() {
@@ -141,12 +144,14 @@ export default function SettingsScreen() {
 
       const rawList = Array.isArray(parsed?.completedDays) ? parsed.completedDays : null;
       if (!rawList) {
-        throw new Error("Formato inválido");
+        Alert.alert("Erro", "Formato inválido: não encontrei 'completedDays' no JSON.");
+        return;
       }
 
       const validDates = uniqueSortedIsoDates(rawList);
 
-      await AsyncStorage.setItem("completedDays", JSON.stringify(validDates));
+      // ✅ usa o setter oficial (sanitiza e mantém compatibilidade do app)
+      await setCompletedDays(validDates);
 
       const gratitudeByDate = sanitizeGratitudeMap(parsed?.gratitudeByDate);
       await AsyncStorage.setItem(GRATITUDE_KEY, JSON.stringify(gratitudeByDate));
@@ -159,9 +164,12 @@ export default function SettingsScreen() {
         await AsyncStorage.setItem(HAS_ONBOARDED_KEY, parsed.hasOnboarded ? "1" : "0");
       }
 
-      await AsyncStorage.setItem(AUTO_RESTORE_DONE_KEY, "1");
+      // ✅ marca auto-restore como já feito (mesma convenção do app)
+      await markAutoRestoreDone();
 
       setImportText("");
+      setExportJson(null);
+
       Alert.alert(
         "Sucesso",
         `${validDates.length} leituras restauradas 🙏\nGratidões: ${Object.keys(gratitudeByDate).length}`
@@ -180,14 +188,11 @@ export default function SettingsScreen() {
       const result = await restoreFromAutoBackup();
 
       if (!result.restored) {
-        Alert.alert(
-          "Nada para restaurar",
-          "Nenhum backup automático válido foi encontrado."
-        );
+        Alert.alert("Nada para restaurar", "Nenhum backup automático válido foi encontrado.");
         return;
       }
 
-      await AsyncStorage.setItem(AUTO_RESTORE_DONE_KEY, "1");
+      await markAutoRestoreDone();
 
       Alert.alert("Restaurado ✅", `Progresso restaurado: ${result.count} dias.`);
       await loadLastBackupInfo();
@@ -202,8 +207,8 @@ export default function SettingsScreen() {
   ========================== */
   function confirmReset() {
     Alert.alert(
-      "Resetar progresso?",
-      "Isso vai apagar suas leituras concluídas (streak, progresso e histórico). Essa ação não pode ser desfeita.",
+      "Resetar tudo?",
+      "Isso vai apagar seu progresso (leituras, streak, atrasos), gratidões e também suas infos de boas-vindas. Essa ação não pode ser desfeita.",
       [
         { text: "Cancelar", style: "cancel" },
         { text: "Continuar", style: "destructive", onPress: confirmResetFinal },
@@ -212,30 +217,30 @@ export default function SettingsScreen() {
   }
 
   function confirmResetFinal() {
-    Alert.alert(
-      "Confirmação final",
-      "Tem certeza? Suas leituras concluídas serão apagadas agora.",
-      [
-        { text: "Cancelar", style: "cancel" },
-        { text: "Apagar", style: "destructive", onPress: resetProgressNow },
-      ]
-    );
+    Alert.alert("Confirmação final", "Tem certeza? Tudo será apagado agora.", [
+      { text: "Cancelar", style: "cancel" },
+      { text: "Apagar", style: "destructive", onPress: resetAllNow },
+    ]);
   }
 
-  async function resetProgressNow() {
+  async function resetAllNow() {
     try {
-      await AsyncStorage.removeItem("completedDays");
-      await AsyncStorage.removeItem(AUTO_RESTORE_DONE_KEY);
+      // ✅ usa o reset oficial (inclui planStartDate e flags do fluxo)
+      await resetProgress();
+
+      // ✅ limpa extras (gratidão + onboarding)
       await AsyncStorage.removeItem(GRATITUDE_KEY);
+      await AsyncStorage.removeItem(USER_NAME_KEY);
+      await AsyncStorage.removeItem(HAS_ONBOARDED_KEY);
 
       setExportJson(null);
       setImportText("");
 
-      Alert.alert("Pronto", "Seu progresso foi resetado.");
+      Alert.alert("Pronto", "Tudo foi resetado.");
       await loadLastBackupInfo();
     } catch (err) {
-      console.log("Erro ao resetar progresso", err);
-      Alert.alert("Erro", "Não foi possível resetar o progresso.");
+      console.log("Erro ao resetar", err);
+      Alert.alert("Erro", "Não foi possível resetar os dados.");
     }
   }
 
@@ -262,20 +267,14 @@ export default function SettingsScreen() {
     navigation.navigate("Dedication");
   }
 
-  const lastBackupLabel = lastBackupAt
-    ? formatIsoDate(lastBackupAt)
-    : "Nunca";
+  const lastBackupLabel = lastBackupAt ? formatIsoDate(lastBackupAt) : "Nunca";
 
   // --- RENDER ---
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#F4F6F8" />
 
-      <ScrollView 
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* HEADER */}
         <View style={{ marginBottom: 20, alignItems: "center" }}>
           <Text style={styles.screenTitle}>Configurações</Text>
@@ -288,11 +287,11 @@ export default function SettingsScreen() {
         <View style={styles.card}>
           <Text style={styles.cardTitle}>👤 Perfil</Text>
           <Text style={styles.cardDesc}>Gerencie suas informações.</Text>
-          
+
           <TouchableOpacity style={styles.buttonOutline} onPress={replayWelcome}>
             <Text style={styles.buttonOutlineText}>🔁 Rever Boas-vindas</Text>
           </TouchableOpacity>
-          
+
           <TouchableOpacity style={styles.buttonOutline} onPress={openDedication}>
             <Text style={styles.buttonOutlineText}>📜 Ver Dedicatória</Text>
           </TouchableOpacity>
@@ -301,13 +300,14 @@ export default function SettingsScreen() {
         {/* 2. DADOS & BACKUP */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>💾 Dados & Backup</Text>
-          
+
           {/* Info Backup Auto */}
           <View style={styles.infoBox}>
             <Text style={styles.infoText}>📦 Último Backup Auto: {lastBackupLabel}</Text>
           </View>
+
           <TouchableOpacity style={styles.buttonSecondary} onPress={restoreAutoBackupNow}>
-             <Text style={styles.buttonSecondaryText}>♻️ Restaurar Backup Automático</Text>
+            <Text style={styles.buttonSecondaryText}>♻️ Restaurar Backup Automático</Text>
           </TouchableOpacity>
 
           <View style={styles.divider} />
@@ -315,13 +315,15 @@ export default function SettingsScreen() {
           {/* Exportar */}
           <Text style={styles.sectionLabel}>Backup Manual (Texto)</Text>
           <TouchableOpacity style={styles.buttonPrimary} onPress={exportAsText}>
-             <Text style={styles.buttonPrimaryText}>📋 Gerar Código de Backup</Text>
+            <Text style={styles.buttonPrimaryText}>📋 Gerar Código de Backup</Text>
           </TouchableOpacity>
 
           {exportJson && (
             <View style={styles.codeBlock}>
-               <Text style={styles.codeTitle}>Copie o código abaixo:</Text>
-               <Text selectable style={styles.codeText}>{exportJson}</Text>
+              <Text style={styles.codeTitle}>Copie o código abaixo:</Text>
+              <Text selectable style={styles.codeText}>
+                {exportJson}
+              </Text>
             </View>
           )}
 
@@ -337,113 +339,125 @@ export default function SettingsScreen() {
             placeholderTextColor="#999"
             style={styles.textInput}
           />
-          
+
           <View style={styles.rowButtons}>
-            <TouchableOpacity style={[styles.buttonPrimary, { flex: 1, marginRight: 8, marginBottom: 0 }]} onPress={importProgress}>
-                <Text style={styles.buttonPrimaryText}>📥 Importar</Text>
+            <TouchableOpacity
+              style={[styles.buttonPrimary, { flex: 1, marginRight: 8, marginBottom: 0 }]}
+              onPress={importProgress}
+            >
+              <Text style={styles.buttonPrimaryText}>📥 Importar</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={[styles.buttonOutline, { flex: 1, marginBottom: 0 }]} onPress={clearImportBox}>
-                <Text style={styles.buttonOutlineText}>🧽 Limpar</Text>
+            <TouchableOpacity
+              style={[styles.buttonOutline, { flex: 1, marginBottom: 0 }]}
+              onPress={clearImportBox}
+            >
+              <Text style={styles.buttonOutlineText}>🧽 Limpar</Text>
             </TouchableOpacity>
           </View>
         </View>
 
         {/* 3. ZONA DE PERIGO */}
         <View style={[styles.card, styles.dangerCard]}>
-           <Text style={[styles.cardTitle, { color: "#D32F2F" }]}>⚠️ Zona de Perigo</Text>
-           <Text style={styles.cardDesc}>
-              Apagar todo o progresso, gratidões e configurações do aplicativo. Ação irreversível.
-           </Text>
-           <TouchableOpacity style={styles.buttonDanger} onPress={confirmReset}>
-              <Text style={styles.buttonDangerText}>🧹 Resetar Tudo</Text>
-           </TouchableOpacity>
+          <Text style={[styles.cardTitle, { color: "#D32F2F" }]}>⚠️ Zona de Perigo</Text>
+          <Text style={styles.cardDesc}>
+            Apagar todo o progresso, gratidões e configurações do aplicativo. Ação irreversível.
+          </Text>
+          <TouchableOpacity style={styles.buttonDanger} onPress={confirmReset}>
+            <Text style={styles.buttonDangerText}>🧹 Resetar Tudo</Text>
+          </TouchableOpacity>
         </View>
 
         {/* 4. LEGAL */}
         <View style={styles.card}>
-           <Text style={styles.cardTitle}>⚖️ Legal</Text>
-           
-           <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate("Terms")}>
-              <Text style={styles.menuItemText}>📄 Termos de Uso</Text>
-              <Text style={styles.menuItemArrow}>›</Text>
-           </TouchableOpacity>
-           
-           <View style={{ height: 1, backgroundColor: "#EEE" }} />
-           
-           <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate("Privacy")}>
-              <Text style={styles.menuItemText}>🔒 Política de Privacidade</Text>
-              <Text style={styles.menuItemArrow}>›</Text>
-           </TouchableOpacity>
+          <Text style={styles.cardTitle}>⚖️ Legal</Text>
+
+          <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate("Terms")}>
+            <Text style={styles.menuItemText}>📄 Termos de Uso</Text>
+            <Text style={styles.menuItemArrow}>›</Text>
+          </TouchableOpacity>
+
+          <View style={{ height: 1, backgroundColor: "#EEE" }} />
+
+          <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate("Privacy")}>
+            <Text style={styles.menuItemText}>🔒 Política de Privacidade</Text>
+            <Text style={styles.menuItemArrow}>›</Text>
+          </TouchableOpacity>
         </View>
 
         {/* 5. SOBRE (Texto Integral) */}
         <View style={styles.card}>
-           <Text style={styles.cardTitle}>💙 Sobre o App</Text>
-           
-           <View style={styles.aboutContent}>
-              <Text style={styles.paragraph}>
-                 <Text style={styles.bold}>Nossa Missão</Text>{"\n"}
-                 Em um mundo de distrações constantes, sabemos que manter a disciplina espiritual é um desafio real. Muitas vezes, o desejo de ler a Bíblia existe, mas falta a organização ou o incentivo para continuar quando a rotina aperta.
-              </Text>
-              
-              <Text style={styles.paragraph}>
-                 O {APP_INFO.name} nasceu com um objetivo claro: ser mais do que uma ferramenta digital; queremos ser um parceiro na sua caminhada de fé. Nossa missão é transformar a <Text style={styles.italic}>intenção</Text> de ler a Bíblia em <Text style={styles.italic}>hábito</Text>, e o hábito em <Text style={styles.italic}>intimidade</Text>.
-              </Text>
+          <Text style={styles.cardTitle}>💙 Sobre o App</Text>
 
-              <Text style={styles.paragraph}>
-                 <Text style={styles.bold}>O Foco do Plano: A Grande História da Redenção</Text>{"\n"}
-                 Este não é apenas um cronograma de leitura sequencial. Todo o plano foi cuidadosamente estruturado ao redor do tema central das Escrituras: o <Text style={styles.bold}>Plano Eterno de Salvação do Homem</Text>.
+          <View style={styles.aboutContent}>
+            <Text style={styles.paragraph}>
+              <Text style={styles.bold}>Nossa Missão</Text>{"\n"}
+              Em um mundo de distrações constantes, sabemos que manter a disciplina espiritual é um desafio real. Muitas vezes, o desejo de ler a Bíblia existe, mas falta a organização ou o incentivo para continuar quando a rotina aperta.
+            </Text>
+
+            <Text style={styles.paragraph}>
+              O {APP_INFO.name} nasceu com um objetivo claro: ser mais do que uma ferramenta digital; queremos ser um parceiro na sua caminhada de fé. Nossa missão é transformar a{" "}
+              <Text style={styles.italic}>intenção</Text> de ler a Bíblia em{" "}
+              <Text style={styles.italic}>hábito</Text>, e o hábito em{" "}
+              <Text style={styles.italic}>intimidade</Text>.
+            </Text>
+
+            <Text style={styles.paragraph}>
+              <Text style={styles.bold}>O Foco do Plano: A Grande História da Redenção</Text>{"\n"}
+              Este não é apenas um cronograma de leitura sequencial. Todo o plano foi cuidadosamente estruturado ao redor do tema central das Escrituras: o{" "}
+              <Text style={styles.bold}>Plano Eterno de Salvação do Homem</Text>.
+            </Text>
+
+            <Text style={styles.paragraph}>
+              Ao seguir nosso roteiro, você não lerá apenas histórias isoladas, mas entenderá como cada livro se conecta ao grande projeto de Deus:
+            </Text>
+
+            <View style={styles.bulletPoint}>
+              <Text style={styles.textData}>
+                • <Text style={styles.bold}>No Antigo Testamento:</Text> Vemos a necessidade da salvação (a Queda), a promessa de um Salvador e a preparação do cenário através de Israel.
               </Text>
-
-              <Text style={styles.paragraph}>
-                 Ao seguir nosso roteiro, você não lerá apenas histórias isoladas, mas entenderá como cada livro se conecta ao grande projeto de Deus:
+            </View>
+            <View style={styles.bulletPoint}>
+              <Text style={styles.textData}>
+                • <Text style={styles.bold}>No Novo Testamento:</Text> Vemos a concretização da salvação em Cristo e a consumação gloriosa na eternidade.
               </Text>
+            </View>
 
-              <View style={styles.bulletPoint}>
-                 <Text style={styles.textData}>• <Text style={styles.bold}>No Antigo Testamento:</Text> Vemos a necessidade da salvação (a Queda), a promessa de um Salvador e a preparação do cenário através de Israel.</Text>
-              </View>
-              <View style={styles.bulletPoint}>
-                 <Text style={styles.textData}>• <Text style={styles.bold}>No Novo Testamento:</Text> Vemos a concretização da salvação em Cristo e a consumação gloriosa na eternidade.</Text>
-              </View>
+            <Text style={styles.paragraph}>
+              Nosso desejo é que, ao final da jornada, você não tenha apenas lido a Bíblia toda, mas compreenda profundamente a mente de Deus e o Seu amor redentor por você.
+            </Text>
 
-              <Text style={styles.paragraph}>
-                 Nosso desejo é que, ao final da jornada, você não tenha apenas lido a Bíblia toda, mas compreenda profundamente a mente de Deus e o Seu amor redentor por você.
+            <Text style={styles.paragraph}>
+              <Text style={styles.bold}>Como Funciona na Prática</Text>{"\n"}•{" "}
+              <Text style={styles.bold}>Ritmo Sustentável:</Text> A quantidade de leitura diária foi pensada para ser profunda, mas perfeitamente possível de realizar em meio à correria do dia a dia.{"\n"}•{" "}
+              <Text style={styles.bold}>O Valor da Pausa (Domingos):</Text> Reservamos seus domingos para "Meditar". Acreditamos que não basta ler; é preciso ruminar a Palavra. Use esse dia para orar sobre o que leu na semana e deixar as verdades sobre a salvação criarem raízes em seu coração.
+            </Text>
+
+            <Text style={styles.paragraph}>
+              <Text style={styles.bold}>Nossos Pilares</Text>{"\n"}1.{" "}
+              <Text style={styles.bold}>Constância:</Text> A fidelidade no pouco gera autoridade no muito.{"\n"}2.{" "}
+              <Text style={styles.bold}>Entendimento:</Text> Capacitar você a enxergar Jesus em toda a Escritura.{"\n"}3.{" "}
+              <Text style={styles.bold}>Transformação:</Text> Não queremos apenas informar sua mente, mas impactar seu espírito.
+            </Text>
+
+            <Text style={styles.paragraph}>
+              <Text style={styles.bold}>Uma Nota Pessoal</Text>{"\n"}
+              Este aplicativo foi desenvolvido com muita oração. O código é apenas o meio; o fim é a glória de Deus e o seu crescimento no conhecimento da Verdade. Não importa se você é um novo convertido ou um teólogo experiente — a mensagem da Cruz é inesgotável.
+            </Text>
+
+            <Text style={styles.paragraph}>
+              Que este app seja a ferramenta que faltava para você mergulhar nas águas profundas do amor de Deus.
+            </Text>
+
+            <View style={styles.quoteBox}>
+              <Text style={styles.quoteText}>
+                "E a vida eterna é esta: que te conheçam, a ti só, por único Deus verdadeiro, e a Jesus Cristo, a quem enviaste."
               </Text>
+              <Text style={styles.quoteRef}>(João 17:3)</Text>
+            </View>
 
-              <Text style={styles.paragraph}>
-                 <Text style={styles.bold}>Como Funciona na Prática</Text>{"\n"}
-                 • <Text style={styles.bold}>Ritmo Sustentável:</Text> A quantidade de leitura diária foi pensada para ser profunda, mas perfeitamente possível de realizar em meio à correria do dia a dia.{"\n"}
-                 • <Text style={styles.bold}>O Valor da Pausa (Domingos):</Text> Reservamos seus domingos para "Meditar". Acreditamos que não basta ler; é preciso ruminar a Palavra. Use esse dia para orar sobre o que leu na semana e deixar as verdades sobre a salvação criarem raízes em seu coração.
-              </Text>
-
-              <Text style={styles.paragraph}>
-                 <Text style={styles.bold}>Nossos Pilares</Text>{"\n"}
-                 1. <Text style={styles.bold}>Constância:</Text> A fidelidade no pouco gera autoridade no muito.{"\n"}
-                 2. <Text style={styles.bold}>Entendimento:</Text> Capacitar você a enxergar Jesus em toda a Escritura.{"\n"}
-                 3. <Text style={styles.bold}>Transformação:</Text> Não queremos apenas informar sua mente, mas impactar seu espírito.
-              </Text>
-
-              <Text style={styles.paragraph}>
-                 <Text style={styles.bold}>Uma Nota Pessoal</Text>{"\n"}
-                 Este aplicativo foi desenvolvido com muita oração. O código é apenas o meio; o fim é a glória de Deus e o seu crescimento no conhecimento da Verdade. Não importa se você é um novo convertido ou um teólogo experiente — a mensagem da Cruz é inesgotável.
-              </Text>
-
-              <Text style={styles.paragraph}>
-                 Que este app seja a ferramenta que faltava para você mergulhar nas águas profundas do amor de Deus.
-              </Text>
-
-              <View style={styles.quoteBox}>
-                  <Text style={styles.quoteText}>
-                    "E a vida eterna é esta: que te conheçam, a ti só, por único Deus verdadeiro, e a Jesus Cristo, a quem enviaste."
-                  </Text>
-                  <Text style={styles.quoteRef}>(João 17:3)</Text>
-              </View>
-
-              <Text style={styles.footerText}>
-                 © {new Date().getFullYear()} {APP_INFO.name}
-              </Text>
-           </View>
+            <Text style={styles.footerText}>© {new Date().getFullYear()} {APP_INFO.name}</Text>
+          </View>
         </View>
 
         <View style={{ height: 60 }} />
@@ -499,7 +513,7 @@ const styles = StyleSheet.create({
     color: colors.muted,
     marginBottom: 12,
   },
-  // Buttons Customizados
+  // Buttons
   buttonPrimary: {
     backgroundColor: colors.primary,
     paddingVertical: 12,
@@ -611,7 +625,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 16, // Mais área de toque
+    paddingVertical: 16,
   },
   menuItemText: {
     fontSize: 15,
@@ -654,7 +668,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
     marginBottom: 10,
     borderLeftWidth: 3,
-    borderLeftColor: colors.primary, // ou use hex: "#F57C00"
+    borderLeftColor: colors.primary,
   },
   quoteText: {
     fontStyle: "italic",
@@ -666,7 +680,7 @@ const styles = StyleSheet.create({
   quoteRef: {
     fontSize: 12,
     fontWeight: "bold",
-    color: colors.primary, // ou use hex: "#F57C00"
+    color: colors.primary,
     textAlign: "right",
   },
   footerText: {
