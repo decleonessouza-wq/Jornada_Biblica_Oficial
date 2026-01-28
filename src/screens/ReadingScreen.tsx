@@ -409,7 +409,8 @@ const PHASE_SPIRITUAL: Record<number, { prayer: string; reflection: string }> = 
       "Observe instruções práticas. Pergunte: qual prática eu preciso aplicar hoje (perdão, disciplina, oração, santidade)?",
   },
   8: {
-    prayer: "Senhor, sustenta-me na perseverança. Dá-me maturidade e firmeza nas provações. Amém.",
+    prayer:
+      "Senhor, sustenta-me na perseverança. Dá-me maturidade e firmeza nas provações. Amém.",
     reflection:
       "Procure encorajamentos à fidelidade. Pergunte: o que eu preciso manter firme, mesmo quando é difícil?",
   },
@@ -860,6 +861,31 @@ export default function ReadingScreen({ route }: Props) {
     } catch {}
   }
 
+  // ✅ após marcar como lido, re-sincroniza notificações (modo inteligente)
+  async function syncNotificationsAfterProgressChange() {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const svc: any = require("../services/notifications");
+
+      if (typeof svc?.syncScheduledNotifications === "function") {
+        await svc.syncScheduledNotifications();
+      } else if (typeof svc?.rescheduleFromSettings === "function") {
+        await svc.rescheduleFromSettings();
+      } else if (typeof svc?.applyNotificationSettings === "function") {
+        // fallback defensivo: apenas garante que está em dia
+        await svc.applyNotificationSettings({
+          enabled: true,
+          timeHHMM: "08:00",
+          smartSkipIfDoneToday: true,
+          contentMode: "mixed",
+        });
+      }
+    } catch (e) {
+      // silencioso: nunca pode quebrar a leitura
+      console.log("syncNotificationsAfterProgressChange (ignorado):", e);
+    }
+  }
+
   async function markAsRead() {
     if (!canMarkRead) return;
     if (!date) return;
@@ -873,6 +899,9 @@ export default function ReadingScreen({ route }: Props) {
       }
 
       setCompletedDays(result.days);
+
+      // ✅ ponto-chave: se modo inteligente estiver ligado, a notificação do dia pode ser cancelada
+      await syncNotificationsAfterProgressChange();
 
       Alert.alert("Concluído ✅", "Leitura marcada como lida!");
     } catch {

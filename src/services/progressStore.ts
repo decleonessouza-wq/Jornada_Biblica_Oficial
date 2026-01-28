@@ -14,6 +14,35 @@ export const PLAN_START_DATE_KEY = "planStartDate"; // YYYY-MM-DD
 // map: { "YYYY-MM-DD": "Gn 1-3; Êx 1-2" }
 export const PLAN_OVERRIDES_KEY = "planOverridesByDate";
 
+/**
+ * ✅ Notificações (modo inteligente)
+ * - Evita import circular usando require()
+ * - Não quebra se o serviço não existir ou se estiver incompleto
+ */
+async function syncNotificationsSafely() {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const svc: any = require("./notifications");
+
+    if (typeof svc?.syncScheduledNotifications === "function") {
+      await svc.syncScheduledNotifications();
+      return;
+    }
+
+    if (typeof svc?.rescheduleFromSettings === "function") {
+      await svc.rescheduleFromSettings();
+      return;
+    }
+
+    if (typeof svc?.applyNotificationSettings === "function") {
+      // Sem payload aqui; preferimos os métodos que leem do storage.
+      await svc.applyNotificationSettings;
+    }
+  } catch {
+    // ignore
+  }
+}
+
 function isValidDateString(d: unknown): d is string {
   return typeof d === "string" && /^\d{4}-\d{2}-\d{2}$/.test(d);
 }
@@ -79,6 +108,10 @@ export async function getCompletedDays(): Promise<string[]> {
 export async function setCompletedDays(days: string[]): Promise<string[]> {
   const sanitized = uniqSorted(days);
   await AsyncStorage.setItem(COMPLETED_DAYS_KEY, JSON.stringify(sanitized));
+
+  // ✅ reavalia notificações (modo inteligente)
+  await syncNotificationsSafely();
+
   return sanitized;
 }
 
@@ -608,6 +641,10 @@ export async function addCompletedDay(dateIso: string): Promise<{
 
   const updated = uniqSorted([...current, dateIso]);
   await AsyncStorage.setItem(COMPLETED_DAYS_KEY, JSON.stringify(updated));
+
+  // ✅ reavalia notificações (modo inteligente)
+  await syncNotificationsSafely();
+
   return { added: true, days: updated };
 }
 
@@ -618,6 +655,9 @@ export async function resetProgress(): Promise<void> {
 
   // ✅ limpa redistribuições
   await AsyncStorage.removeItem(PLAN_OVERRIDES_KEY);
+
+  // ✅ reavalia notificações (se estava ligado, cancela/recria conforme settings)
+  await syncNotificationsSafely();
 }
 
 export async function markAutoRestoreDone(): Promise<void> {
