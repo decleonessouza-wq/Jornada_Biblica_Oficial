@@ -444,7 +444,7 @@ export default function HistoryScreen() {
       Alert.alert("Sucesso", `${validDates.length} leituras restauradas 🙏\nGratidões: ${gCount}`);
     } catch (err) {
       console.log("Erro ao importar", err);
-      Alert.alert("Erro", "JSON inválido ou incompatível com a Jornada Bíblica.");
+      Alert.alert("Erro", `JSON inválido ou incompatível com o ${APP_INFO.name}.`);
     }
   }
 
