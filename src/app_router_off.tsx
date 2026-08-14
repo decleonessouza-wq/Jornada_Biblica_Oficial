@@ -19,6 +19,7 @@ import WelcomeScreen from "./screens/WelcomeScreen";
 import DedicationScreen from "./screens/DedicationScreen";
 
 import { runAutoBackup } from "./utils/autoBackup";
+import { APP_INFO } from "./constants/appInfo";
 
 const HAS_ONBOARDED_KEY = "hasOnboarded";
 
@@ -91,7 +92,7 @@ export default function AppRouterOff() {
         <Stack.Screen
           name="Home"
           component={HomeScreen}
-          options={{ title: "Jornada Bíblica" }}
+          options={{ title: APP_INFO.name }}
         />
         <Stack.Screen
           name="Plan"
