@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Jornada Bíblica",
+    "name": "Bíblia Jornada",
     "slug": "jornada-biblica",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -13,7 +13,7 @@
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#F7F8FA"
     },
     "ios": {
       "supportsTablet": true,
@@ -26,26 +26,26 @@
       "edgeToEdgeEnabled": true,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#F7F8FA"
       }
     },
     "web": {
       "bundler": "metro",
       "output": "single",
       "favicon": "./assets/favicon.png",
-      "name": "Jornada Bíblica",
-      "shortName": "Jornada",
-      "description": "Plano de leitura bíblica anual focado em constância e profundidade.",
+      "name": "Bíblia Jornada",
+      "shortName": "Bíblia Jornada",
+      "description": "Bíblia, leitura e jornada: uma experiência de leitura bíblica, constância e crescimento na Palavra.",
       "display": "standalone",
-      "themeColor": "#0E2A47",
-      "backgroundColor": "#ffffff",
+      "themeColor": "#0D2B45",
+      "backgroundColor": "#F7F8FA",
       "lang": "pt-BR",
       "startUrl": "/",
       "orientation": "portrait",
       "splash": {
         "image": "./assets/splash-icon.png",
         "resizeMode": "contain",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#F7F8FA"
       }
     },
     "extra": {
