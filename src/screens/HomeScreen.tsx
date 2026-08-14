@@ -23,6 +23,7 @@ import { readingPlan } from "../data/readingPlan";
 import { phases } from "../data/phases";
 import { RootStackParamList } from "../app_router_off";
 import { runAutoBackup } from "../utils/autoBackup";
+import { APP_INFO } from "../constants/appInfo";
 
 import {
   addCompletedDay,
@@ -1086,7 +1087,7 @@ export default function HomeScreen() {
 
               <View style={{ flex: 1 }}>
                 <Pressable onLongPress={toggleDevMode} delayLongPress={2000}>
-                  <Text style={styles.title}>Jornada Bíblica</Text>
+                  <Text style={styles.title}>{APP_INFO.name}</Text>
                 </Pressable>
                 <Text style={styles.subTitle}>Plano Anual • Leitura Bíblica</Text>
               </View>
