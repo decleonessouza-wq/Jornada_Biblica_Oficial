@@ -4,6 +4,8 @@ import * as Notifications from "expo-notifications";
 
 // ✅ para “modo inteligente”
 import { getCompletedDays } from "../services/progressStore";
+import { APP_INFO } from "../constants/appInfo";
+import { colors } from "../theme";
 
 /**
  * =========================
@@ -52,7 +54,7 @@ export async function ensureAndroidChannel() {
     importance: Notifications.AndroidImportance.DEFAULT,
     sound: "default",
     vibrationPattern: [0, 250, 250, 250],
-    lightColor: "#00C48C",
+    lightColor: colors.secondary,
   });
 }
 
@@ -161,14 +163,14 @@ const FALLBACK_VERSES: MessagePick[] = [
   { title: "📖 Palavra do Dia", body: "Tudo posso naquele que me fortalece. (Fp 4:13)" },
 ];
 const FALLBACK_PHRASES: MessagePick[] = [
-  { title: "✨ Ânimo!", body: "Hoje é um ótimo dia para continuar sua Jornada Bíblica." },
+  { title: "✨ Ânimo!", body: `Hoje é um ótimo dia para continuar sua leitura no app ${APP_INFO.name}.` },
   { title: "✨ Constância", body: "Um pouco por dia, e Deus faz muito em você." },
 ];
 
 function buildTitle(mode: ContentMode) {
   if (mode === "verse") return "📖 Versículo do Dia";
   if (mode === "phrase") return "✨ Mensagem do Dia";
-  return "🔔 Jornada Bíblica";
+  return `🔔 ${APP_INFO.name}`;
 }
 
 function safeArray<T>(v: unknown): T[] {
