@@ -16,6 +16,7 @@ import { useEffect, useMemo, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { colors } from "../theme/colors";
 import type { RootStackParamList } from "../app_router_off";
@@ -33,6 +34,7 @@ function clamp(n: number, min: number, max: number) {
 
 export default function WelcomeScreen() {
   const navigation = useNavigation<Nav>();
+  const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const maxWidth = clamp(width, 360, 520);
 
@@ -100,7 +102,7 @@ export default function WelcomeScreen() {
                 <Text style={styles.title}>{APP_INFO.name}</Text>
                 <Text style={styles.tagline}>Bíblia • Leitura • Jornada</Text>
                 <Text style={styles.subtitle}>
-                  Um plano anual, simples e constante — para fortalecer sua fé dia após dia.
+                  Bíblia Sagrada completa e prática — plano anual de leitura, simples e constante, para fortalecer sua fé dia após dia.
                 </Text>
 
                 <View style={styles.heroQuoteBox}>
@@ -155,7 +157,14 @@ export default function WelcomeScreen() {
         </ScrollView>
       </KeyboardAvoidingView>
 
-      <View style={styles.footerContainer}>
+      <View
+        style={[
+          styles.footerContainer,
+          {
+            paddingBottom: Math.max(insets.bottom, 20) + 12,
+          },
+        ]}
+      >
         <AppFooter />
       </View>
     </View>
@@ -216,9 +225,9 @@ const styles = StyleSheet.create({
   logoBadge: {
     width: 104,
     height: 104,
-    borderRadius: 28,
+    borderRadius: 20,
     backgroundColor: "#fff",
-    padding: 10,
+    padding: 4,
     borderWidth: 1,
     borderColor: stylesTokens.border,
 
@@ -371,7 +380,9 @@ const styles = StyleSheet.create({
   },
 
   footerContainer: {
-    paddingBottom: 20,
+    width: "100%",
+    paddingTop: 12,
+    paddingHorizontal: 18,
     alignItems: "center",
   },
 });
