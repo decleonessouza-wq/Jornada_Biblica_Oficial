@@ -29,6 +29,7 @@ import {
 
 export const LEGACY_COMPLETED_DAYS_KEY = "completedDays";
 export const LEGACY_PLAN_START_DATE_KEY = "planStartDate";
+export const LEGACY_PLAN_OVERRIDES_KEY = "planOverridesByDate";
 
 export type PlanProgressV2ActivationSource =
   | "LEGACY_PLAN_START_DATE"
@@ -38,6 +39,9 @@ export type PlanProgressV2BootstrapReviewReason =
   | "V2_STORAGE_CORRUPT"
   | "LEGACY_COMPLETED_DAYS_INVALID_JSON"
   | "LEGACY_COMPLETED_DAYS_INVALID_SHAPE"
+  | "LEGACY_PLAN_OVERRIDES_INVALID_JSON"
+  | "LEGACY_PLAN_OVERRIDES_INVALID_SHAPE"
+  | "LEGACY_PLAN_OVERRIDES_PRESENT"
   | "LEGACY_PLAN_START_DATE_INVALID"
   | "LEGACY_ACTIVATION_DATE_UNRESOLVED"
   | "LEGACY_MIGRATION_REVIEW_REQUIRED";
@@ -46,6 +50,8 @@ export type LegacyProgressSnapshotV2 = Readonly<{
   planStartDateRaw: string | null;
   completedDaysRaw: string | null;
   completedDays: readonly unknown[] | null;
+  planOverridesRaw: string | null;
+  planOverrides: Readonly<Record<string, unknown>> | null;
 }>;
 
 export type PlanProgressV2BootstrapResult =
@@ -100,41 +106,57 @@ export class PlanProgressV2BootstrapError extends Error {
 
 async function readLegacySnapshot(): Promise<LegacyProgressSnapshotV2> {
   try {
-    const [planStartDateRaw, completedDaysRaw] = await Promise.all([
-      AsyncStorage.getItem(LEGACY_PLAN_START_DATE_KEY),
-      AsyncStorage.getItem(LEGACY_COMPLETED_DAYS_KEY),
-    ]);
+    const [planStartDateRaw, completedDaysRaw, planOverridesRaw] =
+      await Promise.all([
+        AsyncStorage.getItem(LEGACY_PLAN_START_DATE_KEY),
+        AsyncStorage.getItem(LEGACY_COMPLETED_DAYS_KEY),
+        AsyncStorage.getItem(LEGACY_PLAN_OVERRIDES_KEY),
+      ]);
 
-    if (completedDaysRaw === null) {
-      return {
-        planStartDateRaw,
-        completedDaysRaw,
-        completedDays: [],
-      };
+    let completedDays: readonly unknown[] | null = [];
+
+    if (completedDaysRaw !== null) {
+      try {
+        const parsedCompletedDays: unknown = JSON.parse(completedDaysRaw);
+        completedDays = Array.isArray(parsedCompletedDays)
+          ? parsedCompletedDays
+          : null;
+      } catch {
+        completedDays = null;
+      }
     }
 
-    let parsed: unknown;
+    let planOverrides: Readonly<Record<string, unknown>> | null = null;
 
-    try {
-      parsed = JSON.parse(completedDaysRaw);
-    } catch {
-      return {
-        planStartDateRaw,
-        completedDaysRaw,
-        completedDays: null,
-      };
+    if (planOverridesRaw !== null) {
+      try {
+        const parsedPlanOverrides: unknown = JSON.parse(planOverridesRaw);
+
+        if (
+          typeof parsedPlanOverrides === "object" &&
+          parsedPlanOverrides !== null &&
+          !Array.isArray(parsedPlanOverrides)
+        ) {
+          planOverrides = parsedPlanOverrides as Readonly<
+            Record<string, unknown>
+          >;
+        }
+      } catch {
+        planOverrides = null;
+      }
     }
 
     return {
       planStartDateRaw,
       completedDaysRaw,
-      completedDays: Array.isArray(parsed) ? parsed : null,
+      completedDays,
+      planOverridesRaw,
+      planOverrides,
     };
   } catch (error) {
     throw new PlanProgressV2BootstrapError(error);
   }
 }
-
 function tryNormalizeIsoDate(value: unknown): IsoDate | null {
   if (typeof value !== "string") {
     return null;
@@ -186,6 +208,45 @@ export async function inspectPlanProgressV2Bootstrap(): Promise<PlanProgressV2Bo
   }
 
   const legacySnapshot = await readLegacySnapshot();
+
+  if (
+    legacySnapshot.planOverridesRaw !== null &&
+    legacySnapshot.planOverrides === null
+  ) {
+    let reason: PlanProgressV2BootstrapReviewReason =
+      "LEGACY_PLAN_OVERRIDES_INVALID_SHAPE";
+
+    try {
+      JSON.parse(legacySnapshot.planOverridesRaw);
+    } catch {
+      reason = "LEGACY_PLAN_OVERRIDES_INVALID_JSON";
+    }
+
+    return {
+      status: "REVIEW_REQUIRED",
+      progress: null,
+      v2Storage,
+      legacySnapshot,
+      migration: null,
+      activationSource: null,
+      reviewReason: reason,
+    };
+  }
+
+  if (
+    legacySnapshot.planOverrides !== null &&
+    Object.keys(legacySnapshot.planOverrides).length > 0
+  ) {
+    return {
+      status: "REVIEW_REQUIRED",
+      progress: null,
+      v2Storage,
+      legacySnapshot,
+      migration: null,
+      activationSource: null,
+      reviewReason: "LEGACY_PLAN_OVERRIDES_PRESENT",
+    };
+  }
 
   if (
     legacySnapshot.completedDaysRaw !== null &&
