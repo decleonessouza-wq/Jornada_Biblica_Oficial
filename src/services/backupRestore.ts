@@ -1,7 +1,9 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { APP_INFO } from "../constants/appInfo";
 
 const AUTO_BACKUP_KEY = "autoBackupData";
 const COMPLETED_DAYS_KEY = "completedDays";
+const LEGACY_APP_NAME = "Jornada Bíblica";
 
 type AutoBackupData = {
   app?: unknown;
@@ -12,6 +14,10 @@ type AutoBackupData = {
 
 function isValidDateString(d: unknown): d is string {
   return typeof d === "string" && /^\d{4}-\d{2}-\d{2}$/.test(d);
+}
+
+function isSupportedBackupApp(app: unknown): app is string {
+  return app === APP_INFO.name || app === LEGACY_APP_NAME;
 }
 
 function uniqSorted(days: string[]) {
@@ -33,8 +39,8 @@ export async function restoreFromAutoBackup(): Promise<{
     return { restored: false, count: 0 };
   }
 
-  // valida “assinatura” do backup
-  if (parsed?.app !== "Jornada Bíblica" || parsed?.type !== "auto-backup") {
+  // Aceita a identidade atual e o nome legado para manter backups existentes restauráveis.
+  if (!isSupportedBackupApp(parsed?.app) || parsed?.type !== "auto-backup") {
     return { restored: false, count: 0 };
   }
 

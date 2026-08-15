@@ -1,5 +1,5 @@
 import { View, Text } from "react-native";
-import { colors } from "../theme/colors";
+import { colors } from "../theme";
 import { APP_INFO } from "../constants/appInfo";
 
 export default function AppFooter() {
@@ -13,7 +13,7 @@ export default function AppFooter() {
           lineHeight: 16,
         }}
       >
-        Jornada Bíblica – v {APP_INFO.version} - Ad Maiorem Dei Gloriam – by
+        {APP_INFO.name} – v {APP_INFO.version} - Ad Maiorem Dei Gloriam – by
         Decleones Andrade @2026. Direitos Reservados.
       </Text>
     </View>

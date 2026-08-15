@@ -16,10 +16,12 @@ import { useEffect, useMemo, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { colors } from "../theme/colors";
 import type { RootStackParamList } from "../app_router_off";
 import AppFooter from "../components/AppFooter";
+import { APP_INFO } from "../constants/appInfo";
 
 type Nav = NativeStackNavigationProp<RootStackParamList, "Welcome">;
 
@@ -32,6 +34,7 @@ function clamp(n: number, min: number, max: number) {
 
 export default function WelcomeScreen() {
   const navigation = useNavigation<Nav>();
+  const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const maxWidth = clamp(width, 360, 520);
 
@@ -90,14 +93,16 @@ export default function WelcomeScreen() {
               <View style={styles.hero}>
                 <View style={styles.logoBadge}>
                   <Image
-                    source={require("../../assets/icon.png")}
+                    source={require("../../assets/branding/biblia-jornada-simbolo.png")}
                     style={styles.logo}
+                    resizeMode="contain"
                   />
                 </View>
 
-                <Text style={styles.title}>Jornada Bíblica</Text>
+                <Text style={styles.title}>{APP_INFO.name}</Text>
+                <Text style={styles.tagline}>Bíblia • Leitura • Jornada</Text>
                 <Text style={styles.subtitle}>
-                  Um plano anual, simples e constante — para fortalecer sua fé dia após dia.
+                  Bíblia Sagrada completa e prática — plano anual de leitura, simples e constante, para fortalecer sua fé dia após dia.
                 </Text>
 
                 <View style={styles.heroQuoteBox}>
@@ -152,7 +157,14 @@ export default function WelcomeScreen() {
         </ScrollView>
       </KeyboardAvoidingView>
 
-      <View style={styles.footerContainer}>
+      <View
+        style={[
+          styles.footerContainer,
+          {
+            paddingBottom: Math.max(insets.bottom, 20) + 12,
+          },
+        ]}
+      >
         <AppFooter />
       </View>
     </View>
@@ -160,9 +172,9 @@ export default function WelcomeScreen() {
 }
 
 const stylesTokens = {
-  bg: "#F4F6F8",
+  bg: "#F7F8FA",
   card: "#FFFFFF",
-  border: "rgba(0,0,0,0.06)",
+  border: "rgba(13,43,69,0.10)",
 };
 
 const styles = StyleSheet.create({
@@ -195,7 +207,7 @@ const styles = StyleSheet.create({
     width: 340,
     height: 340,
     borderRadius: 999,
-    backgroundColor: "rgba(4,206,146,0.12)",
+    backgroundColor: "rgba(13,43,69,0.10)",
   },
   glowMidRight: {
     position: "absolute",
@@ -204,7 +216,7 @@ const styles = StyleSheet.create({
     width: 380,
     height: 380,
     borderRadius: 999,
-    backgroundColor: "rgba(218,165,32,0.10)",
+    backgroundColor: "rgba(240,180,41,0.10)",
   },
 
   hero: {
@@ -213,9 +225,9 @@ const styles = StyleSheet.create({
   logoBadge: {
     width: 104,
     height: 104,
-    borderRadius: 28,
+    borderRadius: 20,
     backgroundColor: "#fff",
-    padding: 10,
+    padding: 4,
     borderWidth: 1,
     borderColor: stylesTokens.border,
 
@@ -238,6 +250,14 @@ const styles = StyleSheet.create({
     textAlign: "center",
     letterSpacing: 0.2,
   },
+  tagline: {
+    marginTop: 6,
+    fontSize: 12,
+    fontWeight: "800",
+    color: colors.secondary,
+    textAlign: "center",
+    letterSpacing: 1.1,
+  },
   subtitle: {
     marginTop: 8,
     fontSize: 14,
@@ -250,12 +270,12 @@ const styles = StyleSheet.create({
   heroQuoteBox: {
     marginTop: 14,
     width: "100%",
-    backgroundColor: "rgba(4,206,146,0.08)",
+    backgroundColor: "rgba(240,180,41,0.10)",
     borderRadius: 18,
     paddingVertical: 12,
     paddingHorizontal: 14,
     borderWidth: 1,
-    borderColor: "rgba(4,206,146,0.14)",
+    borderColor: "rgba(240,180,41,0.24)",
   },
   heroQuoteText: {
     fontSize: 13,
@@ -360,7 +380,9 @@ const styles = StyleSheet.create({
   },
 
   footerContainer: {
-    paddingBottom: 20,
+    width: "100%",
+    paddingTop: 12,
+    paddingHorizontal: 18,
     alignItems: "center",
   },
 });

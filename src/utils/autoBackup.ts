@@ -1,5 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { COMPLETED_DAYS_KEY, LAST_BACKUP_KEY, AUTO_BACKUP_KEY } from "../services/progressStore";
+import { APP_INFO } from "../constants/appInfo";
 
 export async function runAutoBackup() {
   try {
@@ -18,7 +19,7 @@ export async function runAutoBackup() {
     const completed: string[] = stored ? JSON.parse(stored) : [];
 
     const backupData = {
-      app: "Jornada Bíblica",
+      app: APP_INFO.name,
       type: "auto-backup",
       createdAt: today.toISOString(),
       completedDays: completed,
