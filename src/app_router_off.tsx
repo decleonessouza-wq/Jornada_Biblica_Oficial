@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { AppState, AppStateStatus, View, Text } from "react-native";
+import { View, Text } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { NavigationContainer } from "@react-navigation/native";
@@ -18,7 +18,6 @@ import PrivacyScreen from "./screens/PrivacyScreen";
 import WelcomeScreen from "./screens/WelcomeScreen";
 import DedicationScreen from "./screens/DedicationScreen";
 
-import { runAutoBackup } from "./utils/autoBackup";
 import { APP_INFO } from "./constants/appInfo";
 
 const HAS_ONBOARDED_KEY = "hasOnboarded";
@@ -55,16 +54,6 @@ export default function AppRouterOff() {
         setBooting(false);
       }
     })();
-  }, []);
-
-  useEffect(() => {
-    runAutoBackup();
-
-    const sub = AppState.addEventListener("change", (state: AppStateStatus) => {
-      if (state === "active") runAutoBackup();
-    });
-
-    return () => sub.remove();
   }, []);
 
   if (booting) {
