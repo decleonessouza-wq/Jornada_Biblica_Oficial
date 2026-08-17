@@ -23,6 +23,8 @@ import { readingPlan } from "../data/readingPlan";
 import { phases } from "../data/phases";
 import type { RootStackParamList } from "../app_router_off";
 import { addCompletedDay } from "../services/progressStore";
+import { projectCanonicalStructuredPlan } from "../domain/plan/canonicalStructuredPlanV2";
+import { buildBibleReadingProviderTarget } from "../services/bibleReadingProviderAdapter";
 
 // ✅ plano atemporal
 import { getPlanStartDate, PLAN_START_DATE_KEY } from "../services/progressStore";
@@ -909,6 +911,37 @@ export default function ReadingScreen({ route }: Props) {
     }
   }
 
+  const structuredProjection = useMemo(() => {
+    if (resolved.mode !== "ATEMPORAL" || !resolved.planStartDate) return null;
+
+    try {
+      return projectCanonicalStructuredPlan(resolved.planStartDate);
+    } catch (error) {
+      console.warn("structuredProjection fallback para provider legado:", error);
+      return null;
+    }
+  }, [resolved.mode, resolved.planStartDate]);
+
+  const structuredReadingDay = useMemo(() => {
+    if (!structuredProjection || !date || isSunday || isNatal) return null;
+
+    const projectedDay =
+      structuredProjection.calendarDays.find((day) => day.date === date) ?? null;
+
+    if (!projectedDay || projectedDay.kind !== "READING") return null;
+
+    if (projectedDay.readingUnit.reference !== reference) {
+      console.warn("structuredReadingDay referência divergente; usando provider legado.", {
+        date,
+        resolvedReference: reference,
+        structuredReference: projectedDay.readingUnit.reference,
+      });
+      return null;
+    }
+
+    return projectedDay;
+  }, [structuredProjection, date, isSunday, isNatal, reference]);
+
   const selectedReferenceRaw = useMemo(() => {
     return passages[selectedPassageIndex] ?? reference;
   }, [passages, selectedPassageIndex, reference]);
@@ -917,9 +950,32 @@ export default function ReadingScreen({ route }: Props) {
     return ensureChapterForSingleChapterBooks(selectedReferenceRaw);
   }, [selectedReferenceRaw]);
 
+  const structuredSelectedPassage = useMemo(() => {
+    if (!structuredReadingDay) return null;
+
+    return (
+      structuredReadingDay.readingUnit.bibleReference.passages[selectedPassageIndex] ??
+      null
+    );
+  }, [structuredReadingDay, selectedPassageIndex]);
+
+  const structuredProviderTarget = useMemo(() => {
+    if (!structuredSelectedPassage || isSunday || isNatal) return null;
+
+    try {
+      return buildBibleReadingProviderTarget(structuredSelectedPassage, version);
+    } catch (error) {
+      console.warn("structuredProviderTarget fallback para provider legado:", error);
+      return null;
+    }
+  }, [structuredSelectedPassage, isSunday, isNatal, version]);
+
   const readingUrl = useMemo(() => {
-    return buildReadingUrl(selectedReferenceForUrl, isSunday, version);
-  }, [selectedReferenceForUrl, isSunday, version]);
+    return (
+      structuredProviderTarget?.url ??
+      buildReadingUrl(selectedReferenceForUrl, isSunday, version)
+    );
+  }, [structuredProviderTarget, selectedReferenceForUrl, isSunday, version]);
 
   async function openInBrowser() {
     try {
