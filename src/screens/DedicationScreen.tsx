@@ -14,7 +14,7 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
 import { colors } from "../theme/colors";
-import { RootStackParamList } from "../app_router_off";
+import type { RootStackParamList } from "../navigation/types";
 import AppFooter from "../components/AppFooter";
 
 const USER_NAME_KEY = "userName";
@@ -61,7 +61,12 @@ export default function DedicationScreen() {
   }, []);
 
   function goHome() {
-    navigation.replace("Home");
+    navigation.replace("AppShell", {
+      screen: "MainTabs",
+      params: {
+        screen: "HomeTab",
+      },
+    });
   }
 
   return (

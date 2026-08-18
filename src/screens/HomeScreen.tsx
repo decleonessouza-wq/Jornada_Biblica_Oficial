@@ -14,6 +14,9 @@ import {
   View,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
+import type { CompositeNavigationProp } from "@react-navigation/native";
+import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
+import type { DrawerNavigationProp } from "@react-navigation/drawer";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -21,7 +24,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { colors } from "../theme/colors";
 import { readingPlan } from "../data/readingPlan";
 import { phases } from "../data/phases";
-import { RootStackParamList } from "../app_router_off";
+import type { AppDrawerParamList, MainTabParamList, RootStackParamList } from "../navigation/types";
 import { runAutoBackup } from "../utils/autoBackup";
 import { APP_INFO } from "../constants/appInfo";
 
@@ -49,7 +52,13 @@ import {
   isMilestone,
 } from "../constants/gamification";
 
-type NavigationProp = NativeStackNavigationProp<RootStackParamList, "Home">;
+type NavigationProp = CompositeNavigationProp<
+  BottomTabNavigationProp<MainTabParamList, "HomeTab">,
+  CompositeNavigationProp<
+    DrawerNavigationProp<AppDrawerParamList>,
+    NativeStackNavigationProp<RootStackParamList>
+  >
+>;
 
 function isIsoDateString(s: unknown): s is string {
   return typeof s === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s);
@@ -1319,7 +1328,7 @@ export default function HomeScreen() {
 
           {quickNavOpen && (
             <View style={styles.menuGrid}>
-              <TouchableOpacity style={styles.menuBtn} onPress={() => navigation.navigate("Plan")}>
+              <TouchableOpacity style={styles.menuBtn} onPress={() => navigation.navigate("PlanTab")}>
                 <Text style={styles.menuEmoji}>📅</Text>
                 <Text style={styles.menuText}>Plano Anual</Text>
               </TouchableOpacity>

@@ -13,12 +13,14 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useNavigation } from "@react-navigation/native";
+import type { CompositeNavigationProp } from "@react-navigation/native";
+import type { DrawerNavigationProp } from "@react-navigation/drawer";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
 import { colors } from "../theme/colors";
 import { restoreFromAutoBackup } from "../services/backupRestore";
 import { APP_INFO } from "../constants/appInfo";
-import type { RootStackParamList } from "../app_router_off";
+import type { AppDrawerParamList, RootStackParamList } from "../navigation/types";
 
 // ✅ usar as rotinas oficiais do app para não deixar chaves “penduradas”
 import { resetProgress, setCompletedDays, markAutoRestoreDone } from "../services/progressStore";
@@ -34,7 +36,10 @@ type ExportData = {
   hasOnboarded?: boolean;
 };
 
-type NavigationProp = NativeStackNavigationProp<RootStackParamList, "Settings">;
+type NavigationProp = CompositeNavigationProp<
+  DrawerNavigationProp<AppDrawerParamList, "Settings">,
+  NativeStackNavigationProp<RootStackParamList>
+>;
 
 // --- CONSTANTES ---
 const LAST_BACKUP_KEY = "lastAutoBackupDate";

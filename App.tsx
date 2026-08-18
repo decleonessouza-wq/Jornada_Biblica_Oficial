@@ -1,7 +1,7 @@
 import React, { useEffect } from "react";
 import { AppState, AppStateStatus } from "react-native";
 
-import AppRouterOff from "./src/app_router_off";
+import RootNavigator from "./src/navigation/RootNavigator";
 import { initNotifications } from "./src/services/notifications";
 import { runAutoBackup } from "./src/utils/autoBackup";
 
@@ -21,5 +21,5 @@ export default function App() {
     return () => sub.remove();
   }, []);
 
-  return <AppRouterOff />;
+  return <RootNavigator />;
 }
