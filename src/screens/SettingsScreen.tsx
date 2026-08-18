@@ -421,8 +421,9 @@ export default function SettingsScreen() {
       setExportJson(null);
       setImportText("");
 
-      Alert.alert("Pronto", "Tudo foi resetado.");
       await loadLastBackupInfo();
+      navigation.replace("Welcome");
+      Alert.alert("Pronto", "Tudo foi resetado.");
     } catch (err) {
       console.log("Erro ao resetar", err);
       Alert.alert("Erro", "Não foi possível resetar os dados.");
