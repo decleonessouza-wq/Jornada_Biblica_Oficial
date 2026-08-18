@@ -19,7 +19,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { colors } from "../theme/colors";
-import type { RootStackParamList } from "../app_router_off";
+import type { RootStackParamList } from "../navigation/types";
 import AppFooter from "../components/AppFooter";
 import { APP_INFO } from "../constants/appInfo";
 

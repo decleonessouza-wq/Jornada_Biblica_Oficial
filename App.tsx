@@ -1,6 +1,9 @@
 import React, { useEffect } from "react";
-import AppRouterOff from "./src/app_router_off";
+import { AppState, AppStateStatus } from "react-native";
+
+import RootNavigator from "./src/navigation/RootNavigator";
 import { initNotifications } from "./src/services/notifications";
+import { runAutoBackup } from "./src/utils/autoBackup";
 
 export default function App() {
   useEffect(() => {
@@ -8,5 +11,15 @@ export default function App() {
     initNotifications();
   }, []);
 
-  return <AppRouterOff />;
+  useEffect(() => {
+    runAutoBackup();
+
+    const sub = AppState.addEventListener("change", (state: AppStateStatus) => {
+      if (state === "active") runAutoBackup();
+    });
+
+    return () => sub.remove();
+  }, []);
+
+  return <RootNavigator />;
 }

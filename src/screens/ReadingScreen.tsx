@@ -21,7 +21,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { colors } from "../theme/colors";
 import { readingPlan } from "../data/readingPlan";
 import { phases } from "../data/phases";
-import type { RootStackParamList } from "../app_router_off";
+import type { RootStackParamList } from "../navigation/types";
 import { addCompletedDay } from "../services/progressStore";
 import { projectCanonicalStructuredPlan } from "../domain/plan/canonicalStructuredPlanV2";
 import { buildBibleReadingProviderTarget } from "../services/bibleReadingProviderAdapter";
