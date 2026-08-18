@@ -1,3 +1,5 @@
+import { useState } from "react";
+
 import DedicationScreen from "../screens/DedicationScreen";
 import HistoryScreen from "../screens/HistoryScreen";
 import PrivacyScreen from "../screens/PrivacyScreen";
@@ -8,14 +10,19 @@ import { colors } from "../theme/colors";
 
 import MainTabsNavigator from "./MainTabsNavigator";
 import { AppDrawer } from "./navigationFactories";
+import QuickActionSheet from "./QuickActionSheet";
 
-export type AppDrawerNavigatorProps = {
-  onQuickAction: () => void;
-};
+export default function AppDrawerNavigator() {
+  const [quickActionsVisible, setQuickActionsVisible] = useState(false);
 
-export default function AppDrawerNavigator({
-  onQuickAction,
-}: AppDrawerNavigatorProps) {
+  const openQuickActions = () => {
+    setQuickActionsVisible(true);
+  };
+
+  const closeQuickActions = () => {
+    setQuickActionsVisible(false);
+  };
+
   return (
     <AppDrawer.Navigator
       initialRouteName="MainTabs"
@@ -27,33 +34,65 @@ export default function AppDrawerNavigator({
         headerTitleStyle: {
           fontWeight: "700",
         },
-        drawerActiveTintColor: colors.primary,
-        drawerInactiveTintColor: colors.textMuted,
         drawerStyle: {
           backgroundColor: colors.surface,
         },
-        drawerLabelStyle: {
-          fontWeight: "600",
+        drawerActiveTintColor: colors.primary,
+        drawerInactiveTintColor: colors.text,
+        drawerActiveBackgroundColor: colors.primarySoft,
+        sceneStyle: {
+          backgroundColor: colors.background,
         },
       }}
     >
       <AppDrawer.Screen
         name="MainTabs"
         options={{
+          title: "Início",
           drawerLabel: "Início",
           headerShown: false,
-          title: "Início",
         }}
       >
-        {() => <MainTabsNavigator onQuickAction={onQuickAction} />}
+        {({ navigation }) => {
+          const handleOpenPlan = () => {
+            closeQuickActions();
+            navigation.navigate("MainTabs", {
+              screen: "PlanTab",
+            });
+          };
+
+          const handleOpenProgress = () => {
+            closeQuickActions();
+            navigation.navigate("Progress");
+          };
+
+          const handleOpenHistory = () => {
+            closeQuickActions();
+            navigation.navigate("History");
+          };
+
+          return (
+            <>
+              <MainTabsNavigator onQuickAction={openQuickActions} />
+
+              <QuickActionSheet
+                visible={quickActionsVisible}
+                onClose={closeQuickActions}
+                onOpenPlan={handleOpenPlan}
+                onOpenProgress={handleOpenProgress}
+                onOpenHistory={handleOpenHistory}
+              />
+            </>
+          );
+        }}
       </AppDrawer.Screen>
 
       <AppDrawer.Screen
         name="Progress"
         component={ProgressScreen}
         options={{
-          drawerLabel: "Progresso",
           title: "Progresso",
+          drawerLabel: "Progresso",
         }}
       />
 
@@ -61,8 +100,8 @@ export default function AppDrawerNavigator({
         name="History"
         component={HistoryScreen}
         options={{
-          drawerLabel: "Histórico",
           title: "Histórico",
+          drawerLabel: "Histórico",
         }}
       />
 
@@ -70,8 +109,8 @@ export default function AppDrawerNavigator({
         name="Settings"
         component={SettingsScreen}
         options={{
-          drawerLabel: "Configurações",
           title: "Configurações",
+          drawerLabel: "Configurações",
         }}
       />
 
@@ -79,8 +118,8 @@ export default function AppDrawerNavigator({
         name="Dedication"
         component={DedicationScreen}
         options={{
-          drawerLabel: "Dedicatória",
           title: "Dedicatória",
+          drawerLabel: "Dedicatória",
         }}
       />
 
@@ -88,8 +127,8 @@ export default function AppDrawerNavigator({
         name="Terms"
         component={TermsScreen}
         options={{
-          drawerLabel: "Termos",
           title: "Termos",
+          drawerLabel: "Termos",
         }}
       />
 
@@ -97,8 +136,8 @@ export default function AppDrawerNavigator({
         name="Privacy"
         component={PrivacyScreen}
         options={{
-          drawerLabel: "Privacidade",
           title: "Privacidade",
+          drawerLabel: "Privacidade",
         }}
       />
     </AppDrawer.Navigator>
