@@ -1,4 +1,4 @@
-import { useEffect, useState, type ComponentType } from "react";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   StyleSheet,
@@ -14,17 +14,12 @@ import ReadingScreen from "../screens/ReadingScreen";
 import WelcomeScreen from "../screens/WelcomeScreen";
 import { colors } from "../theme/colors";
 
+import AppDrawerNavigator from "./AppDrawerNavigator";
 import { RootStack } from "./navigationFactories";
 
 const HAS_ONBOARDED_KEY = "hasOnboarded";
 
-export type RootNavigatorProps = {
-  appShellComponent: ComponentType;
-};
-
-export default function RootNavigator({
-  appShellComponent: AppShellComponent,
-}: RootNavigatorProps) {
+export default function RootNavigator() {
   const [booting, setBooting] = useState(true);
   const [hasOnboarded, setHasOnboarded] = useState(false);
 
@@ -84,7 +79,7 @@ export default function RootNavigator({
 
         <RootStack.Screen
           name="AppShell"
-          component={AppShellComponent}
+          component={AppDrawerNavigator}
           options={{ headerShown: false }}
         />
 
