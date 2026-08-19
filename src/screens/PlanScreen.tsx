@@ -19,6 +19,7 @@ import { readingPlan } from "../data/readingPlan";
 
 // ✅ plano atemporal
 import { getPlanStartDate } from "../services/progressStore";
+import { useAppShellChrome } from "../navigation/AppShellChromeContext";
 
 /* ==========================
    HELPERS
@@ -235,6 +236,7 @@ function Pill({
 export default function PlanScreen() {
   const { width } = useWindowDimensions();
   const maxWidth = clamp(width, 360, 820);
+  const { handleScroll, resetChrome } = useAppShellChrome();
 
   const [completedDays, setCompletedDays] = useState<string[]>([]);
   const [selectedPhase, setSelectedPhase] = useState<Phase | null>(null);
@@ -283,6 +285,12 @@ export default function PlanScreen() {
       loadGratitude();
       loadPlanStartDate();
     }, [loadCompletedDays, loadGratitude, loadPlanStartDate])
+  );
+
+  useFocusEffect(
+    useCallback(() => {
+      resetChrome();
+    }, [resetChrome])
   );
 
   const totalGratitudes = useMemo(() => Object.keys(gratitudeByDate).length, [gratitudeByDate]);
@@ -359,6 +367,8 @@ export default function PlanScreen() {
       <ScrollView
         contentContainerStyle={[styles.scrollContent, { paddingHorizontal: width >= 700 ? 24 : 16 }]}
         showsVerticalScrollIndicator={false}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
       >
         <View style={[styles.contentWrap, { maxWidth, alignSelf: "center" }]}>
           {/* HERO */}
