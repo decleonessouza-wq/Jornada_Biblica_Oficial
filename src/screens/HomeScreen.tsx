@@ -2,10 +2,8 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Alert,
   Dimensions,
-  Image,
   Platform,
   Pressable,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -26,7 +24,6 @@ import { readingPlan } from "../data/readingPlan";
 import { phases } from "../data/phases";
 import type { AppDrawerParamList, MainTabParamList, RootStackParamList } from "../navigation/types";
 import { runAutoBackup } from "../utils/autoBackup";
-import { APP_INFO } from "../constants/appInfo";
 import { useAppShellChrome } from "../navigation/AppShellChromeContext";
 import { VERSES_OF_DAY, pickVerseForToday, type VerseItem } from "../data/versesOfDay";
 
@@ -687,48 +684,31 @@ export default function HomeScreen() {
   const hasLegacyProgress = useMemo(() => completedDays.length > 0, [completedDays.length]);
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <View style={styles.safeInner}>
-        <ScrollView
-          style={styles.scroll}
-          contentContainerStyle={styles.content}
-          onScroll={handleScroll}
-          scrollEventThrottle={16}
-        >
-          {/* HEADER */}
-          <View style={styles.headerWrap}>
-            <View style={styles.headerTop}>
-              <View style={styles.logoWrap}>
-                <Image source={require("../../assets/icon.png")} style={styles.logo} resizeMode="cover" />
-              </View>
+    <View style={styles.screen}>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.content}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
+      >
+        {devMode && (
+          <View style={styles.devPanel}>
+            <Text style={styles.devText}>🔧 Modo Desenvolvedor ativo</Text>
 
-              <View style={{ flex: 1 }}>
-                <Pressable onLongPress={toggleDevMode} delayLongPress={2000}>
-                  <Text style={styles.title}>{APP_INFO.name}</Text>
-                </Pressable>
-                <Text style={styles.subTitle}>Plano Anual • Leitura Bíblica</Text>
-              </View>
-            </View>
-
-            {devMode && (
-              <View style={styles.devPanel}>
-                <Text style={styles.devText}>🔧 Modo Desenvolvedor ativo</Text>
-
-                <TouchableOpacity
-                  style={styles.devBtn}
-                  onPress={() => {
-                    if (!__DEV__) return;
-                    setMockDate(null);
-                    notify("DEV", "Mock date removido (voltou para hoje real).");
-                  }}
-                >
-                  <Text style={styles.devBtnText}>Remover mockDate</Text>
-                </TouchableOpacity>
-              </View>
-            )}
+            <TouchableOpacity
+              style={styles.devBtn}
+              onPress={() => {
+                if (!__DEV__) return;
+                setMockDate(null);
+                notify("DEV", "Mock date removido (voltou para hoje real).");
+              }}
+            >
+              <Text style={styles.devBtnText}>Remover mockDate</Text>
+            </TouchableOpacity>
           </View>
+        )}
 
-          {/* BANNER */}
+        {/* BANNER */}
           {banner && (
             <Pressable
               onPress={() => setBanner(null)}
@@ -819,7 +799,13 @@ export default function HomeScreen() {
               <Pill text={todayStatusPill.text} variant={todayStatusPill.variant} />
             </View>
 
-            <Pressable onPress={openReading} accessibilityRole="button" accessibilityLabel="Abrir leitura do dia">
+            <Pressable
+              onPress={openReading}
+              onLongPress={toggleDevMode}
+              delayLongPress={2000}
+              accessibilityRole="button"
+              accessibilityLabel="Abrir leitura do dia"
+            >
               <Text style={styles.heroReference}>{resolvedToday.reference}</Text>
             </Pressable>
 
@@ -993,8 +979,7 @@ export default function HomeScreen() {
             </View>
           </View>
         )}
-      </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -1002,13 +987,10 @@ const { width } = Dimensions.get("window");
 const CARD_MAX = 560;
 
 const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  safeInner: {
+  screen: {
     flex: 1,
     position: "relative",
+    backgroundColor: colors.background,
   },
   scroll: {
     flex: 1,
@@ -1021,47 +1003,9 @@ const styles = StyleSheet.create({
     maxWidth: CARD_MAX,
   },
 
-  /* HEADER */
-  headerWrap: {
+  devPanel: {
     marginTop: 6,
     marginBottom: 12,
-  },
-  headerTop: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  logoWrap: {
-    width: 52,
-    height: 52,
-    borderRadius: 16,
-    backgroundColor: "#fff",
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: "#000",
-    shadowOpacity: 0.06,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 2,
-  },
-  logo: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: "800",
-    color: colors.primary,
-  },
-  subTitle: {
-    marginTop: 2,
-    color: colors.muted,
-    fontSize: 12,
-  },
-
-  devPanel: {
-    marginTop: 10,
     backgroundColor: "#fff",
     borderRadius: 14,
     padding: 12,
