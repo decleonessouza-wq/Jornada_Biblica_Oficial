@@ -13,7 +13,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { useNavigation } from "@react-navigation/native";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import type { CompositeNavigationProp } from "@react-navigation/native";
 import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 import type { DrawerNavigationProp } from "@react-navigation/drawer";
@@ -27,6 +27,7 @@ import { phases } from "../data/phases";
 import type { AppDrawerParamList, MainTabParamList, RootStackParamList } from "../navigation/types";
 import { runAutoBackup } from "../utils/autoBackup";
 import { APP_INFO } from "../constants/appInfo";
+import { useAppShellChrome } from "../navigation/AppShellChromeContext";
 
 import {
   addCompletedDay,
@@ -609,6 +610,13 @@ function Card({
 
 export default function HomeScreen() {
   const navigation = useNavigation<NavigationProp>();
+  const { handleScroll, resetChrome } = useAppShellChrome();
+
+  useFocusEffect(
+    useCallback(() => {
+      resetChrome();
+    }, [resetChrome])
+  );
 
   const [mockDate, setMockDate] = useState<string | null>(null);
   const [devMode, setDevMode] = useState(false);
@@ -1086,7 +1094,12 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.safeInner}>
-        <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={styles.content}
+          onScroll={handleScroll}
+          scrollEventThrottle={16}
+        >
           {/* HEADER */}
           <View style={styles.headerWrap}>
             <View style={styles.headerTop}>

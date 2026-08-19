@@ -1,39 +1,80 @@
 import { DrawerActions } from "@react-navigation/native";
-import { Pressable, StyleSheet, Text } from "react-native";
+import { StyleSheet, View } from "react-native";
+import Animated, { useAnimatedStyle } from "react-native-reanimated";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import HomeScreen from "../screens/HomeScreen";
 import PlanScreen from "../screens/PlanScreen";
 import { APP_INFO } from "../constants/appInfo";
 import { colors } from "../theme/colors";
 
+import {
+  AppHeaderBrand,
+  AppHeaderMenuButton,
+  AppHeaderNotificationButton,
+} from "./AppHeader";
+import {
+  AppShellChromeProvider,
+  useAppShellChrome,
+} from "./AppShellChromeContext";
 import CustomTabBar from "./CustomTabBar";
 import { MainTabs } from "./navigationFactories";
+
+const HEADER_ROW_HEIGHT = 56;
 
 export type MainTabsNavigatorProps = {
   onQuickAction: () => void;
 };
 
-type HeaderMenuButtonProps = {
-  onPress: () => void;
+type AnimatedAppShellHeaderProps = {
+  onOpenDrawer: () => void;
+  onOpenNotifications: () => void;
 };
 
-function HeaderMenuButton({ onPress }: HeaderMenuButtonProps) {
+function AnimatedAppShellHeader({
+  onOpenDrawer,
+  onOpenNotifications,
+}: AnimatedAppShellHeaderProps) {
+  const insets = useSafeAreaInsets();
+  const { chromeProgress } = useAppShellChrome();
+
+  const shellAnimatedStyle = useAnimatedStyle(() => ({
+    height:
+      insets.top +
+      HEADER_ROW_HEIGHT * (1 - chromeProgress.value),
+  }));
+
+  const rowAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: 1 - chromeProgress.value,
+    transform: [
+      {
+        translateY: -HEADER_ROW_HEIGHT * chromeProgress.value,
+      },
+    ],
+  }));
+
   return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel="Abrir menu"
-      onPress={onPress}
-      style={({ pressed }) => [
-        styles.headerMenuButton,
-        pressed && styles.headerMenuButtonPressed,
-      ]}
-    >
-      <Text style={styles.headerMenuGlyph}>☰</Text>
-    </Pressable>
+    <Animated.View style={[styles.headerShell, shellAnimatedStyle]}>
+      <View style={{ height: insets.top }} />
+
+      <Animated.View style={[styles.headerRow, rowAnimatedStyle]}>
+        <View style={styles.headerSide}>
+          <AppHeaderMenuButton onPress={onOpenDrawer} />
+        </View>
+
+        <View style={styles.headerBrand}>
+          <AppHeaderBrand />
+        </View>
+
+        <View style={styles.headerSide}>
+          <AppHeaderNotificationButton onPress={onOpenNotifications} />
+        </View>
+      </Animated.View>
+    </Animated.View>
   );
 }
 
-export default function MainTabsNavigator({
+function MainTabsNavigatorContent({
   onQuickAction,
 }: MainTabsNavigatorProps) {
   return (
@@ -41,17 +82,13 @@ export default function MainTabsNavigator({
       initialRouteName="HomeTab"
       screenOptions={({ navigation }) => ({
         headerShown: true,
-        headerStyle: {
-          backgroundColor: colors.surface,
-        },
-        headerTintColor: colors.textStrong,
-        headerTitleStyle: {
-          fontWeight: "700",
-        },
-        headerLeft: () => (
-          <HeaderMenuButton
-            onPress={() =>
+        header: () => (
+          <AnimatedAppShellHeader
+            onOpenDrawer={() =>
               navigation.dispatch(DrawerActions.openDrawer())
+            }
+            onOpenNotifications={() =>
+              navigation.dispatch(DrawerActions.jumpTo("Settings"))
             }
           />
         ),
@@ -79,22 +116,35 @@ export default function MainTabsNavigator({
   );
 }
 
+export default function MainTabsNavigator(
+  props: MainTabsNavigatorProps
+) {
+  return (
+    <AppShellChromeProvider>
+      <MainTabsNavigatorContent {...props} />
+    </AppShellChromeProvider>
+  );
+}
+
 const styles = StyleSheet.create({
-  headerMenuButton: {
+  headerShell: {
+    backgroundColor: colors.surface,
+    overflow: "hidden",
+  },
+  headerRow: {
     alignItems: "center",
-    borderRadius: 12,
-    height: 44,
+    flexDirection: "row",
+    height: HEADER_ROW_HEIGHT,
+    paddingHorizontal: 6,
+  },
+  headerSide: {
+    alignItems: "center",
     justifyContent: "center",
-    marginLeft: 4,
-    width: 44,
+    width: 52,
   },
-  headerMenuButtonPressed: {
-    backgroundColor: colors.primarySoft,
-  },
-  headerMenuGlyph: {
-    color: colors.primary,
-    fontSize: 24,
-    fontWeight: "700",
-    lineHeight: 26,
+  headerBrand: {
+    alignItems: "center",
+    flex: 1,
+    justifyContent: "center",
   },
 });

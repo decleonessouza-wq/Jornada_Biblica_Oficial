@@ -1,8 +1,14 @@
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import Animated, { useAnimatedStyle } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { colors } from "../theme/colors";
+
+import { useAppShellChrome } from "./AppShellChromeContext";
+
+const BASE_BAR_HEIGHT = 60;
+const QUICK_ACTION_OVERHANG = 10;
 
 type RealTabRouteName = "HomeTab" | "PlanTab";
 
@@ -66,7 +72,6 @@ function RealTabButton({
       onLongPress={handleLongPress}
       style={({ pressed }) => [
         styles.tabItem,
-        isFocused && styles.tabItemActive,
         pressed && styles.tabItemPressed,
       ]}
     >
@@ -125,84 +130,114 @@ export default function CustomTabBar({
   onQuickAction,
 }: CustomTabBarProps) {
   const insets = useSafeAreaInsets();
+  const { chromeProgress } = useAppShellChrome();
+
+  const bottomPadding = Math.max(insets.bottom, 8);
+  const hiddenHeight = insets.bottom;
+  const visibleHeight =
+    QUICK_ACTION_OVERHANG + BASE_BAR_HEIGHT + bottomPadding;
+  const travelDistance = visibleHeight - hiddenHeight;
+
+  const shellAnimatedStyle = useAnimatedStyle(() => ({
+    height:
+      hiddenHeight +
+      travelDistance * (1 - chromeProgress.value),
+    marginTop:
+      -QUICK_ACTION_OVERHANG * (1 - chromeProgress.value),
+  }));
+
+  const contentAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [
+      {
+        translateY: visibleHeight * chromeProgress.value,
+      },
+    ],
+  }));
 
   return (
-    <View
-      style={[
-        styles.safeArea,
-        {
-          paddingBottom: Math.max(insets.bottom, 8),
-        },
-      ]}
-    >
-      <View style={styles.container}>
-        <RealTabButton
-          routeName="HomeTab"
-          label="Início"
-          symbol="⌂"
-          state={state}
-          descriptors={descriptors}
-          navigation={navigation}
-        />
+    <Animated.View style={[styles.animatedShell, shellAnimatedStyle]}>
+      <Animated.View
+        style={[
+          styles.safeArea,
+          {
+            height: visibleHeight,
+            paddingBottom: bottomPadding,
+            paddingTop: QUICK_ACTION_OVERHANG,
+          },
+          contentAnimatedStyle,
+        ]}
+      >
+        <View style={styles.container}>
+          <RealTabButton
+            routeName="HomeTab"
+            label="Início"
+            symbol="⌂"
+            state={state}
+            descriptors={descriptors}
+            navigation={navigation}
+          />
 
-        <DisabledTabButton label="Bíblia" symbol="▤" />
+          <DisabledTabButton label="Bíblia" symbol="▤" />
 
-        <View style={styles.quickActionSlot}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Abrir ações rápidas"
-            onPress={onQuickAction}
-            style={({ pressed }) => [
-              styles.quickActionButton,
-              pressed && styles.quickActionButtonPressed,
-            ]}
-          >
-            <Text style={styles.quickActionSymbol}>+</Text>
-          </Pressable>
+          <View style={styles.quickActionSlot}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Abrir ações rápidas"
+              onPress={onQuickAction}
+              style={({ pressed }) => [
+                styles.quickActionButton,
+                pressed && styles.quickActionButtonPressed,
+              ]}
+            >
+              <Text style={styles.quickActionSymbol}>+</Text>
+            </Pressable>
+          </View>
+
+          <RealTabButton
+            routeName="PlanTab"
+            label="Plano"
+            symbol="≡"
+            state={state}
+            descriptors={descriptors}
+            navigation={navigation}
+          />
+
+          <DisabledTabButton label="Perfil" symbol="○" />
         </View>
-
-        <RealTabButton
-          routeName="PlanTab"
-          label="Plano"
-          symbol="≡"
-          state={state}
-          descriptors={descriptors}
-          navigation={navigation}
-        />
-
-        <DisabledTabButton label="Perfil" symbol="○" />
-      </View>
-    </View>
+      </Animated.View>
+    </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
+  animatedShell: {
+    backgroundColor: colors.background,
+    overflow: "hidden",
+  },
   safeArea: {
-    backgroundColor: colors.surface,
-    borderTopColor: colors.border,
+    backgroundColor: colors.primary,
+    borderTopColor: colors.primaryPressed,
     borderTopWidth: StyleSheet.hairlineWidth,
   },
   container: {
     alignItems: "flex-end",
+    backgroundColor: colors.primary,
     flexDirection: "row",
-    minHeight: 64,
+    minHeight: BASE_BAR_HEIGHT,
     paddingHorizontal: 8,
-    paddingTop: 6,
+    paddingTop: 4,
   },
   tabItem: {
     alignItems: "center",
     borderRadius: 12,
     flex: 1,
     justifyContent: "center",
-    minHeight: 44,
+    minHeight: 42,
     paddingHorizontal: 4,
-    paddingVertical: 4,
-  },
-  tabItemActive: {
-    backgroundColor: colors.primarySoft,
+    paddingVertical: 3,
   },
   tabItemPressed: {
-    backgroundColor: colors.primarySoft,
+    backgroundColor: colors.primaryPressed,
   },
   tabSymbol: {
     fontSize: 20,
@@ -210,13 +245,14 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   tabSymbolActive: {
-    color: colors.primary,
+    color: colors.secondary,
   },
   tabSymbolInactive: {
-    color: colors.textMuted,
+    color: colors.textInverse,
   },
   tabSymbolDisabled: {
-    color: colors.border,
+    color: colors.textInverse,
+    opacity: 0.35,
   },
   tabLabel: {
     fontSize: 11,
@@ -225,37 +261,39 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   tabLabelActive: {
-    color: colors.primary,
+    color: colors.secondary,
   },
   tabLabelInactive: {
-    color: colors.textMuted,
+    color: colors.textInverse,
   },
   tabLabelDisabled: {
-    color: colors.textMuted,
-    opacity: 0.55,
+    color: colors.textInverse,
+    opacity: 0.35,
   },
   quickActionSlot: {
     alignItems: "center",
     flex: 1,
     justifyContent: "flex-end",
-    minHeight: 44,
+    minHeight: 42,
   },
   quickActionButton: {
     alignItems: "center",
     backgroundColor: colors.secondary,
+    borderColor: colors.primary,
     borderRadius: 28,
+    borderWidth: 4,
     height: 56,
     justifyContent: "center",
-    marginTop: -18,
+    marginTop: -QUICK_ACTION_OVERHANG,
     width: 56,
   },
   quickActionButtonPressed: {
     backgroundColor: colors.secondaryPressed,
   },
   quickActionSymbol: {
-    color: colors.textStrong,
+    color: colors.primary,
     fontSize: 30,
-    fontWeight: "500",
+    fontWeight: "600",
     lineHeight: 32,
   },
 });

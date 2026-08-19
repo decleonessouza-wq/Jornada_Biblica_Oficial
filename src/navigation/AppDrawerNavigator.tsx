@@ -8,6 +8,7 @@ import SettingsScreen from "../screens/SettingsScreen";
 import TermsScreen from "../screens/TermsScreen";
 import { colors } from "../theme/colors";
 
+import AppDrawerContent from "./AppDrawerContent";
 import MainTabsNavigator from "./MainTabsNavigator";
 import { AppDrawer } from "./navigationFactories";
 import QuickActionSheet from "./QuickActionSheet";
@@ -26,6 +27,7 @@ export default function AppDrawerNavigator() {
   return (
     <AppDrawer.Navigator
       initialRouteName="MainTabs"
+      drawerContent={(props) => <AppDrawerContent {...props} />}
       screenOptions={{
         headerStyle: {
           backgroundColor: colors.surface,
