@@ -7,7 +7,6 @@ import {
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { NavigationContainer } from "@react-navigation/native";
-import { SafeAreaView } from "react-native-safe-area-context";
 
 import DedicationScreen from "../screens/DedicationScreen";
 import ReadingScreen from "../screens/ReadingScreen";
@@ -51,12 +50,12 @@ export default function RootNavigator() {
 
   if (booting) {
     return (
-      <SafeAreaView style={styles.loadingSafeArea}>
+      <View style={styles.loadingSafeArea}>
         <View style={styles.loadingContent}>
           <ActivityIndicator size="large" color={colors.primary} />
           <Text style={styles.loadingText}>Carregando…</Text>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
