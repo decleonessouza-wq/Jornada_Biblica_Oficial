@@ -2,6 +2,8 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Alert,
   Dimensions,
+  Image,
+  ImageBackground,
   Platform,
   Pressable,
   ScrollView,
@@ -21,11 +23,14 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { colors } from "../theme/colors";
 import { readingPlan } from "../data/readingPlan";
-import { phases } from "../data/phases";
 import type { AppDrawerParamList, MainTabParamList, RootStackParamList } from "../navigation/types";
 import { runAutoBackup } from "../utils/autoBackup";
 import { useAppShellChrome } from "../navigation/AppShellChromeContext";
 import { VERSES_OF_DAY, pickVerseForToday, type VerseItem } from "../data/versesOfDay";
+import {
+  loadHomeDashboardV2Snapshot,
+  type HomeDashboardV2Snapshot,
+} from "../features/home/homeDashboardV2";
 
 import {
   addCompletedDay,
@@ -159,27 +164,6 @@ function confirmAction(title: string, message: string): Promise<boolean> {
    SMALL UI PRIMITIVES
 ========================== */
 
-function Pill({
-  text,
-  variant = "neutral",
-}: {
-  text: string;
-  variant?: "neutral" | "success" | "warning" | "info";
-}) {
-  return (
-    <View
-      style={[
-        styles.pill,
-        variant === "success" && styles.pillSuccess,
-        variant === "warning" && styles.pillWarning,
-        variant === "info" && styles.pillInfo,
-      ]}
-    >
-      <Text style={styles.pillText}>{text}</Text>
-    </View>
-  );
-}
-
 function Card({
   children,
   variant = "default",
@@ -197,6 +181,53 @@ function Card({
     >
       {children}
     </View>
+  );
+}
+
+function QuickAccessCard({
+  iconSource,
+  title,
+  subtitle,
+  disabled = false,
+  onPress,
+}: {
+  iconSource: any;
+  title: string;
+  subtitle: string;
+  disabled?: boolean;
+  onPress?: () => void;
+}) {
+  return (
+    <TouchableOpacity
+      style={[styles.quickCard, disabled && styles.quickCardDisabled]}
+      onPress={onPress}
+      disabled={disabled}
+      activeOpacity={0.82}
+      accessibilityRole="button"
+      accessibilityLabel={disabled ? `${title}, em breve` : title}
+      accessibilityState={{ disabled }}
+    >
+      <Image
+        source={iconSource}
+        style={[styles.quickIconImage, disabled && styles.quickIconImageDisabled]}
+        resizeMode="contain"
+        accessibilityIgnoresInvertColors
+      />
+
+      <Text style={[styles.quickTitle, disabled && styles.quickTitleDisabled]} numberOfLines={2}>
+        {title}
+      </Text>
+
+      <Text style={[styles.quickSubtitle, disabled && styles.quickSubtitleDisabled]} numberOfLines={2}>
+        {subtitle}
+      </Text>
+
+      {disabled && (
+        <View style={styles.quickSoonPill}>
+          <Text style={styles.quickSoonText}>Em breve</Text>
+        </View>
+      )}
+    </TouchableOpacity>
   );
 }
 
@@ -230,6 +261,8 @@ export default function HomeScreen() {
     source: "NOT_STARTED",
   });
 
+  const [homeDashboardV2, setHomeDashboardV2] = useState<HomeDashboardV2Snapshot | null>(null);
+
   // ✅ banner de feedback (aparece sempre)
   const [banner, setBanner] = useState<BannerState>(null);
 
@@ -239,9 +272,6 @@ export default function HomeScreen() {
   // ✅ Versículo do dia (modal)
   const [showVerseModal, setShowVerseModal] = useState(false);
   const [verseOfDay, setVerseOfDay] = useState<VerseItem | null>(null);
-
-  // ✅ Acessos rápidos recolhível
-  const [quickNavOpen, setQuickNavOpen] = useState(false);
 
   // ✅ Migração/ajuste do início do plano
   const [showStartAdjust, setShowStartAdjust] = useState(false);
@@ -261,12 +291,6 @@ export default function HomeScreen() {
 
   // ✅ sequência do plano (canônica) — usada só para exibir “primeiro dia” antes de iniciar
   const nonSundaySeq = useMemo(() => getNonSundaySequence(), []);
-
-  // ✅ fase (apenas informativa; continua usando intervalos das fases)
-  const currentPhase = useMemo(
-    () => phases.find((phase) => today >= phase.startDate && today <= phase.endDate),
-    [today]
-  );
 
   const isCompletedToday = useMemo(() => completedDays.includes(today), [completedDays, today]);
 
@@ -425,6 +449,16 @@ export default function HomeScreen() {
     [today, loadResolvedForDate, migrateLegacyStartIfNeeded]
   );
 
+  const loadHomeDashboardV2 = useCallback(async (dateIso: string) => {
+    try {
+      const snapshot = await loadHomeDashboardV2Snapshot(dateIso);
+      setHomeDashboardV2(snapshot);
+    } catch (err) {
+      console.log("Erro ao carregar dashboard V2 da Home", err);
+      setHomeDashboardV2(null);
+    }
+  }, []);
+
   const loadVerseOfDayIfNeeded = useCallback(async () => {
     try {
       if (!Array.isArray(VERSES_OF_DAY) || VERSES_OF_DAY.length === 0) return;
@@ -469,6 +503,7 @@ export default function HomeScreen() {
 
       await loadGratitude();
       await loadPlanStartAndOverdue(days);
+      await loadHomeDashboardV2(today);
       await runAutoBackup();
       await loadVerseOfDayIfNeeded();
     })();
@@ -487,6 +522,7 @@ export default function HomeScreen() {
 
       await loadGratitude();
       await loadPlanStartAndOverdue(days);
+      await loadHomeDashboardV2(today);
       await loadVerseOfDayIfNeeded();
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -539,6 +575,7 @@ export default function HomeScreen() {
       // recarrega leitura do dia e atrasos com esse início
       const days = await getCompletedDays();
       await loadPlanStartAndOverdue(days);
+      await loadHomeDashboardV2(today);
     } catch (err) {
       console.log("Erro ao definir data de início manual", err);
       setBanner({ kind: "error", title: "Erro", message: "Não foi possível definir a data de início." });
@@ -565,6 +602,7 @@ export default function HomeScreen() {
       setStreak(newStreak);
 
       await loadPlanStartAndOverdue(days);
+      await loadHomeDashboardV2(today);
 
       if (isMilestone(newStreak)) {
         notify("Marco alcançado ✅", getMilestoneMessage(newStreak));
@@ -655,6 +693,7 @@ export default function HomeScreen() {
 
       const days = await getCompletedDays();
       await loadPlanStartAndOverdue(days);
+      await loadHomeDashboardV2(today);
     } catch (err) {
       console.log("Erro ao redistribuir atrasos", err);
       notify("Erro", "Não foi possível redistribuir as leituras atrasadas.");
@@ -675,7 +714,69 @@ export default function HomeScreen() {
     return { text: "Em aberto", variant: "warning" as const };
   }, [planStartDate, todayIsSunday, resolvedToday.source, isCompletedToday]);
 
-  const quickNavLabel = useMemo(() => (quickNavOpen ? "Ocultar" : "Mostrar"), [quickNavOpen]);
+  const planProgressDisplay = useMemo(() => {
+    const snapshot = homeDashboardV2;
+
+    if (!snapshot) {
+      return {
+        state: "loading" as const,
+        percent: 0,
+        title: "Carregando progresso",
+        detail: "Atualizando sua jornada...",
+        phase: null as string | null,
+      };
+    }
+
+    if (snapshot.bridgeStatus === "NOT_STARTED") {
+      return {
+        state: "not_started" as const,
+        percent: 0,
+        title: "Plano ainda não iniciado",
+        detail: `0 de ${snapshot.progress.requiredReadingCount} leituras concluídas`,
+        phase: null as string | null,
+      };
+    }
+
+    if (snapshot.bridgeStatus === "LEGACY_START_REQUIRED") {
+      return {
+        state: "review" as const,
+        percent: 0,
+        title: "Alinhamento necessário",
+        detail: "Defina o início do plano para consolidar o progresso.",
+        phase: null as string | null,
+      };
+    }
+
+    if (!snapshot.canUseCanonicalProgress) {
+      return {
+        state: "review" as const,
+        percent: 0,
+        title: "Progresso em revisão",
+        detail: "Há dados que precisam de conferência antes do cálculo canônico.",
+        phase: null as string | null,
+      };
+    }
+
+    const completed = snapshot.progress.completedReadingCount;
+    const total = snapshot.progress.requiredReadingCount;
+    const percent = Math.round(snapshot.progress.completionPercent);
+
+    return {
+      state: snapshot.progress.isPlanComplete ? ("complete" as const) : ("ready" as const),
+      percent,
+      title: snapshot.progress.isPlanComplete ? "Plano concluído" : "Plano em andamento",
+      detail: `${completed} de ${total} leituras concluídas`,
+      phase: snapshot.currentPhase?.title ?? null,
+    };
+  }, [homeDashboardV2]);
+
+  const heroCtaLabel = useMemo(() => {
+    if (!planStartDate) return "Começar plano hoje";
+    if (resolvedToday.finished) return "Plano concluído";
+    if (resolvedToday.isSunday) return "Abrir meditação";
+    if (isCompletedToday) return "Revisar leitura";
+    return "Continuar leitura";
+  }, [planStartDate, resolvedToday.finished, resolvedToday.isSunday, isCompletedToday]);
 
   // Mostra card de alinhamento quando:
   // - existe progresso (completedDays) e
@@ -727,7 +828,272 @@ export default function HomeScreen() {
             </Pressable>
           )}
 
-          {/* ✅ CARD: ALINHAMENTO (MIGRAÇÃO + AJUSTE) */}
+          {/* HERO 2.0 - JORNADA DO DIA */}
+          <View style={styles.heroCard}>
+            <View style={styles.heroImageFrame}>
+              <Image
+                source={require("../../assets/home/hero_img.png")}
+                style={styles.heroBackdropImage}
+                resizeMode="cover"
+                accessibilityIgnoresInvertColors
+              />
+
+              <Image
+                source={require("../../assets/home/overlays/hero_navy_fade.png")}
+                style={styles.heroFadeImage}
+                resizeMode="stretch"
+                accessibilityIgnoresInvertColors
+              />
+
+              <View style={styles.heroContentPanel}>
+                <View style={styles.heroEyebrowRow}>
+                  <View style={styles.heroAccentLine} />
+                  <Text style={styles.heroEyebrow}>Sua jornada de hoje</Text>
+                </View>
+
+                <Text style={styles.heroDateText}>{todayLabel}</Text>
+
+                <Pressable
+                  onPress={openReading}
+                  onLongPress={toggleDevMode}
+                  delayLongPress={2000}
+                  accessibilityRole="button"
+                  accessibilityLabel="Abrir leitura do dia"
+                  style={styles.heroReferencePressable}
+                >
+                  <Text style={styles.heroReference}>{resolvedToday.reference}</Text>
+                </Pressable>
+
+                <View style={styles.heroStatusPill}>
+                  <Text style={styles.heroStatusText}>{todayStatusPill.text}</Text>
+                </View>
+
+                <TouchableOpacity
+                  style={styles.heroPrimaryBtn}
+                  onPress={planStartDate ? openReading : startPlanNowAndOpen}
+                  activeOpacity={0.86}
+                  accessibilityRole="button"
+                  accessibilityLabel={heroCtaLabel}
+                >
+                  <View style={styles.heroPrimaryBtnContent}>
+                    <Text style={styles.heroPrimaryBtnIcon}>📖</Text>
+                    <Text style={styles.heroPrimaryBtnText}>{heroCtaLabel}</Text>
+                  </View>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <View style={styles.heroUtilityRow}>
+              {canRegisterGratitudeToday && (
+                <Text
+                  style={[
+                    styles.heroGratitudeText,
+                    { color: todayGratitude ? colors.secondaryPressed : colors.muted },
+                  ]}
+                >
+                  {todayGratitude ? "🙏 Gratidão registrada" : "✍️ Gratidão: ainda não registrada"}
+                </Text>
+              )}
+
+              {planStartDate && !resolvedToday.isSunday && !resolvedToday.finished && (
+                <TouchableOpacity
+                  style={[
+                    styles.heroMarkReadBtn,
+                    isCompletedToday && styles.heroMarkReadBtnDisabled,
+                  ]}
+                  onPress={markAsCompleted}
+                  disabled={isCompletedToday}
+                  accessibilityRole="button"
+                  accessibilityLabel={isCompletedToday ? "Leitura concluída" : "Marcar leitura como concluída"}
+                >
+                  <Text
+                    style={[
+                      styles.heroMarkReadText,
+                      isCompletedToday && styles.heroMarkReadTextDisabled,
+                    ]}
+                  >
+                    {isCompletedToday ? "✓ Concluído" : "✓ Marcar lido"}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+
+          {/* PLANO DE LEITURA - PROGRESSO CANÔNICO V2 */}
+          <View style={styles.planSectionHeader}>
+            <View style={styles.planSectionTitleWrap}>
+              <Text style={styles.planSectionSymbol}>▤</Text>
+              <Text style={styles.planSectionTitle}>Plano de Leitura</Text>
+            </View>
+
+            <TouchableOpacity
+              onPress={() => navigation.navigate("PlanTab")}
+              accessibilityRole="button"
+              accessibilityLabel="Ver plano de leitura"
+            >
+              <Text style={styles.planSectionLink}>Ver plano ›</Text>
+            </TouchableOpacity>
+          </View>
+
+          <TouchableOpacity
+            style={styles.planProgressCard}
+            onPress={() => navigation.navigate("PlanTab")}
+            activeOpacity={0.88}
+            accessibilityRole="button"
+            accessibilityLabel={`Plano de leitura. ${planProgressDisplay.title}. ${planProgressDisplay.detail}`}
+          >
+            <View style={styles.planPercentCircle}>
+              <Text style={styles.planPercentValue}>{planProgressDisplay.percent}%</Text>
+            </View>
+
+            <View style={styles.planProgressMain}>
+              <Text style={styles.planProgressTitle} numberOfLines={2}>
+                {planProgressDisplay.title}
+              </Text>
+              <Text style={styles.planProgressDetail}>{planProgressDisplay.detail}</Text>
+
+              {planProgressDisplay.phase && (
+                <Text style={styles.planProgressPhase} numberOfLines={1}>
+                  {planProgressDisplay.phase}
+                </Text>
+              )}
+
+              <View style={styles.planProgressTrack}>
+                <View
+                  style={[
+                    styles.planProgressFill,
+                    { width: `${Math.min(100, Math.max(0, planProgressDisplay.percent))}%` },
+                  ]}
+                />
+              </View>
+            </View>
+
+            <Text style={styles.planProgressChevron}>›</Text>
+          </TouchableOpacity>
+
+          {/* OVERDUE */}
+          {planStartDate && overdueCount > 0 && (
+            <Card variant="warning">
+              <Text style={styles.sectionTitle}>⚠️ Leituras atrasadas</Text>
+              <Text style={styles.sectionMuted}>
+                {overdueCount} pendente{overdueCount !== 1 ? "s" : ""} (domingos não contam — domingo é livre)
+              </Text>
+
+              <View style={{ height: 12 }} />
+
+              <TouchableOpacity style={styles.primaryBtn} onPress={openOldestOverdue}>
+                <Text style={styles.btnText}>📖 Ler atraso mais antigo</Text>
+              </TouchableOpacity>
+
+              <View style={{ height: 10 }} />
+
+              <TouchableOpacity style={styles.secondaryBtn} onPress={handleRedistributeOverdue}>
+                <Text style={styles.btnText}>🔁 Redistribuir atrasos</Text>
+              </TouchableOpacity>
+            </Card>
+          )}
+
+          {/* ACESSOS RÁPIDOS 2x3 - CONTRATO OFICIAL */}
+          <View style={styles.quickSectionHeader}>
+            <View>
+              <Text style={styles.quickSectionEyebrow}>NAVEGAÇÃO</Text>
+              <Text style={styles.quickSectionTitle}>Acessos rápidos</Text>
+            </View>
+            <Text style={styles.quickSectionHint}>2 recursos ativos</Text>
+          </View>
+
+          <View style={styles.quickGrid}>
+            <QuickAccessCard
+              iconSource={require("../../assets/home/icons/biblia_icone.png")}
+              title="Bíblia"
+              subtitle="Leitor bíblico local"
+              disabled
+            />
+
+            <QuickAccessCard
+              iconSource={require("../../assets/home/icons/plano_icone.png")}
+              title="Plano de Leitura"
+              subtitle="Siga sua jornada"
+              onPress={() => navigation.navigate("PlanTab")}
+            />
+
+            <QuickAccessCard
+              iconSource={require("../../assets/home/icons/diario_icone.png")}
+              title="Meu Diário"
+              subtitle="Anote e reflita"
+              disabled
+            />
+
+            <QuickAccessCard
+              iconSource={require("../../assets/home/icons/estudos_icone.png")}
+              title="Estudos"
+              subtitle="Aprofunde temas"
+              disabled
+            />
+
+            <QuickAccessCard
+              iconSource={require("../../assets/home/icons/favoritos_icone.png")}
+              title="Favoritos"
+              subtitle="Conteúdos salvos"
+              disabled
+            />
+
+            <QuickAccessCard
+              iconSource={require("../../assets/home/icons/progresso_icone.png")}
+              title="Progresso"
+              subtitle="Acompanhe sua evolução"
+              onPress={() => navigation.navigate("Progress")}
+            />
+          </View>
+
+          {/* BANNER MOTIVACIONAL */}
+          <ImageBackground
+            source={require("../../assets/home/banner_motivacional.png")}
+            style={styles.motivationalBanner}
+            imageStyle={{ borderRadius: 18 }}
+            resizeMode="cover"
+            accessibilityIgnoresInvertColors
+          >
+            <Image
+              source={require("../../assets/home/overlays/banner_cream_fade.png")}
+              style={styles.motivationalFadeImage}
+              resizeMode="stretch"
+              accessibilityIgnoresInvertColors
+            />
+
+            <View style={styles.motivationalContent}>
+              <View style={styles.motivationalAccentLine} />
+              <Text style={styles.motivationalEyebrow}>PALAVRA PARA A JORNADA</Text>
+              <Text style={styles.motivationalText} numberOfLines={3}>
+                {dailyMessage}
+              </Text>
+            </View>
+          </ImageBackground>
+
+          {/* CONSTÂNCIA - BLOCO LEGADO PRESERVADO */}
+          <View style={styles.statsGrid}>
+            <Card>
+              <Text style={styles.kpiLabel}>🔥 Streak</Text>
+              <Text style={styles.kpiValue}>
+                {streak} dia{streak !== 1 ? "s" : ""}
+              </Text>
+              {lastRead ? <Text style={styles.kpiHint}>Última: {lastRead}</Text> : <Text style={styles.kpiHint}>—</Text>}
+            </Card>
+
+            <Card>
+              <Text style={styles.kpiLabel}>🏅 Nível</Text>
+              <Text style={styles.kpiValue}>{level.title}</Text>
+              {nextMilestone.next ? (
+                <Text style={styles.kpiHint}>
+                  Próx.: {nextMilestone.next} (faltam {nextMilestone.remaining})
+                </Text>
+              ) : (
+                <Text style={styles.kpiHint}>Marcos concluídos</Text>
+              )}
+            </Card>
+          </View>
+
+          {/* AJUSTE DE ALINHAMENTO - FUNÇÃO REAL PRESERVADA, PRIORIDADE SECUNDÁRIA */}
           {planStartDate && hasLegacyProgress && (
             <Card>
               <Text style={styles.sectionTitle}>🧭 Alinhamento do plano</Text>
@@ -746,7 +1112,7 @@ export default function HomeScreen() {
                     setShowStartAdjust(true);
                   }}
                 >
-                  <Text style={styles.btnText}>✏️ Ajustar data de início</Text>
+                  <Text style={[styles.btnText, { color: colors.primary }]}>✏️ Ajustar data de início</Text>
                 </TouchableOpacity>
               ) : (
                 <View style={styles.startAdjustBox}>
@@ -786,162 +1152,6 @@ export default function HomeScreen() {
                 </View>
               )}
             </Card>
-          )}
-
-          {/* HERO - LEITURA DO DIA (CTA PRINCIPAL) */}
-          <Card variant="highlight">
-            <View style={styles.heroTopRow}>
-              <View>
-                <Text style={styles.heroLabel}>Hoje</Text>
-                <Text style={styles.heroDate}>{todayLabel}</Text>
-              </View>
-
-              <Pill text={todayStatusPill.text} variant={todayStatusPill.variant} />
-            </View>
-
-            <Pressable
-              onPress={openReading}
-              onLongPress={toggleDevMode}
-              delayLongPress={2000}
-              accessibilityRole="button"
-              accessibilityLabel="Abrir leitura do dia"
-            >
-              <Text style={styles.heroReference}>{resolvedToday.reference}</Text>
-            </Pressable>
-
-            {canRegisterGratitudeToday && (
-              <Text style={[styles.heroMeta, { color: todayGratitude ? colors.secondary : colors.muted }]}>
-                {todayGratitude ? "🙏 Gratidão registrada" : "✍️ Gratidão: ainda não registrada"}
-              </Text>
-            )}
-
-            <View style={{ height: 12 }} />
-
-            {!planStartDate ? (
-              <TouchableOpacity style={styles.primaryBtn} onPress={startPlanNowAndOpen}>
-                <Text style={styles.btnText}>🚀 Começar plano hoje</Text>
-              </TouchableOpacity>
-            ) : resolvedToday.isSunday ? (
-              <TouchableOpacity style={styles.primaryBtn} onPress={openReading}>
-                <Text style={styles.btnText}>🙏 Abrir meditação</Text>
-              </TouchableOpacity>
-            ) : (
-              <View style={styles.heroButtons}>
-                <TouchableOpacity style={[styles.primaryBtn, styles.heroBtn]} onPress={openReading}>
-                  <Text style={styles.btnText}>📖 Abrir</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[
-                    styles.secondaryBtn,
-                    styles.heroBtn,
-                    (isCompletedToday || resolvedToday.finished) && styles.btnDisabled,
-                  ]}
-                  onPress={markAsCompleted}
-                  disabled={isCompletedToday || resolvedToday.finished}
-                >
-                  <Text style={styles.btnText}>{isCompletedToday ? "✅ Concluído" : "✔️ Marcar lido"}</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-          </Card>
-
-          {/* OVERDUE */}
-          {planStartDate && overdueCount > 0 && (
-            <Card variant="warning">
-              <Text style={styles.sectionTitle}>⚠️ Leituras atrasadas</Text>
-              <Text style={styles.sectionMuted}>
-                {overdueCount} pendente{overdueCount !== 1 ? "s" : ""} (domingos não contam — domingo é livre)
-              </Text>
-
-              <View style={{ height: 12 }} />
-
-              <TouchableOpacity style={styles.primaryBtn} onPress={openOldestOverdue}>
-                <Text style={styles.btnText}>📖 Ler atraso mais antigo</Text>
-              </TouchableOpacity>
-
-              <View style={{ height: 10 }} />
-
-              <TouchableOpacity style={styles.secondaryBtn} onPress={handleRedistributeOverdue}>
-                <Text style={styles.btnText}>🔁 Redistribuir atrasos</Text>
-              </TouchableOpacity>
-            </Card>
-          )}
-
-          {/* STATS GRID */}
-          <View style={styles.statsGrid}>
-            <Card>
-              <Text style={styles.kpiLabel}>🔥 Streak</Text>
-              <Text style={styles.kpiValue}>
-                {streak} dia{streak !== 1 ? "s" : ""}
-              </Text>
-              {lastRead ? <Text style={styles.kpiHint}>Última: {lastRead}</Text> : <Text style={styles.kpiHint}>—</Text>}
-            </Card>
-
-            <Card>
-              <Text style={styles.kpiLabel}>🏅 Nível</Text>
-              <Text style={styles.kpiValue}>{level.title}</Text>
-              {nextMilestone.next ? (
-                <Text style={styles.kpiHint}>
-                  Próx.: {nextMilestone.next} (faltam {nextMilestone.remaining})
-                </Text>
-              ) : (
-                <Text style={styles.kpiHint}>Marcos concluídos</Text>
-              )}
-            </Card>
-          </View>
-
-          {/* MENSAGEM DO DIA */}
-          <Card>
-            <Text style={styles.sectionTitle}>💬 Mensagem do dia</Text>
-            <Text style={styles.sectionBody}>{dailyMessage}</Text>
-          </Card>
-
-          {/* FASE ATUAL */}
-          {currentPhase && (
-            <Card>
-              <Text style={styles.sectionTitle}>📘 Fase atual</Text>
-              <Text style={styles.sectionBodyStrong}>{currentPhase.title}</Text>
-              <Text style={styles.sectionMuted}>{currentPhase.description}</Text>
-            </Card>
-          )}
-
-          {/* QUICK NAV (RECOLHÍVEL) */}
-          <TouchableOpacity
-            style={styles.quickNavToggle}
-            onPress={() => setQuickNavOpen((p) => !p)}
-            accessibilityRole="button"
-            accessibilityLabel="Abrir ou fechar acessos rápidos"
-          >
-            <Text style={styles.quickNavToggleTitle}>Acessos rápidos</Text>
-            <View style={styles.quickNavToggleRight}>
-              <Text style={styles.quickNavToggleHint}>{quickNavLabel}</Text>
-              <Text style={styles.quickNavToggleChevron}>{quickNavOpen ? "˄" : "˅"}</Text>
-            </View>
-          </TouchableOpacity>
-
-          {quickNavOpen && (
-            <View style={styles.menuGrid}>
-              <TouchableOpacity style={styles.menuBtn} onPress={() => navigation.navigate("PlanTab")}>
-                <Text style={styles.menuEmoji}>📅</Text>
-                <Text style={styles.menuText}>Plano Anual</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity style={styles.menuBtn} onPress={() => navigation.navigate("Progress")}>
-                <Text style={styles.menuEmoji}>📊</Text>
-                <Text style={styles.menuText}>Progresso</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity style={styles.menuBtn} onPress={() => navigation.navigate("History")}>
-                <Text style={styles.menuEmoji}>📜</Text>
-                <Text style={styles.menuText}>Histórico</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity style={styles.menuBtn} onPress={() => navigation.navigate("Settings")}>
-                <Text style={styles.menuEmoji}>⚙️</Text>
-                <Text style={styles.menuText}>Configurações</Text>
-              </TouchableOpacity>
-            </View>
           )}
 
           <View style={{ height: 10 }} />
@@ -1123,66 +1333,403 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
 
-  /* HERO */
-  heroTopRow: {
+  /* HERO 2.0 */
+  heroCard: {
+    marginBottom: 16,
+    borderRadius: 22,
+    overflow: "hidden",
+    backgroundColor: colors.surface,
+    shadowColor: colors.black,
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 3,
+  },
+  heroImageFrame: {
+    width: "100%",
+    aspectRatio: 16 / 9,
+    position: "relative",
+    overflow: "hidden",
+    backgroundColor: colors.primary,
+  },
+  heroBackdropImage: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    width: "100%",
+    height: "100%",
+    transform: [{ scale: 1.1 }, { translateX: 12 }],
+  },
+  heroFadeImage: {
+    ...StyleSheet.absoluteFillObject,
+    width: "100%",
+    height: "100%",
+  },
+  heroContentPanel: {
+    width: width < 390 ? "66%" : "62%",
+    height: "100%",
+    justifyContent: "center",
+    paddingHorizontal: 18,
+    paddingVertical: 14,
+  },
+  heroEyebrowRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 5,
+  },
+  heroAccentLine: {
+    width: 26,
+    height: 3,
+    borderRadius: 999,
+    backgroundColor: colors.secondary,
+  },
+  heroEyebrow: {
+    color: colors.secondary,
+    fontSize: 11,
+    fontWeight: "900",
+  },
+  heroDateText: {
+    color: "rgba(255,255,255,0.76)",
+    fontSize: 10,
+    fontWeight: "700",
+    marginBottom: 7,
+  },
+  heroReferencePressable: {
+    alignSelf: "stretch",
+  },
+  heroReference: {
+    color: colors.textInverse,
+    fontSize: width < 390 ? 19 : 22,
+    fontWeight: "900",
+    lineHeight: width < 390 ? 23 : 27,
+  },
+  heroStatusPill: {
+    alignSelf: "flex-start",
+    marginTop: 8,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 999,
+    backgroundColor: "rgba(255,255,255,0.14)",
+  },
+  heroStatusText: {
+    color: colors.textInverse,
+    fontSize: 9,
+    fontWeight: "800",
+  },
+  heroPrimaryBtn: {
+    alignSelf: "flex-start",
+    marginTop: 6,
+    minHeight: 36,
+    minWidth: width < 390 ? 150 : 170,
+    maxWidth: "64%",
+    borderRadius: 13,
+    paddingHorizontal: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: colors.secondary,
+  },
+  heroPrimaryBtnText: {
+    color: colors.primary,
+    fontSize: width < 390 ? 14 : 15,
+    lineHeight: width < 390 ? 19 : 20,
+    fontWeight: "900",
+    textAlign: "center",
+  },
+
+  heroPrimaryBtnContent: {
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: 6,
+  },
+
+  heroPrimaryBtnIcon: {
+    fontSize: 24,
+    marginLeft: 68,
+  },
+
+  heroUtilityRow: {
+    minHeight: 58,
+    marginTop: -16,
+    paddingHorizontal: 14,
+    paddingTop: 20,
+    paddingBottom: 10,
+    flexDirection: width < 390 ? "column" : "row",
+    alignItems: width < 390 ? "stretch" : "center",
+    justifyContent: "space-between",
+    gap: 8,
+    borderTopLeftRadius: 22,
+    borderTopRightRadius: 22,
+    backgroundColor: colors.surface,
+    zIndex: 3,
+  },
+  heroGratitudeText: {
+    flexShrink: 1,
+    fontSize: 10.5,
+    fontWeight: "700",
+    textAlign: width < 390 ? "center" : "left",
+  },
+  heroMarkReadBtn: {
+    minHeight: 36,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: colors.primarySoft,
+  },
+  heroMarkReadBtnDisabled: {
+    backgroundColor: colors.secondarySoft,
+  },
+  heroMarkReadText: {
+    color: colors.primary,
+    fontSize: 10.5,
+    fontWeight: "900",
+  },
+  heroMarkReadTextDisabled: {
+    color: colors.secondaryPressed,
+  },
+
+  /* PLANO DE LEITURA */
+  planSectionHeader: {
+    marginBottom: 9,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    gap: 10,
-    marginBottom: 10,
   },
-  heroLabel: {
-    fontSize: 12,
-    color: colors.muted,
-    fontWeight: "700",
+  planSectionTitleWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
   },
-  heroDate: {
-    fontSize: 16,
-    color: colors.text,
-    fontWeight: "800",
-    marginTop: 2,
-  },
-  heroReference: {
-    fontSize: 22,
+  planSectionSymbol: {
+    color: colors.secondary,
+    fontSize: 20,
     fontWeight: "900",
-    color: colors.primary,
-    textAlign: "center",
-    marginTop: 2,
   },
-  heroMeta: {
-    textAlign: "center",
+  planSectionTitle: {
+    color: colors.primary,
+    fontSize: 14,
+    fontWeight: "900",
+    textTransform: "uppercase",
+    letterSpacing: 0.4,
+  },
+  planSectionLink: {
+    color: colors.secondaryPressed,
     fontSize: 12,
-    marginTop: 8,
+    fontWeight: "900",
+  },
+  planProgressCard: {
+    minHeight: 116,
+    marginBottom: 16,
+    borderRadius: 18,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    shadowColor: colors.black,
+    shadowOpacity: 0.04,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 7 },
+    elevation: 1,
+  },
+  planPercentCircle: {
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    borderWidth: 5,
+    borderColor: colors.secondary,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: colors.surfaceHighlight,
+  },
+  planPercentValue: {
+    color: colors.primary,
+    fontSize: 17,
+    fontWeight: "900",
+  },
+  planProgressMain: {
+    flex: 1,
+    minWidth: 0,
+  },
+  planProgressTitle: {
+    color: colors.primary,
+    fontSize: 14,
+    lineHeight: 18,
+    fontWeight: "900",
+  },
+  planProgressDetail: {
+    marginTop: 3,
+    color: colors.text,
+    fontSize: 11,
     fontWeight: "700",
   },
-  heroButtons: {
-    flexDirection: width < 380 ? "column" : "row",
-    gap: 10,
+  planProgressPhase: {
+    marginTop: 3,
+    color: colors.muted,
+    fontSize: 10,
   },
-  heroBtn: {
-    flex: 1,
+  planProgressTrack: {
+    height: 5,
+    marginTop: 9,
+    borderRadius: 999,
+    overflow: "hidden",
+    backgroundColor: colors.surfaceAlt,
+  },
+  planProgressFill: {
+    height: "100%",
+    borderRadius: 999,
+    backgroundColor: colors.secondary,
+  },
+  planProgressChevron: {
+    color: colors.primary,
+    fontSize: 28,
+    fontWeight: "500",
+    marginLeft: 2,
   },
 
-  /* PILL */
-  pill: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+  /* ACESSOS RÁPIDOS 2x3 */
+  quickSectionHeader: {
+    marginTop: 2,
+    marginBottom: 10,
+    flexDirection: "row",
+    alignItems: "flex-end",
+    justifyContent: "space-between",
+  },
+  quickSectionEyebrow: {
+    color: colors.secondaryPressed,
+    fontSize: 9,
+    fontWeight: "900",
+    letterSpacing: 1.2,
+  },
+  quickSectionTitle: {
+    marginTop: 2,
+    color: colors.primary,
+    fontSize: 17,
+    fontWeight: "900",
+  },
+  quickSectionHint: {
+    color: colors.muted,
+    fontSize: 10,
+    fontWeight: "700",
+  },
+  quickGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    rowGap: 9,
+    marginBottom: 16,
+  },
+  quickCard: {
+    width: "31.5%",
+    height: 122,
+    borderRadius: 16,
+    paddingHorizontal: 7,
+    paddingVertical: 7,
+    alignItems: "center",
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    shadowColor: colors.black,
+    shadowOpacity: 0.035,
+    shadowRadius: 9,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 1,
+  },
+  quickCardDisabled: {
+    backgroundColor: colors.surfaceAlt,
+    borderColor: colors.divider,
+    opacity: 0.88,
+  },
+  quickIconImage: {
+    width: 42,
+    height: 42,
+    marginBottom: 4,
+  },
+  quickIconImageDisabled: {
+    opacity: 0.68,
+  },
+  quickTitle: {
+    minHeight: 24,
+    color: colors.primary,
+    fontSize: 10.2,
+    lineHeight: 12.5,
+    fontWeight: "900",
+    textAlign: "center",
+  },
+  quickTitleDisabled: {
+    color: colors.textMuted,
+  },
+  quickSubtitle: {
+    marginTop: 0,
+    color: colors.muted,
+    fontSize: 8.3,
+    lineHeight: 10.5,
+    textAlign: "center",
+  },
+  quickSubtitleDisabled: {
+    color: colors.textMuted,
+  },
+  quickSoonPill: {
+    marginTop: 4,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
     borderRadius: 999,
-    backgroundColor: "#f2f3f5",
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.divider,
   },
-  pillSuccess: {
-    backgroundColor: "#eaf8ef",
+  quickSoonText: {
+    color: colors.muted,
+    fontSize: 7.5,
+    fontWeight: "900",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
   },
-  pillWarning: {
-    backgroundColor: "#fff1e0",
+
+  /* BANNER MOTIVACIONAL */
+  motivationalBanner: {
+    minHeight: 116,
+    marginBottom: 16,
+    borderRadius: 18,
+    overflow: "hidden",
+    justifyContent: "center",
+    backgroundColor: colors.secondarySoft,
   },
-  pillInfo: {
-    backgroundColor: "#eaf2ff",
+  motivationalFadeImage: {
+    ...StyleSheet.absoluteFillObject,
+    width: "100%",
+    height: "100%",
   },
-  pillText: {
-    fontSize: 11,
+  motivationalContent: {
+    alignSelf: "flex-end",
+    width: "61%",
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  motivationalAccentLine: {
+    width: 32,
+    height: 3,
+    borderRadius: 999,
+    backgroundColor: colors.secondary,
+    marginBottom: 7,
+  },
+  motivationalEyebrow: {
+    color: colors.secondaryPressed,
+    fontSize: 8.5,
+    fontWeight: "900",
+    letterSpacing: 1.1,
+    marginBottom: 6,
+  },
+  motivationalText: {
+    color: colors.primary,
+    fontSize: 12.5,
+    lineHeight: 17.5,
     fontWeight: "800",
-    color: colors.text,
   },
 
   /* BUTTONS */
@@ -1261,74 +1808,6 @@ const styles = StyleSheet.create({
     color: colors.muted,
     textAlign: "center",
     marginTop: 6,
-  },
-
-  /* QUICK NAV (RECOLHÍVEL) */
-  quickNavToggle: {
-    marginTop: 6,
-    marginBottom: 10,
-    backgroundColor: "#fff",
-    borderRadius: 18,
-    paddingVertical: 14,
-    paddingHorizontal: 14,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    shadowColor: "#000",
-    shadowOpacity: 0.03,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 1,
-  },
-  quickNavToggleTitle: {
-    fontSize: 13,
-    fontWeight: "900",
-    color: colors.text,
-  },
-  quickNavToggleRight: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-  quickNavToggleHint: {
-    fontSize: 12,
-    color: colors.muted,
-    fontWeight: "800",
-  },
-  quickNavToggleChevron: {
-    fontSize: 18,
-    color: colors.muted,
-    fontWeight: "900",
-    marginTop: -2,
-  },
-
-  menuGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-    gap: 12,
-  },
-  menuBtn: {
-    width: width < 420 ? "100%" : "48%",
-    backgroundColor: "#fff",
-    borderRadius: 18,
-    paddingVertical: 16,
-    paddingHorizontal: 14,
-    marginBottom: 0,
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOpacity: 0.03,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 1,
-  },
-  menuEmoji: {
-    fontSize: 20,
-    marginBottom: 8,
-  },
-  menuText: {
-    color: colors.text,
-    fontWeight: "900",
   },
 
   /* VERSE MODAL */
