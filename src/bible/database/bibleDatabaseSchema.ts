@@ -4,6 +4,9 @@
  * Este arquivo é deliberadamente independente de expo-sqlite.
  * A conexão, execução de migrations e WAL entram no gate de infraestrutura.
  * FTS5 permanece fora desta fase e será introduzido na Fase 7.
+ *
+ * Como nenhum banco runtime/seed foi materializado antes deste refinamento,
+ * o schema permanece na versão 1.
  */
 
 export const BIBLE_DATABASE_SCHEMA_VERSION = 1 as const;
@@ -22,10 +25,12 @@ CREATE TABLE IF NOT EXISTS bible_versions (
   display_name TEXT NOT NULL,
   language_tag TEXT NOT NULL,
   publication_year INTEGER,
-  license_kind TEXT NOT NULL CHECK (license_kind IN ('OPEN_LICENSE', 'PUBLIC_DOMAIN')),
-  license_identifier TEXT NOT NULL,
+  rights_kind TEXT NOT NULL CHECK (rights_kind IN ('OPEN_LICENSE', 'PUBLIC_DOMAIN')),
+  rights_identifier TEXT NOT NULL CHECK (length(trim(rights_identifier)) > 0),
+  rights_basis_jurisdiction TEXT NOT NULL CHECK (rights_basis_jurisdiction IN ('BR', 'US')),
+  rights_evidence_url TEXT NOT NULL CHECK (length(trim(rights_evidence_url)) > 0),
   attribution_notice TEXT,
-  source_kind TEXT NOT NULL CHECK (source_kind IN ('GIT_REPOSITORY', 'PUBLIC_DOMAIN_ARCHIVE')),
+  source_kind TEXT NOT NULL CHECK (source_kind IN ('GIT_REPOSITORY', 'HISTORICAL_ARCHIVE')),
   source_url TEXT NOT NULL,
   source_revision TEXT NOT NULL,
   source_artifact TEXT NOT NULL,

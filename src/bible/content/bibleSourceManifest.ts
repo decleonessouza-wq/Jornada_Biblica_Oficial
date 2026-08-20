@@ -5,15 +5,18 @@
  * - runtime do app nunca depende destas URLs para leitura;
  * - nenhum artefato é considerado congelado sem SHA-256;
  * - hashes e arquivo exato serão registrados no gate de source lock;
- * - apenas BLIVRE e ALM1911 pertencem ao corpus v1 aprovado.
+ * - apenas BLIVRE e ALM1911 pertencem ao corpus v1 aprovado;
+ * - direitos são registrados conforme a evidência e a jurisdição declaradas,
+ *   sem ampliar uma conclusão de domínio público para outras jurisdições.
  */
 
 import type {
-  BibleLicenseKind,
+  BibleRightsBasisJurisdiction,
+  BibleRightsKind,
   BibleVersionId,
 } from "../../domain/bible/bibleVersion";
 
-export type BibleSourceKind = "GIT_REPOSITORY" | "PUBLIC_DOMAIN_ARCHIVE";
+export type BibleSourceKind = "GIT_REPOSITORY" | "HISTORICAL_ARCHIVE";
 
 export type BibleSourceLockStatus = "PENDING_GATE_5_P5" | "LOCKED";
 
@@ -23,9 +26,10 @@ export type BibleSourceManifestEntry = Readonly<{
   sourceName: string;
   sourceUrl: string;
   sourceRevision: string;
-  licenseKind: BibleLicenseKind;
-  licenseIdentifier: string;
-  licenseEvidenceUrl: string;
+  rightsKind: BibleRightsKind;
+  rightsIdentifier: string;
+  rightsBasisJurisdiction: BibleRightsBasisJurisdiction;
+  rightsEvidenceUrl: string;
   attributionNotice: string | null;
   runtimeNetworkDependency: false;
   artifactLockStatus: BibleSourceLockStatus;
@@ -38,9 +42,10 @@ export const BIBLE_SOURCE_MANIFEST: readonly BibleSourceManifestEntry[] = [
     sourceName: "Projeto Bíblia Livre",
     sourceUrl: "https://github.com/blivre/BibliaLivre",
     sourceRevision: "a315a15e9f4d01883b62206fe441d57762f126b3",
-    licenseKind: "OPEN_LICENSE",
-    licenseIdentifier: "CC-BY-3.0-BR",
-    licenseEvidenceUrl:
+    rightsKind: "OPEN_LICENSE",
+    rightsIdentifier: "CC-BY-3.0-BR",
+    rightsBasisJurisdiction: "BR",
+    rightsEvidenceUrl:
       "https://github.com/blivre/BibliaLivre/blob/a315a15e9f4d01883b62206fe441d57762f126b3/LICENCA.md",
     attributionNotice:
       "Bíblia Livre (BLIVRE), licenciada sob Creative Commons Atribuição 3.0 Brasil. A atribuição final será congelada junto ao artefato-fonte.",
@@ -49,13 +54,14 @@ export const BIBLE_SOURCE_MANIFEST: readonly BibleSourceManifestEntry[] = [
   },
   {
     versionId: "ALM1911",
-    sourceKind: "PUBLIC_DOMAIN_ARCHIVE",
+    sourceKind: "HISTORICAL_ARCHIVE",
     sourceName: "Project Gutenberg — Almeida 1911",
     sourceUrl: "https://www.gutenberg.org/ebooks/62383",
     sourceRevision: "gutenberg-ebook-62383",
-    licenseKind: "PUBLIC_DOMAIN",
-    licenseIdentifier: "PUBLIC_DOMAIN",
-    licenseEvidenceUrl: "https://www.gutenberg.org/ebooks/62383",
+    rightsKind: "PUBLIC_DOMAIN",
+    rightsIdentifier: "PUBLIC_DOMAIN_USA",
+    rightsBasisJurisdiction: "US",
+    rightsEvidenceUrl: "https://www.gutenberg.org/ebooks/62383",
     attributionNotice: null,
     runtimeNetworkDependency: false,
     artifactLockStatus: "PENDING_GATE_5_P5",

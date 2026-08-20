@@ -4,13 +4,18 @@
  * Esta camada define identidade e metadados estáveis de produto.
  * Proveniência de artefatos, hashes e detalhes de importação pertencem
  * ao manifesto de fontes e ao pipeline de importação.
+ *
+ * Os campos de direitos registram a base documental aprovada para cada
+ * versão e não afirmam validade jurídica fora da jurisdição declarada.
  */
 
 export const BIBLE_VERSION_IDS = ["BLIVRE", "ALM1911"] as const;
 
 export type BibleVersionId = (typeof BIBLE_VERSION_IDS)[number];
 
-export type BibleLicenseKind = "OPEN_LICENSE" | "PUBLIC_DOMAIN";
+export type BibleRightsKind = "OPEN_LICENSE" | "PUBLIC_DOMAIN";
+
+export type BibleRightsBasisJurisdiction = "BR" | "US";
 
 export type BibleVersionMetadata = Readonly<{
   id: BibleVersionId;
@@ -18,8 +23,9 @@ export type BibleVersionMetadata = Readonly<{
   displayName: string;
   languageTag: string;
   publicationYear: number | null;
-  licenseKind: BibleLicenseKind;
-  licenseIdentifier: string;
+  rightsKind: BibleRightsKind;
+  rightsIdentifier: string;
+  rightsBasisJurisdiction: BibleRightsBasisJurisdiction;
   attributionRequired: boolean;
 }>;
 
@@ -30,8 +36,9 @@ export const BIBLE_VERSION_CATALOG: readonly BibleVersionMetadata[] = [
     displayName: "Bíblia Livre",
     languageTag: "pt-BR",
     publicationYear: 2018,
-    licenseKind: "OPEN_LICENSE",
-    licenseIdentifier: "CC-BY-3.0-BR",
+    rightsKind: "OPEN_LICENSE",
+    rightsIdentifier: "CC-BY-3.0-BR",
+    rightsBasisJurisdiction: "BR",
     attributionRequired: true,
   },
   {
@@ -40,8 +47,9 @@ export const BIBLE_VERSION_CATALOG: readonly BibleVersionMetadata[] = [
     displayName: "Almeida 1911",
     languageTag: "pt",
     publicationYear: 1911,
-    licenseKind: "PUBLIC_DOMAIN",
-    licenseIdentifier: "PUBLIC_DOMAIN",
+    rightsKind: "PUBLIC_DOMAIN",
+    rightsIdentifier: "PUBLIC_DOMAIN_USA",
+    rightsBasisJurisdiction: "US",
     attributionRequired: false,
   },
 ] as const;
