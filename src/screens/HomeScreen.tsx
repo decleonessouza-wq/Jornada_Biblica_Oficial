@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Alert,
-  Dimensions,
+  useWindowDimensions,
   Image,
   ImageBackground,
   Platform,
@@ -233,6 +233,13 @@ function QuickAccessCard({
 
 export default function HomeScreen() {
   const navigation = useNavigation<NavigationProp>();
+  const { width: viewportWidth } = useWindowDimensions();
+  const isNarrowViewport = viewportWidth < 390;
+  const stackStats = viewportWidth < 420;
+  const motivationalWebImageHeight = Math.min(
+    320,
+    Math.max(180, viewportWidth * 0.55)
+  );
   const { handleScroll, resetChrome } = useAppShellChrome();
 
   useFocusEffect(
@@ -845,7 +852,12 @@ export default function HomeScreen() {
                 accessibilityIgnoresInvertColors
               />
 
-              <View style={styles.heroContentPanel}>
+              <View
+                style={[
+                  styles.heroContentPanel,
+                  isNarrowViewport && styles.heroContentPanelNarrow,
+                ]}
+              >
                 <View style={styles.heroEyebrowRow}>
                   <View style={styles.heroAccentLine} />
                   <Text style={styles.heroEyebrow}>Sua jornada de hoje</Text>
@@ -861,7 +873,14 @@ export default function HomeScreen() {
                   accessibilityLabel="Abrir leitura do dia"
                   style={styles.heroReferencePressable}
                 >
-                  <Text style={styles.heroReference}>{resolvedToday.reference}</Text>
+                  <Text
+                    style={[
+                      styles.heroReference,
+                      isNarrowViewport && styles.heroReferenceNarrow,
+                    ]}
+                  >
+                    {resolvedToday.reference}
+                  </Text>
                 </Pressable>
 
                 <View style={styles.heroStatusPill}>
@@ -869,25 +888,49 @@ export default function HomeScreen() {
                 </View>
 
                 <TouchableOpacity
-                  style={styles.heroPrimaryBtn}
+                  style={[
+                    styles.heroPrimaryBtn,
+                    isNarrowViewport && styles.heroPrimaryBtnNarrow,
+                    Platform.OS === "web" && styles.heroPrimaryBtnWeb,
+                  ]}
                   onPress={planStartDate ? openReading : startPlanNowAndOpen}
                   activeOpacity={0.86}
                   accessibilityRole="button"
                   accessibilityLabel={heroCtaLabel}
                 >
                   <View style={styles.heroPrimaryBtnContent}>
-                    <Text style={styles.heroPrimaryBtnIcon}>📖</Text>
-                    <Text style={styles.heroPrimaryBtnText}>{heroCtaLabel}</Text>
+                    <Text
+                      style={[
+                        styles.heroPrimaryBtnIcon,
+                        Platform.OS === "web" && styles.heroPrimaryBtnIconWeb,
+                      ]}
+                    >
+                      📖
+                    </Text>
+                    <Text
+                      style={[
+                        styles.heroPrimaryBtnText,
+                        isNarrowViewport && styles.heroPrimaryBtnTextNarrow,
+                      ]}
+                    >
+                      {heroCtaLabel}
+                    </Text>
                   </View>
                 </TouchableOpacity>
               </View>
             </View>
 
-            <View style={styles.heroUtilityRow}>
+            <View
+              style={[
+                styles.heroUtilityRow,
+                isNarrowViewport && styles.heroUtilityRowNarrow,
+              ]}
+            >
               {canRegisterGratitudeToday && (
                 <Text
                   style={[
                     styles.heroGratitudeText,
+                    isNarrowViewport && styles.heroGratitudeTextNarrow,
                     { color: todayGratitude ? colors.secondaryPressed : colors.muted },
                   ]}
                 >
@@ -1054,6 +1097,18 @@ export default function HomeScreen() {
             resizeMode="cover"
             accessibilityIgnoresInvertColors
           >
+            {Platform.OS === "web" && (
+              <Image
+                source={require("../../assets/home/banner_motivacional.png")}
+                style={[
+                  styles.motivationalBackdropWeb,
+                  { height: motivationalWebImageHeight },
+                ]}
+                resizeMode="cover"
+                accessibilityIgnoresInvertColors
+              />
+            )}
+
             <Image
               source={require("../../assets/home/overlays/banner_cream_fade.png")}
               style={styles.motivationalFadeImage}
@@ -1071,7 +1126,7 @@ export default function HomeScreen() {
           </ImageBackground>
 
           {/* CONSTÂNCIA - BLOCO LEGADO PRESERVADO */}
-          <View style={styles.statsGrid}>
+          <View style={[styles.statsGrid, stackStats && styles.statsGridNarrow]}>
             <Card>
               <Text style={styles.kpiLabel}>🔥 Streak</Text>
               <Text style={styles.kpiValue}>
@@ -1193,7 +1248,6 @@ export default function HomeScreen() {
   );
 }
 
-const { width } = Dimensions.get("window");
 const CARD_MAX = 560;
 
 const styles = StyleSheet.create({
@@ -1366,11 +1420,14 @@ const styles = StyleSheet.create({
     height: "100%",
   },
   heroContentPanel: {
-    width: width < 390 ? "66%" : "62%",
+    width: "62%",
     height: "100%",
     justifyContent: "center",
     paddingHorizontal: 18,
     paddingVertical: 14,
+  },
+  heroContentPanelNarrow: {
+    width: "66%",
   },
   heroEyebrowRow: {
     flexDirection: "row",
@@ -1400,9 +1457,13 @@ const styles = StyleSheet.create({
   },
   heroReference: {
     color: colors.textInverse,
-    fontSize: width < 390 ? 19 : 22,
+    fontSize: 22,
     fontWeight: "900",
-    lineHeight: width < 390 ? 23 : 27,
+    lineHeight: 27,
+  },
+  heroReferenceNarrow: {
+    fontSize: 19,
+    lineHeight: 23,
   },
   heroStatusPill: {
     alignSelf: "flex-start",
@@ -1421,7 +1482,7 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
     marginTop: 6,
     minHeight: 36,
-    minWidth: width < 390 ? 150 : 170,
+    minWidth: 170,
     maxWidth: "64%",
     borderRadius: 13,
     paddingHorizontal: 18,
@@ -1429,12 +1490,24 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     backgroundColor: colors.secondary,
   },
+  heroPrimaryBtnNarrow: {
+    minWidth: 150,
+  },
+  heroPrimaryBtnWeb: {
+    minWidth: 182,
+    maxWidth: "100%",
+    paddingHorizontal: 8,
+  },
   heroPrimaryBtnText: {
     color: colors.primary,
-    fontSize: width < 390 ? 14 : 15,
-    lineHeight: width < 390 ? 19 : 20,
+    fontSize: 15,
+    lineHeight: 20,
     fontWeight: "900",
     textAlign: "center",
+  },
+  heroPrimaryBtnTextNarrow: {
+    fontSize: 14,
+    lineHeight: 19,
   },
 
   heroPrimaryBtnContent: {
@@ -1448,6 +1521,9 @@ const styles = StyleSheet.create({
     fontSize: 24,
     marginLeft: 68,
   },
+  heroPrimaryBtnIconWeb: {
+    marginLeft: 0,
+  },
 
   heroUtilityRow: {
     minHeight: 58,
@@ -1455,8 +1531,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingTop: 20,
     paddingBottom: 10,
-    flexDirection: width < 390 ? "column" : "row",
-    alignItems: width < 390 ? "stretch" : "center",
+    flexDirection: "row",
+    alignItems: "center",
     justifyContent: "space-between",
     gap: 8,
     borderTopLeftRadius: 22,
@@ -1464,11 +1540,18 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     zIndex: 3,
   },
+  heroUtilityRowNarrow: {
+    flexDirection: "column",
+    alignItems: "stretch",
+  },
   heroGratitudeText: {
     flexShrink: 1,
     fontSize: 10.5,
     fontWeight: "700",
-    textAlign: width < 390 ? "center" : "left",
+    textAlign: "left",
+  },
+  heroGratitudeTextNarrow: {
+    textAlign: "center",
   },
   heroMarkReadBtn: {
     minHeight: 36,
@@ -1700,6 +1783,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     backgroundColor: colors.secondarySoft,
   },
+  motivationalBackdropWeb: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    width: "100%",
+  },
   motivationalFadeImage: {
     ...StyleSheet.absoluteFillObject,
     width: "100%",
@@ -1787,8 +1876,11 @@ const styles = StyleSheet.create({
 
   /* KPIs */
   statsGrid: {
-    flexDirection: width < 420 ? "column" : "row",
+    flexDirection: "row",
     gap: 12,
+  },
+  statsGridNarrow: {
+    flexDirection: "column",
   },
   kpiLabel: {
     fontSize: 12,
