@@ -7,8 +7,8 @@ import { colors } from "../theme/colors";
 
 import { useAppShellChrome } from "./AppShellChromeContext";
 
-const BASE_BAR_HEIGHT = 60;
-const QUICK_ACTION_OVERHANG = 10;
+const BASE_BAR_HEIGHT = 46;
+const QUICK_ACTION_OVERHANG = 24;
 
 type RealTabRouteName = "HomeTab" | "PlanTab";
 
@@ -161,13 +161,20 @@ export default function CustomTabBar({
           styles.safeArea,
           {
             height: visibleHeight,
-            paddingBottom: bottomPadding,
-            paddingTop: QUICK_ACTION_OVERHANG,
           },
           contentAnimatedStyle,
         ]}
       >
-        <View style={styles.container}>
+        <View
+          style={[
+            styles.barSurface,
+            {
+              height: BASE_BAR_HEIGHT + bottomPadding,
+              paddingBottom: bottomPadding,
+            },
+          ]}
+        >
+          <View style={styles.container}>
           <RealTabButton
             routeName="HomeTab"
             label="Início"
@@ -203,6 +210,7 @@ export default function CustomTabBar({
           />
 
           <DisabledTabButton label="Perfil" symbol="○" />
+          </View>
         </View>
       </Animated.View>
     </Animated.View>
@@ -215,34 +223,41 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   safeArea: {
+    backgroundColor: colors.background,
+    position: "relative",
+  },
+  barSurface: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
     backgroundColor: colors.primary,
     borderTopColor: colors.primaryPressed,
     borderTopWidth: StyleSheet.hairlineWidth,
   },
   container: {
-    alignItems: "flex-end",
+    alignItems: "center",
     backgroundColor: colors.primary,
     flexDirection: "row",
-    minHeight: BASE_BAR_HEIGHT,
+    height: BASE_BAR_HEIGHT,
     paddingHorizontal: 8,
-    paddingTop: 4,
   },
   tabItem: {
     alignItems: "center",
     borderRadius: 12,
     flex: 1,
     justifyContent: "center",
-    minHeight: 42,
+    minHeight: 40,
     paddingHorizontal: 4,
-    paddingVertical: 3,
+    paddingVertical: 2,
   },
   tabItemPressed: {
     backgroundColor: colors.primaryPressed,
   },
   tabSymbol: {
-    fontSize: 20,
+    fontSize: 19,
     fontWeight: "700",
-    lineHeight: 22,
+    lineHeight: 20,
   },
   tabSymbolActive: {
     color: colors.secondary,
@@ -255,10 +270,10 @@ const styles = StyleSheet.create({
     opacity: 0.35,
   },
   tabLabel: {
-    fontSize: 11,
+    fontSize: 10.5,
     fontWeight: "600",
-    lineHeight: 14,
-    marginTop: 2,
+    lineHeight: 12,
+    marginTop: 1,
   },
   tabLabelActive: {
     color: colors.secondary,
@@ -273,27 +288,34 @@ const styles = StyleSheet.create({
   quickActionSlot: {
     alignItems: "center",
     flex: 1,
-    justifyContent: "flex-end",
-    minHeight: 42,
+    height: BASE_BAR_HEIGHT,
+    justifyContent: "center",
+    position: "relative",
   },
   quickActionButton: {
     alignItems: "center",
     backgroundColor: colors.secondary,
     borderColor: colors.primary,
-    borderRadius: 28,
+    borderRadius: 27,
     borderWidth: 4,
-    height: 56,
+    height: 54,
     justifyContent: "center",
-    marginTop: -QUICK_ACTION_OVERHANG,
-    width: 56,
+    position: "absolute",
+    top: -QUICK_ACTION_OVERHANG,
+    width: 54,
+    shadowColor: colors.black,
+    shadowOpacity: 0.14,
+    shadowRadius: 7,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 5,
   },
   quickActionButtonPressed: {
     backgroundColor: colors.secondaryPressed,
   },
   quickActionSymbol: {
     color: colors.primary,
-    fontSize: 30,
+    fontSize: 29,
     fontWeight: "600",
-    lineHeight: 32,
+    lineHeight: 30,
   },
 });
