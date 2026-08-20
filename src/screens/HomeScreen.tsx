@@ -1,11 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Alert,
-  Dimensions,
+  useWindowDimensions,
   Image,
+  ImageBackground,
   Platform,
   Pressable,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -23,11 +23,14 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { colors } from "../theme/colors";
 import { readingPlan } from "../data/readingPlan";
-import { phases } from "../data/phases";
 import type { AppDrawerParamList, MainTabParamList, RootStackParamList } from "../navigation/types";
 import { runAutoBackup } from "../utils/autoBackup";
-import { APP_INFO } from "../constants/appInfo";
 import { useAppShellChrome } from "../navigation/AppShellChromeContext";
+import { VERSES_OF_DAY, pickVerseForToday, type VerseItem } from "../data/versesOfDay";
+import {
+  loadHomeDashboardV2Snapshot,
+  type HomeDashboardV2Snapshot,
+} from "../features/home/homeDashboardV2";
 
 import {
   addCompletedDay,
@@ -158,435 +161,8 @@ function confirmAction(title: string, message: string): Promise<boolean> {
 }
 
 /* ==========================
-   VERSE OF THE DAY (LOCAL)
-========================== */
-
-type VerseItem = {
-  id?: number | string;
-  theme?: string;
-  reference: string;
-  text: string;
-};
-
-/**
- * ✅ RESERVADO (COLE AQUI SEUS 365 VERSÍCULOS MANUALMENTE)
- */
-const VERSES_OF_DAY: VerseItem[] = [
-  
-  { "id": 1, "theme": "Novos Começos", "reference": "Lamentações 3:22-23", "text": "As misericórdias do Senhor são a causa de não sermos consumidos... renovam-se a cada manhã." },
-  { "id": 2, "theme": "Foco", "reference": "Filipenses 3:13-14", "text": "Esquecendo-me das coisas que atrás ficam... prossigo para o alvo." },
-  { "id": 3, "theme": "Renovação", "reference": "Isaías 43:18-19", "text": "Eis que faço uma coisa nova; agora sairá à luz." },
-  { "id": 4, "theme": "Coragem", "reference": "Josué 1:9", "text": "Não to mandei eu? Esforça-te, e tem bom ânimo." },
-  { "id": 5, "theme": "Transformação", "reference": "2 Coríntios 5:17", "text": "Se alguém está em Cristo, nova criatura é; as coisas velhas já passaram." },
-  { "id": 6, "theme": "Esperança", "reference": "Jeremias 29:11", "text": "Pois eu bem sei os planos que tenho a vosso respeito... planos de paz." },
-  { "id": 7, "theme": "Entrega", "reference": "Salmos 37:5", "text": "Entrega o teu caminho ao Senhor; confia nele, e ele o fará." },
-  { "id": 8, "theme": "Propósito", "reference": "Provérbios 16:3", "text": "Consagra ao Senhor as tuas obras, e os teus planos serão estabelecidos." },
-  { "id": 9, "theme": "Fé", "reference": "Hebreus 11:1", "text": "A fé é a certeza daquilo que esperamos e a prova das coisas que não vemos." },
-  { "id": 10, "theme": "Crer", "reference": "Marcos 9:23", "text": "Tudo é possível ao que crê." },
-  { "id": 11, "theme": "Confiança", "reference": "Salmos 27:1", "text": "O Senhor é a minha luz e a minha salvação; a quem temerei?" },
-  { "id": 12, "theme": "Prioridade", "reference": "Mateus 6:33", "text": "Buscai primeiro o Reino de Deus, e a sua justiça." },
-  { "id": 13, "theme": "Força", "reference": "Isaías 40:31", "text": "Mas os que esperam no Senhor renovarão as forças." },
-  { "id": 14, "theme": "Confiança", "reference": "Salmos 20:7", "text": "Uns confiam em carros e outros em cavalos, mas nós faremos menção do nome do Senhor." },
-  { "id": 15, "theme": "Segurança", "reference": "Romanos 8:31", "text": "Se Deus é por nós, quem será contra nós?" },
-  { "id": 16, "theme": "Socorro", "reference": "Salmos 121:1-2", "text": "Levanto os meus olhos para os montes e pergunto: De onde me vem o socorro?" },
-  { "id": 17, "theme": "Companhia", "reference": "Isaías 41:10", "text": "Não temas, porque eu sou contigo; não te assombres, porque eu sou o teu Deus." },
-  { "id": 18, "theme": "Direção", "reference": "Provérbios 3:5-6", "text": "Confia no Senhor de todo o teu coração e não te estribes no teu próprio entendimento." },
-  { "id": 19, "theme": "Refúgio", "reference": "Salmos 46:1", "text": "Deus é o nosso refúgio e fortaleza, socorro bem presente na angústia." },
-  { "id": 20, "theme": "Fé", "reference": "Mateus 17:20", "text": "Se tiverdes fé como um grão de mostarda... nada vos será impossível." },
-  { "id": 21, "theme": "Bondade", "reference": "Salmos 34:8", "text": "Provai e vede que o Senhor é bom." },
-  { "id": 22, "theme": "Tempo", "reference": "Eclesiastes 3:1", "text": "Tudo tem o seu tempo determinado, e há tempo para todo o propósito." },
-  { "id": 23, "theme": "Vida", "reference": "Gálatas 2:20", "text": "Já estou crucificado com Cristo; e vivo, não mais eu, mas Cristo vive em mim." },
-  { "id": 24, "theme": "Graça", "reference": "Efésios 2:8", "text": "Porque pela graça sois salvos, por meio da fé; e isto não vem de vós, é dom de Deus." },
-  { "id": 25, "theme": "Prosperidade", "reference": "Salmos 1:3", "text": "Será como a árvore plantada junto a ribeiros de águas." },
-  { "id": 26, "theme": "Soberania", "reference": "Jó 42:2", "text": "Bem sei eu que tudo podes, e que nenhum dos teus propósitos pode ser impedido." },
-  { "id": 27, "theme": "Verdade", "reference": "Números 23:19", "text": "Deus não é homem, para que minta." },
-  { "id": 28, "theme": "Palavra", "reference": "Salmos 119:105", "text": "Lâmpada para os meus pés é tua palavra, e luz para o meu caminho." },
-  { "id": 29, "theme": "Poder", "reference": "Lucas 1:37", "text": "Porque para Deus nada é impossível." },
-  { "id": 30, "theme": "Dádiva", "reference": "Tiago 1:17", "text": "Toda a boa dádiva e todo o dom perfeito vem do alto." },
-  { "id": 31, "theme": "Sabedoria", "reference": "Salmos 90:12", "text": "Ensina-nos a contar os nossos dias, de tal maneira que alcancemos corações sábios." },
-  { "id": 32, "theme": "Amor", "reference": "1 João 4:19", "text": "Nós amamos porque ele nos amou primeiro." },
-  { "id": 33, "theme": "Salvação", "reference": "João 3:16", "text": "Porque Deus amou o mundo de tal maneira que deu o seu Filho unigênito." },
-  { "id": 34, "theme": "Amor", "reference": "Romanos 5:8", "text": "Deus prova o seu amor para conosco, em que Cristo morreu por nós." },
-  { "id": 35, "theme": "Amor Eterno", "reference": "Jeremias 31:3", "text": "Com amor eterno te amei, por isso com benignidade te atraí." },
-  { "id": 36, "theme": "Alegria", "reference": "Sofonias 3:17", "text": "O Senhor teu Deus... se deleitará em ti com alegria; calar-se-á por seu amor." },
-  { "id": 37, "theme": "Inseparável", "reference": "Romanos 8:38-39", "text": "Nem altura, nem profundidade... nos poderá separar do amor de Deus." },
-  { "id": 38, "theme": "Misericórdia", "reference": "Salmos 136:1", "text": "Louvai ao Senhor, porque ele é bom; porque a sua benignidade dura para sempre." },
-  { "id": 39, "theme": "Cuidado", "reference": "Isaías 49:15", "text": "Acaso pode uma mulher esquecer-se do filho que ainda mama?... Eu, todavia, não me esquecerei de ti." },
-  { "id": 40, "theme": "Filiação", "reference": "1 João 3:1", "text": "Vede quão grande amor nos tem concedido o Pai." },
-  { "id": 41, "theme": "Vida", "reference": "Salmos 63:3", "text": "Porque a tua benignidade é melhor do que a vida." },
-  { "id": 42, "theme": "Fundamento", "reference": "Efésios 3:17-18", "text": "Estando arraigados e fundados em amor." },
-  { "id": 43, "theme": "Proteção", "reference": "Cantares 2:4", "text": "Levou-me à sala do banquete, e o seu estandarte sobre mim era o amor." },
-  { "id": 44, "theme": "Sacrifício", "reference": "João 15:13", "text": "Ninguém tem maior amor do que este, de dar alguém a sua vida pelos seus amigos." },
-  { "id": 45, "theme": "Perdão", "reference": "1 Pedro 4:8", "text": "O amor cobre uma multidão de pecados." },
-  { "id": 46, "theme": "União", "reference": "Colossenses 3:14", "text": "E, sobre tudo isto, revesti-vos de amor, que é o vínculo da perfeição." },
-  { "id": 47, "theme": "Fruto", "reference": "Gálatas 5:22", "text": "Mas o fruto do Espírito é: amor, gozo, paz..." },
-  { "id": 48, "theme": "Compaixão", "reference": "Salmos 86:15", "text": "Mas tu, Senhor, és um Deus cheio de compaixão e piedoso." },
-  { "id": 49, "theme": "Aliança", "reference": "Isaías 54:10", "text": "A minha misericórdia não se apartará de ti." },
-  { "id": 50, "theme": "Mandamento", "reference": "João 13:34", "text": "Um novo mandamento vos dou: Que vos ameis uns aos outros." },
-  { "id": 51, "theme": "Fidelidade", "reference": "Deuteronômio 7:9", "text": "Saberás, pois, que o Senhor teu Deus... guarda a aliança e a misericórdia." },
-  { "id": 52, "theme": "Precioso", "reference": "Salmos 36:7", "text": "Quão preciosa é, ó Deus, a tua benignidade!" },
-  { "id": 53, "theme": "Imitação", "reference": "Efésios 5:1-2", "text": "Sede, pois, imitadores de Deus, como filhos amados; e andai em amor." },
-  { "id": 54, "theme": "Permanência", "reference": "1 Coríntios 13:13", "text": "Agora, pois, permanecem a fé, a esperança e o amor... mas o maior destes é o amor." },
-  { "id": 55, "theme": "Amizade", "reference": "Provérbios 17:17", "text": "Em todo o tempo ama o amigo e para a hora da angústia nasce o irmão." },
-  { "id": 56, "theme": "Promessa", "reference": "Oséias 2:19", "text": "Desposar-te-ei comigo em benignidade e em misericórdia." },
-  { "id": 57, "theme": "Seguimento", "reference": "Salmos 23:6", "text": "Certamente que a bondade e a misericórdia me seguirão todos os dias." },
-  { "id": 58, "theme": "Essência", "reference": "1 João 4:8", "text": "Aquele que não ama não conhece a Deus; porque Deus é amor." },
-  { "id": 59, "theme": "Piedade", "reference": "Salmos 103:8", "text": "Misericordioso e piedoso é o Senhor; longânimo e grande em benignidade." },
-  { "id": 60, "theme": "Escudo", "reference": "Salmos 28:7", "text": "O Senhor é a minha força e o meu escudo." },
-  { "id": 61, "theme": "Confiança", "reference": "Isaías 12:2", "text": "Deus é a minha salvação; confiarei e não temerei." },
-  { "id": 62, "theme": "Capacidade", "reference": "Filipenses 4:13", "text": "Posso todas as coisas naquele que me fortalece." },
-  { "id": 63, "theme": "Espírito", "reference": "2 Timóteo 1:7", "text": "Deus não nos deu espírito de covardia, mas de poder, de amor e de moderação." },
-  { "id": 64, "theme": "Rocha", "reference": "Salmos 18:2", "text": "O Senhor é o meu rochedo, a minha fortaleza e o meu libertador." },
-  { "id": 65, "theme": "Poder", "reference": "Efésios 6:10", "text": "Fortalecei-vos no Senhor e na força do seu poder." },
-  { "id": 66, "theme": "Alegria", "reference": "Neemias 8:10", "text": "A alegria do Senhor é a vossa força." },
-  { "id": 67, "theme": "Paz", "reference": "Salmos 46:10", "text": "Aquietai-vos, e sabei que eu sou Deus." },
-  { "id": 68, "theme": "Coragem", "reference": "Deuteronômio 31:6", "text": "Sede fortes e corajosos; não temais." },
-  { "id": 69, "theme": "Companhia", "reference": "Salmos 118:6", "text": "O Senhor está comigo; não temerei." },
-  { "id": 70, "theme": "Vigor", "reference": "Isaías 40:29", "text": "Dá força ao cansado, e multiplica as forças ao que não tem nenhum vigor." },
-  { "id": 71, "theme": "Batalha", "reference": "2 Crônicas 20:15", "text": "Não temais... pois a peleja não é vossa, mas de Deus." },
-  { "id": 72, "theme": "Fortaleza", "reference": "Salmos 73:26", "text": "A minha carne e o meu coração desfalecem; mas Deus é a fortaleza do meu coração." },
-  { "id": 73, "theme": "Força", "reference": "Habacuque 3:19", "text": "O Senhor Deus é a minha força." },
-  { "id": 74, "theme": "Louvor", "reference": "Salmos 59:16", "text": "Eu, porém, cantarei a tua força; pela manhã louvarei a tua misericórdia." },
-  { "id": 75, "theme": "Eternidade", "reference": "Isaías 26:4", "text": "Confiai no Senhor perpetuamente; porque o Senhor Deus é uma rocha eterna." },
-  { "id": 76, "theme": "Cântico", "reference": "Êxodo 15:2", "text": "O Senhor é a minha força e o meu cântico." },
-  { "id": 77, "theme": "Resposta", "reference": "Salmos 138:3", "text": "No dia em que eu clamei, me escutaste; e alentaste com força a minha alma." },
-  { "id": 78, "theme": "Ânimo", "reference": "Josué 1:6", "text": "Esforça-te, e tem bom ânimo." },
-  { "id": 79, "theme": "Bendição", "reference": "Salmos 144:1", "text": "Bendito seja o Senhor, minha rocha." },
-  { "id": 80, "theme": "Declaração", "reference": "Joel 3:10", "text": "Diga o fraco: Eu sou forte." },
-  { "id": 81, "theme": "Perfeição", "reference": "Salmos 18:32", "text": "Deus é o que me cinge de força e aperfeiçoa o meu caminho." },
-  { "id": 82, "theme": "Vigilância", "reference": "1 Coríntios 16:13", "text": "Vigiai, estai firmes na fé; portai-vos varonilmente, e fortalecei-vos." },
-  { "id": 83, "theme": "Espera", "reference": "Salmos 62:1-2", "text": "Somente em Deus espera silenciosa a minha alma; dele vem a minha salvação." },
-  { "id": 84, "theme": "Conforto", "reference": "Isaías 35:4", "text": "Dizei aos turbados de coração: Esforçai-vos, não temais." },
-  { "id": 85, "theme": "Coração", "reference": "Salmos 31:24", "text": "Esforçai-vos, e ele fortalecerá o vosso coração." },
-  { "id": 86, "theme": "Resiliência", "reference": "Provérbios 24:10", "text": "Se te mostrares fraco no dia da angústia, é pequena a tua força." },
-  { "id": 87, "theme": "Espírito", "reference": "Zacarias 4:6", "text": "Não por força nem por violência, mas pelo meu Espírito." },
-  { "id": 88, "theme": "Bem-aventurança", "reference": "Salmos 84:5", "text": "Bem-aventurado o homem cuja força está em ti." },
-  { "id": 89, "theme": "Poder Interior", "reference": "Efésios 3:16", "text": "Para que... vos conceda que sejais corroborados com poder pelo seu Espírito." },
-  { "id": 90, "theme": "Conhecimento", "reference": "Daniel 11:32", "text": "O povo que conhece ao seu Deus se tornará forte e fará proezas." },
-  { "id": 91, "theme": "Paz", "reference": "João 14:27", "text": "Deixo-vos a paz, a minha paz vos dou." },
-  { "id": 92, "theme": "Esperança", "reference": "Romanos 15:13", "text": "O Deus de esperança vos encha de todo o gozo e paz." },
-  { "id": 93, "theme": "Segurança", "reference": "Salmos 4:8", "text": "Em paz também me deitarei e dormirei, porque só tu, Senhor, me fazes habitar em segurança." },
-  { "id": 94, "theme": "Entendimento", "reference": "Filipenses 4:7", "text": "E a paz de Deus, que excede todo o entendimento, guardará os vossos corações." },
-  { "id": 95, "theme": "Firmeza", "reference": "Isaías 26:3", "text": "Tu conservarás em paz aquele cuja mente está firme em ti." },
-  { "id": 96, "theme": "Alívio", "reference": "Mateus 11:28", "text": "Vinde a mim, todos os que estais cansados e oprimidos, e eu vos aliviarei." },
-  { "id": 97, "theme": "Bênção", "reference": "Salmos 29:11", "text": "O Senhor abençoará o seu povo com paz." },
-  { "id": 98, "theme": "Domínio", "reference": "Colossenses 3:15", "text": "E a paz de Cristo... domine em vossos corações." },
-  { "id": 99, "theme": "Cura", "reference": "Isaías 53:5", "text": "O castigo que nos traz a paz estava sobre ele." },
-  { "id": 100, "theme": "Vitória", "reference": "João 16:33", "text": "Tenho-vos dito isto, para que em mim tenhais paz." },
-  { "id": 101, "theme": "Lei", "reference": "Salmos 119:165", "text": "Muita paz têm os que amam a tua lei." },
-  { "id": 102, "theme": "Príncipe", "reference": "Isaías 9:6", "text": "E o seu nome será... Príncipe da Paz." },
-  { "id": 103, "theme": "Constância", "reference": "2 Tessalonicenses 3:16", "text": "Ora, o mesmo Senhor da paz vos dê sempre paz de toda a maneira." },
-  { "id": 104, "theme": "União", "reference": "Jó 22:21", "text": "Une-te, pois, a Deus, e tem paz." },
-  { "id": 105, "theme": "Escuta", "reference": "Salmos 85:8", "text": "Escutarei o que Deus, o Senhor, falar; porque falará de paz ao seu povo." },
-  { "id": 106, "theme": "Justiça", "reference": "Isaías 32:17", "text": "O efeito da justiça será paz." },
-  { "id": 107, "theme": "Justificação", "reference": "Romanos 5:1", "text": "Sendo pois justificados pela fé, temos paz com Deus." },
-  { "id": 108, "theme": "Repouso", "reference": "Salmos 116:7", "text": "Volta, minha alma, para o teu repouso, pois o Senhor te fez bem." },
-  { "id": 109, "theme": "Busca", "reference": "Salmos 34:14", "text": "Busca a paz, e segue-a." },
-  { "id": 110, "theme": "Saúde", "reference": "Provérbios 14:30", "text": "O coração em paz dá vida ao corpo." },
-  { "id": 111, "theme": "Colheita", "reference": "Gálatas 6:9", "text": "E não nos cansemos de fazer bem, pois a seu tempo ceifaremos." },
-  { "id": 112, "theme": "Âncora", "reference": "Hebreus 6:19", "text": "Temos esta esperança como âncora da alma, segura e firme." },
-  { "id": 113, "theme": "Expectativa", "reference": "Salmos 39:7", "text": "Agora, pois, Senhor, que espero eu? A minha esperança está em ti." },
-  { "id": 114, "theme": "Confiança", "reference": "Salmos 42:11", "text": "Por que estás abatida, ó minha alma?... Espera em Deus." },
-  { "id": 115, "theme": "Renascimento", "reference": "1 Pedro 1:3", "text": "Bendito o Deus... que nos gerou de novo para uma viva esperança." },
-  { "id": 116, "theme": "Aguardo", "reference": "Tito 2:13", "text": "Aguardando a bem-aventurada esperança." },
-  { "id": 117, "theme": "Refúgio", "reference": "Salmos 71:5", "text": "Pois tu és a minha esperança, Senhor Deus." },
-  { "id": 118, "theme": "Futuro", "reference": "Provérbios 23:18", "text": "Porque deveras há um fim bom; não será malograda a tua esperança." },
-  { "id": 119, "theme": "Paciência", "reference": "Romanos 12:12", "text": "Alegrai-vos na esperança, sede pacientes na tribulação." },
-  { "id": 120, "theme": "Misericórdia", "reference": "Salmos 33:22", "text": "Seja a tua misericórdia, Senhor, sobre nós, como em ti esperamos." },
-  { "id": 121, "theme": "Sabedoria", "reference": "Tiago 1:5", "text": "Se algum de vós tem falta de sabedoria, peça-a a Deus." },
-  { "id": 122, "theme": "Prioridade", "reference": "Provérbios 4:7", "text": "A sabedoria é a coisa principal; adquire pois a sabedoria." },
-  { "id": 123, "theme": "Instrução", "reference": "Salmos 32:8", "text": "Instruir-te-ei, e ensinar-te-ei o caminho que deves seguir." },
-  { "id": 124, "theme": "Direção", "reference": "Provérbios 16:9", "text": "O coração do homem planeja o seu caminho, mas o Senhor lhe dirige os passos." },
-  { "id": 125, "theme": "Firmeza", "reference": "Salmos 119:133", "text": "Firma os meus passos na tua palavra." },
-  { "id": 126, "theme": "Temor", "reference": "Provérbios 9:10", "text": "O temor do Senhor é o princípio da sabedoria." },
-  { "id": 127, "theme": "Guia", "reference": "Salmos 143:8", "text": "Faze-me saber o caminho que devo seguir, porque a ti levanto a minha alma." },
-  { "id": 128, "theme": "Voz", "reference": "Isaías 30:21", "text": "E os teus ouvidos ouvirão a palavra... dizendo: Este é o caminho, andai nele." },
-  { "id": 129, "theme": "Dom", "reference": "Provérbios 2:6", "text": "Porque o Senhor dá a sabedoria." },
-  { "id": 130, "theme": "Habitação", "reference": "Colossenses 3:16", "text": "A palavra de Cristo habite em vós abundantemente, em toda a sabedoria." },
-  { "id": 131, "theme": "Caminhos", "reference": "Salmos 25:4", "text": "Faze-me saber os teus caminhos, Senhor." },
-  { "id": 132, "theme": "Companhia", "reference": "Provérbios 13:20", "text": "O que anda com os sábios ficará sábio." },
-  { "id": 133, "theme": "Prudência", "reference": "Efésios 5:15-16", "text": "Vede prudentemente como andais, não como néscios, mas como sábios." },
-  { "id": 134, "theme": "Confirmação", "reference": "Salmos 37:23", "text": "Os passos de um homem bom são confirmados pelo Senhor." },
-  { "id": 135, "theme": "Propósito", "reference": "Provérbios 19:21", "text": "Muitos são os planos no coração do homem, mas o propósito do Senhor prevalecerá." },
-  { "id": 136, "theme": "Louvor", "reference": "Daniel 2:20", "text": "Seja bendito o nome de Deus... porque dele é a sabedoria e a força." },
-  { "id": 137, "theme": "Preservação", "reference": "Eclesiastes 7:12", "text": "A excelência da sabedoria é que ela preserva a vida de quem a possui." },
-  { "id": 138, "theme": "Entendimento", "reference": "Salmos 111:10", "text": "O temor do Senhor é o princípio da sabedoria; bom entendimento têm todos os que cumprem os seus mandamentos." },
-  { "id": 139, "theme": "Busca", "reference": "Provérbios 8:17", "text": "Eu amo aos que me amam, e os que de madrugada me buscam me acharão." },
-  { "id": 140, "theme": "Promessa", "reference": "Lucas 21:15", "text": "Eu vos darei boca e sabedoria." },
-  { "id": 141, "theme": "Graça", "reference": "Salmos 90:17", "text": "Seja sobre nós a graça do Senhor... e confirma sobre nós a obra das nossas mãos." },
-  { "id": 142, "theme": "Conhecimento", "reference": "Provérbios 18:15", "text": "O coração do entendido adquire o conhecimento." },
-  { "id": 143, "theme": "Mandamentos", "reference": "Salmos 119:98", "text": "Tu, pelos teus mandamentos, me fazes mais sábio." },
-  { "id": 144, "theme": "Pensamentos", "reference": "Isaías 55:8-9", "text": "Os meus pensamentos não são os vossos pensamentos." },
-  { "id": 145, "theme": "Revelação", "reference": "Jeremias 33:3", "text": "Clama a mim, e responder-te-ei, e anunciar-te-ei coisas grandes e firmes." },
-  { "id": 146, "theme": "Conselho", "reference": "Provérbios 11:14", "text": "Não havendo sábios conselhos, o povo cai." },
-  { "id": 147, "theme": "Vereda", "reference": "Salmos 16:11", "text": "Far-me-ás ver a vereda da vida." },
-  { "id": 148, "theme": "Humildade", "reference": "Provérbios 3:7", "text": "Não sejas sábio a teus próprios olhos; teme ao Senhor e aparta-te do mal." },
-  { "id": 149, "theme": "Profundidade", "reference": "Romanos 11:33", "text": "Ó profundidade das riquezas, tanto da sabedoria, como da ciência de Deus!" },
-  { "id": 150, "theme": "Sabedoria Divina", "reference": "1 Coríntios 1:25", "text": "A loucura de Deus é mais sábia do que os homens." },
-  { "id": 151, "theme": "Pureza", "reference": "Tiago 3:17", "text": "A sabedoria que vem do alto é, primeiramente, pura, depois pacífica." },
-  { "id": 152, "theme": "Abrigo", "reference": "Salmos 91:1-2", "text": "Aquele que habita no esconderijo do Altíssimo..." },
-  { "id": 153, "theme": "Proteção", "reference": "Salmos 91:4", "text": "Cobrir-te-á com as suas penas, e, sob as suas asas te confiarás." },
-  { "id": 154, "theme": "Segurança", "reference": "Provérbios 18:10", "text": "Torre forte é o nome do Senhor." },
-  { "id": 155, "theme": "Guarda", "reference": "Salmos 121:7", "text": "O Senhor te guardará de todo o mal; guardará a tua alma." },
-  { "id": 156, "theme": "Livramento", "reference": "Salmos 34:7", "text": "O anjo do Senhor acampa-se ao redor dos que o temem." },
-  { "id": 157, "theme": "Fidelidade", "reference": "2 Tessalonicenses 3:3", "text": "Fiel é o Senhor, que vos confirmará, e guardará do maligno." },
-  { "id": 158, "theme": "Cuidado", "reference": "Salmos 17:8", "text": "Guarda-me como à menina do olho." },
-  { "id": 159, "theme": "Defesa", "reference": "Isaías 54:17", "text": "Toda a ferramenta preparada contra ti não prosperará." },
-  { "id": 160, "theme": "Presença", "reference": "Salmos 46:7", "text": "O Senhor dos Exércitos está conosco." },
-  { "id": 161, "theme": "Escudo", "reference": "Salmos 3:3", "text": "Tu, Senhor, és um escudo para mim, a minha glória, e o que exalta a minha cabeça." },
-  { "id": 162, "theme": "Alegria", "reference": "Salmos 5:11", "text": "Alegrem-se todos os que confiam em ti... pois tu os defendes." },
-  { "id": 163, "theme": "Muro", "reference": "Zacarias 2:5", "text": "Eu serei para ela um muro de fogo em redor." },
-  { "id": 164, "theme": "Perfeição", "reference": "Salmos 18:30", "text": "O caminho de Deus é perfeito... é um escudo para todos os que nele confiam." },
-  { "id": 165, "theme": "Amparo", "reference": "Deuteronômio 33:27", "text": "O Deus eterno é a tua habitação, e por baixo estão os braços eternos." },
-  { "id": 166, "theme": "Esconderijo", "reference": "Salmos 32:7", "text": "Tu és o lugar em que me escondo; tu me preservas da angústia." },
-  { "id": 167, "theme": "Confiança", "reference": "Salmos 56:3", "text": "Em qualquer tempo em que eu temer, confiarei em ti." },
-  { "id": 168, "theme": "Refúgio", "reference": "Salmos 61:3", "text": "Pois tens sido um refúgio para mim, e uma torre forte contra o inimigo." },
-  { "id": 169, "theme": "Auxílio", "reference": "Salmos 115:11", "text": "Vós, os que temeis ao Senhor, confiai no Senhor; ele é o seu auxílio e o seu escudo." },
-  { "id": 170, "theme": "Esperança", "reference": "Salmos 119:114", "text": "Tu és o meu refúgio e o meu escudo; espero na tua palavra." },
-  { "id": 171, "theme": "Cobertura", "reference": "Salmos 140:7", "text": "Ó Deus... tu cobriste a minha cabeça no dia da batalha." },
-  { "id": 172, "theme": "Amor", "reference": "Salmos 145:20", "text": "O Senhor guarda a todos os que o amam." },
-  { "id": 173, "theme": "Retiro", "reference": "Provérbios 29:25", "text": "O que confia no Senhor será posto em alto retiro." },
-  { "id": 174, "theme": "Justiça", "reference": "Salmos 9:9", "text": "O Senhor será também um alto refúgio para o oprimido." },
-  { "id": 175, "theme": "Bondade", "reference": "Naum 1:7", "text": "O Senhor é bom, uma fortaleza no dia da angústia." },
-  { "id": 176, "theme": "Rocha", "reference": "Salmos 62:6", "text": "Só ele é a minha rocha e a minha salvação." },
-  { "id": 177, "theme": "Entrega", "reference": "Salmos 16:1", "text": "Guarda-me, ó Deus, porque em ti confio." },
-  { "id": 178, "theme": "Fé", "reference": "1 Pedro 1:5", "text": "Que mediante a fé estais guardados na virtude de Deus." },
-  { "id": 179, "theme": "Poder", "reference": "Judas 1:24", "text": "Ora, àquele que é poderoso para vos guardar de tropeçar." },
-  { "id": 180, "theme": "Cerca", "reference": "Salmos 125:2", "text": "Assim como estão os montes à roda de Jerusalém, assim o Senhor está em volta do seu povo." },
-  { "id": 181, "theme": "Batalha", "reference": "Êxodo 14:14", "text": "O Senhor pelejará por vós, e vós vos calareis." },
-  { "id": 182, "theme": "Identidade", "reference": "1 Pedro 2:9", "text": "Vós sois a geração eleita, o sacerdócio real, a nação santa." },
-  { "id": 183, "theme": "Criação", "reference": "Efésios 2:10", "text": "Porque somos feitura sua, criados em Cristo Jesus." },
-  { "id": 184, "theme": "Filiação", "reference": "João 1:12", "text": "A todos quantos o receberam, deu-lhes o poder de serem feitos filhos de Deus." },
-  { "id": 185, "theme": "Testemunho", "reference": "Romanos 8:16-17", "text": "O Espírito testifica com o nosso espírito que somos filhos de Deus." },
-  { "id": 186, "theme": "Herança", "reference": "Gálatas 4:7", "text": "Assim que já não és mais servo, mas filho." },
-  { "id": 187, "theme": "Templo", "reference": "1 Coríntios 6:19", "text": "Ou não sabeis que o vosso corpo é o templo do Espírito Santo?" },
-  { "id": 188, "theme": "Adoção", "reference": "Efésios 1:5", "text": "Nos predestinou para filhos de adoção por Jesus Cristo." },
-  { "id": 189, "theme": "Fé", "reference": "Gálatas 3:26", "text": "Porque todos sois filhos de Deus pela fé em Cristo Jesus." },
-  { "id": 190, "theme": "Amados", "reference": "1 João 3:2", "text": "Amados, agora somos filhos de Deus." },
-  { "id": 191, "theme": "Vida", "reference": "Colossenses 3:3", "text": "Porque já estais mortos, e a vossa vida está escondida com Cristo em Deus." },
-  { "id": 192, "theme": "Justiça", "reference": "2 Coríntios 5:21", "text": "Para que nele fôssemos feitos justiça de Deus." },
-  { "id": 193, "theme": "Redenção", "reference": "Efésios 1:7", "text": "Em quem temos a redenção pelo seu sangue... segundo as riquezas da sua graça." },
-  { "id": 194, "theme": "Liberdade", "reference": "Romanos 6:14", "text": "Porque o pecado não terá domínio sobre vós, pois não estais debaixo da lei, mas debaixo da graça." },
-  { "id": 195, "theme": "Salvação", "reference": "Tito 2:11", "text": "Porque a graça de Deus se há manifestado, trazendo salvação a todos os homens." },
-  { "id": 196, "theme": "Confiança", "reference": "Hebreus 4:16", "text": "Cheguemos, pois, com confiança ao trono da graça." },
-  { "id": 197, "theme": "Suficiência", "reference": "2 Coríntios 12:9", "text": "A minha graça te basta, porque o meu poder se aperfeiçoa na fraqueza." },
-  { "id": 198, "theme": "Dom", "reference": "Efésios 4:7", "text": "Mas a graça foi dada a cada um de nós segundo a medida do dom de Cristo." },
-  { "id": 199, "theme": "Justificação", "reference": "Romanos 3:24", "text": "Sendo justificados gratuitamente pela sua graça." },
-  { "id": 200, "theme": "Edificação", "reference": "Atos 20:32", "text": "Encomendo-vos a Deus e à palavra da sua graça." },
-  { "id": 201, "theme": "Glória", "reference": "Salmos 84:11", "text": "O Senhor dará graça e glória." },
-  { "id": 202, "theme": "Transformação", "reference": "1 Coríntios 15:10", "text": "Mas pela graça de Deus sou o que sou." },
-  { "id": 203, "theme": "Fortaleza", "reference": "2 Timóteo 2:1", "text": "Fortifica-te na graça que há em Cristo Jesus." },
-  { "id": 204, "theme": "Humildade", "reference": "Tiago 4:6", "text": "Deus resiste aos soberbos, mas dá graça aos humildes." },
-  { "id": 205, "theme": "Plenitude", "reference": "João 1:16", "text": "E todos nós recebemos também da sua plenitude, e graça por graça." },
-  { "id": 206, "theme": "Pertença", "reference": "Isaías 43:1", "text": "Não temas, porque eu te remi; chamei-te pelo teu nome, tu és meu." },
-  { "id": 207, "theme": "Propósito", "reference": "Jeremias 1:5", "text": "Antes que te formasse no ventre te conheci." },
-  { "id": 208, "theme": "Maravilha", "reference": "Salmos 139:14", "text": "Eu te louvarei, porque de um modo assombroso, e tão maravilhoso fui feito." },
-  { "id": 209, "theme": "Sal", "reference": "Mateus 5:13", "text": "Vós sois o sal da terra." },
-  { "id": 210, "theme": "Luz", "reference": "Mateus 5:14", "text": "Vós sois a luz do mundo." },
-  { "id": 211, "theme": "Entrega", "reference": "Romanos 14:8", "text": "Quer vivamos ou morramos, somos do Senhor." },
-  { "id": 212, "theme": "Amor", "reference": "Cantares 6:3", "text": "Eu sou do meu amado, e o meu amado é meu." },
-  { "id": 213, "theme": "Constância", "reference": "1 Tessalonicenses 5:17", "text": "Orai sem cessar." },
-  { "id": 214, "theme": "Paz", "reference": "Filipenses 4:6", "text": "Não estejais inquietos por coisa alguma; antes as vossas petições sejam... conhecidas diante de Deus." },
-  { "id": 215, "theme": "Resposta", "reference": "Jeremias 29:12", "text": "Então me invocareis, e ireis, e orareis a mim, e eu vos ouvirei." },
-  { "id": 216, "theme": "Proximidade", "reference": "Salmos 145:18", "text": "Perto está o Senhor de todos os que o invocam." },
-  { "id": 217, "theme": "Busca", "reference": "Mateus 7:7", "text": "Pedi, e dar-se-vos-á; buscai, e encontrareis." },
-  { "id": 218, "theme": "Crer", "reference": "Marcos 11:24", "text": "Tudo o que pedirdes, orando, crede que o recebereis." },
-  { "id": 219, "theme": "Eficácia", "reference": "Tiago 5:16", "text": "A oração feita por um justo pode muito em seus efeitos." },
-  { "id": 220, "theme": "Ouvir", "reference": "Salmos 66:19", "text": "Mas, na verdade, Deus me ouviu; atendeu à voz da minha oração." },
-  { "id": 221, "theme": "Fé", "reference": "Mateus 21:22", "text": "E tudo o que pedirdes na oração, crendo, o recebereis." },
-  { "id": 222, "theme": "Confiança", "reference": "1 João 5:14", "text": "E esta é a confiança que temos nele, que, se pedirmos alguma coisa... ele nos ouve." },
-  { "id": 223, "theme": "Gratidão", "reference": "Colossenses 4:2", "text": "Perseverai na oração, velando nela com ação de graças." },
-  { "id": 224, "theme": "Manhã", "reference": "Salmos 5:3", "text": "Pela manhã ouvirás a minha voz, ó Senhor." },
-  { "id": 225, "theme": "Cura", "reference": "2 Crônicas 7:14", "text": "E se o meu povo... orar, e buscar a minha face... então eu ouvirei dos céus." },
-  { "id": 226, "theme": "Amor", "reference": "Salmos 116:1-2", "text": "Amo o Senhor, porque ele ouviu a minha voz." },
-  { "id": 227, "theme": "Perseverança", "reference": "Romanos 12:12", "text": "Perseverai na oração." },
-  { "id": 228, "theme": "Rotina", "reference": "Salmos 55:17", "text": "De tarde e de manhã e ao meio-dia orarei." },
-  { "id": 229, "theme": "Dever", "reference": "Lucas 18:1", "text": "O dever de orar sempre, e nunca desfalecer." },
-  { "id": 230, "theme": "Socorro", "reference": "Salmos 102:17", "text": "Ele atenderá à oração do desamparado." },
-  { "id": 231, "theme": "Clamor", "reference": "Salmos 4:1", "text": "Ouve-me quando eu clamo, ó Deus da minha justiça." },
-  { "id": 232, "theme": "Secreto", "reference": "Mateus 6:6", "text": "Entra no teu aposento... e teu Pai, que vê em secreto, te recompensará." },
-  { "id": 233, "theme": "Incenso", "reference": "Salmos 141:2", "text": "Suba a minha oração perante a tua face como incenso." },
-  { "id": 234, "theme": "Espírito", "reference": "Efésios 6:18", "text": "Orando em todo o tempo com toda a oração e súplica no Espírito." },
-  { "id": 235, "theme": "Atenção", "reference": "Salmos 34:15", "text": "Os olhos do Senhor estão sobre os justos, e os seus ouvidos atentos ao seu clamor." },
-  { "id": 236, "theme": "Promessa", "reference": "Jó 22:27", "text": "Orarás a ele, e ele te ouvirá." },
-  { "id": 237, "theme": "Certeza", "reference": "Salmos 17:6", "text": "Eu te invoquei, ó Deus, pois me queres ouvir." },
-  { "id": 238, "theme": "Proximidade", "reference": "Tiago 4:8", "text": "Chegai-vos a Deus, e ele se chegará a vós." },
-  { "id": 239, "theme": "Face", "reference": "Salmos 27:8", "text": "O meu coração diz de ti: Buscai a minha face." },
-  { "id": 240, "theme": "Antecipação", "reference": "Isaías 65:24", "text": "E será que antes que clamem eu responderei." },
-  { "id": 241, "theme": "Universalidade", "reference": "Salmos 65:2", "text": "Ó tu que ouves a oração, a ti virá toda a carne." },
-  { "id": 242, "theme": "Verdade", "reference": "Hebreus 10:22", "text": "Cheguemo-nos com verdadeiro coração, em inteira certeza de fé." },
-  { "id": 243, "theme": "Sede", "reference": "Salmos 42:1", "text": "Como o cervo brama pelas correntes das águas, assim suspira a minha alma por ti." },
-  { "id": 244, "theme": "Ansiedade", "reference": "1 Pedro 5:7", "text": "Lançando sobre ele toda a vossa ansiedade, porque ele tem cuidado de vós." },
-  { "id": 245, "theme": "Coragem", "reference": "Salmos 56:4", "text": "Em Deus louvarei a sua palavra... não temerei o que a carne me possa fazer." },
-  { "id": 246, "theme": "Segurança", "reference": "Salmos 23:4", "text": "Ainda que eu andasse pelo vale da sombra da morte, não temeria mal algum." },
-  { "id": 247, "theme": "Consolação", "reference": "Salmos 94:19", "text": "Na multidão dos meus pensamentos... as tuas consolações recrearam a minha alma." },
-  { "id": 248, "theme": "Futuro", "reference": "Mateus 6:34", "text": "Não vos inquieteis, pois, pelo dia de amanhã." },
-  { "id": 249, "theme": "Livramento", "reference": "Salmos 34:4", "text": "Busquei ao Senhor, e ele me respondeu; livrou-me de todos os meus temores." },
-  { "id": 250, "theme": "Auxílio", "reference": "Isaías 41:13", "text": "Eu sou o Senhor teu Deus, que te toma pela tua mão direita; e te diz: Não temas." },
-  { "id": 251, "theme": "Firmeza", "reference": "Salmos 112:7", "text": "Não temerá maus rumores; o seu coração está firme, confiando no Senhor." },
-  { "id": 252, "theme": "Palavra", "reference": "Provérbios 12:25", "text": "A ansiedade no coração deixa o homem abatido, mas uma boa palavra o alegra." },
-  { "id": 253, "theme": "Sustento", "reference": "Salmos 55:22", "text": "Lança o teu cuidado sobre o Senhor, e ele te susterá." },
-  { "id": 254, "theme": "Fé", "reference": "João 14:1", "text": "Não se turbe o vosso coração; credes em Deus, crede também em mim." },
-  { "id": 255, "theme": "Ânimo", "reference": "Salmos 27:14", "text": "Espera no Senhor, anima-te." },
-  { "id": 256, "theme": "Valor", "reference": "Mateus 10:31", "text": "Não temais pois; mais valeis vós do que muitos passarinhos." },
-  { "id": 257, "theme": "Batalha", "reference": "Deuteronômio 3:22", "text": "Não os temais, porque o Senhor vosso Deus é o que peleja por vós." },
-  { "id": 258, "theme": "Resposta", "reference": "Salmos 118:5", "text": "Invoquei o Senhor na angústia; o Senhor me ouviu." },
-  { "id": 259, "theme": "Guarda", "reference": "Salmos 121:5", "text": "O Senhor é quem te guarda." },
-  { "id": 260, "theme": "Consolo", "reference": "Isaías 51:12", "text": "Eu, eu sou aquele que vos consola." },
-  { "id": 261, "theme": "Presença", "reference": "Salmos 16:8", "text": "Tenho posto o Senhor continuamente diante de mim." },
-  { "id": 262, "theme": "Liberdade", "reference": "Romanos 8:15", "text": "Não recebestes o espírito de escravidão, para outra vez estardes em temor." },
-  { "id": 263, "theme": "Auxílio", "reference": "Hebreus 13:6", "text": "O Senhor é o meu auxiliador, e não temerei." },
-  { "id": 264, "theme": "Proteção", "reference": "Salmos 3:6", "text": "Não temerei dez milhares de pessoas que se puseram contra mim." },
-  { "id": 265, "theme": "Eternidade", "reference": "Apocalipse 1:17", "text": "Não temas; Eu sou o Primeiro e o Último." },
-  { "id": 266, "theme": "Confiança", "reference": "Isaías 12:2", "text": "Eis que Deus é a minha salvação; confiarei e não temerei." },
-  { "id": 267, "theme": "Estabilidade", "reference": "Salmos 46:2", "text": "Portanto não temeremos, ainda que a terra se mude." },
-  { "id": 268, "theme": "Fé", "reference": "Marcos 4:40", "text": "Por que sois tão tímidos? Ainda não tendes fé?" },
-  { "id": 269, "theme": "Coragem", "reference": "Salmos 27:3", "text": "Ainda que um exército me cercasse, o meu coração não temeria." },
-  { "id": 270, "theme": "Promessa", "reference": "Gênesis 26:24", "text": "Eu sou o Deus de Abraão... não temas, porque eu sou contigo." },
-  { "id": 271, "theme": "Reino", "reference": "Lucas 12:32", "text": "Não temais, ó pequeno rebanho." },
-  { "id": 272, "theme": "Crer", "reference": "Marcos 5:36", "text": "Não temas, crê somente." },
-  { "id": 273, "theme": "Força", "reference": "Josué 10:25", "text": "Não temais, nem vos espanteis; esforçai-vos e animai-vos." },
-  { "id": 274, "theme": "Ação", "reference": "Tiago 1:22", "text": "E sede cumpridores da palavra, e não somente ouvintes." },
-  { "id": 275, "theme": "Pureza", "reference": "Salmos 119:11", "text": "Escondi a tua palavra no meu coração, para eu não pecar contra ti." },
-  { "id": 276, "theme": "Obediência", "reference": "1 Samuel 15:22", "text": "Eis que o obedecer é melhor do que o sacrificar." },
-  { "id": 277, "theme": "Justiça", "reference": "Miquéias 6:8", "text": "Que pratiques a justiça, e ames a misericórdia, e andes humildemente com o teu Deus." },
-  { "id": 278, "theme": "Sinceridade", "reference": "Salmos 25:21", "text": "Guardem-me a sinceridade e a retidão, porquanto espero em ti." },
-  { "id": 279, "theme": "Segurança", "reference": "Provérbios 10:9", "text": "Quem anda em sinceridade, anda seguro." },
-  { "id": 280, "theme": "Retidão", "reference": "Salmos 15:1-2", "text": "Quem habitará no teu tabernáculo?... Aquele que anda sinceramente." },
-  { "id": 281, "theme": "Coração", "reference": "Mateus 5:8", "text": "Bem-aventurados os limpos de coração, porque eles verão a Deus." },
-  { "id": 282, "theme": "Excelência", "reference": "Colossenses 3:23", "text": "E tudo quanto fizerdes, fazei-o de todo o coração, como ao Senhor." },
-  { "id": 283, "theme": "Renovação", "reference": "Salmos 51:10", "text": "Cria em mim, ó Deus, um coração puro." },
-  { "id": 284, "theme": "Integridade", "reference": "Provérbios 20:7", "text": "O justo anda na sua integridade." },
-  { "id": 285, "theme": "Regra de Ouro", "reference": "Lucas 6:31", "text": "Como vós quereis que os homens vos façam, da mesma maneira fazei-lhes vós também." },
-  { "id": 286, "theme": "Reputação", "reference": "Provérbios 22:1", "text": "Mais digno de ser escolhido é o bom nome do que as muitas riquezas." },
-  { "id": 287, "theme": "Conhecimento", "reference": "1 João 2:3", "text": "Nisto sabemos que o conhecemos: se guardarmos os seus mandamentos." },
-  { "id": 288, "theme": "Bondade", "reference": "Salmos 37:3", "text": "Confia no Senhor e faze o bem." },
-  { "id": 289, "theme": "Colheita", "reference": "Gálatas 6:7", "text": "Tudo o que o homem semear, isso também ceifará." },
-  { "id": 290, "theme": "Meditação", "reference": "Salmos 19:14", "text": "Sejam agradáveis as palavras da minha boca e a meditação do meu coração." },
-  { "id": 291, "theme": "Guia", "reference": "Provérbios 11:3", "text": "A sinceridade dos íntegros os guiará." },
-  { "id": 292, "theme": "Honestidade", "reference": "2 Coríntios 8:21", "text": "Pois zelamos do que é honesto, não só diante do Senhor." },
-  { "id": 293, "theme": "Virtude", "reference": "Filipenses 4:8", "text": "Tudo o que é verdadeiro... honesto... justo... nisso pensai." },
-  { "id": 294, "theme": "Lar", "reference": "Salmos 101:2", "text": "Andarei em minha casa com um coração sincero." },
-  { "id": 295, "theme": "Consciência", "reference": "1 Pedro 3:16", "text": "Tendo uma boa consciência." },
-  { "id": 296, "theme": "Amor", "reference": "João 14:15", "text": "Se me amais, guardai os meus mandamentos." },
-  { "id": 297, "theme": "Cuidado", "reference": "Provérbios 4:23", "text": "Sobre tudo o que se deve guardar, guarda o teu coração." },
-  { "id": 298, "theme": "Fidelidade", "reference": "Lucas 16:10", "text": "Quem é fiel no mínimo, também é fiel no muito." },
-  { "id": 299, "theme": "Pureza", "reference": "Salmos 119:9", "text": "Como purificará o jovem o seu caminho? Observando-o conforme a tua palavra." },
-  { "id": 300, "theme": "Prudência", "reference": "Mateus 7:24", "text": "Todo aquele, pois, que escuta estas minhas palavras, e as pratica, assemelhá-lo-ei ao homem prudente." },
-  { "id": 301, "theme": "Justiça", "reference": "Provérbios 21:3", "text": "Fazer justiça e juízo é mais aceitável ao Senhor do que sacrifício." },
-  { "id": 302, "theme": "Perfeição", "reference": "1 Reis 8:61", "text": "Seja, pois, o vosso coração perfeito para com o Senhor nosso Deus." },
-  { "id": 303, "theme": "Integridade", "reference": "Salmos 26:11", "text": "Eu, porém, andarei na minha integridade; resgata-me e tem piedade de mim." },
-  { "id": 304, "theme": "Verdade", "reference": "3 João 1:4", "text": "Não tenho maior gozo do que este, o de ouvir que os meus filhos andam na verdade." },
-  { "id": 305, "theme": "Gratidão", "reference": "1 Tessalonicenses 5:18", "text": "Em tudo dai graças, porque esta é a vontade de Deus." },
-  { "id": 306, "theme": "Bondade", "reference": "Salmos 107:1", "text": "Louvai ao Senhor, porque ele é bom." },
-  { "id": 307, "theme": "Louvor", "reference": "Salmos 103:1", "text": "Bendize, ó minha alma, ao Senhor." },
-  { "id": 308, "theme": "Memória", "reference": "Salmos 103:2", "text": "Bendize, ó minha alma, ao Senhor, e não te esqueças de nenhum de seus benefícios." },
-  { "id": 309, "theme": "Acesso", "reference": "Salmos 100:4", "text": "Entrai pelas portas dele com gratidão." },
-  { "id": 310, "theme": "Nome", "reference": "Colossenses 3:17", "text": "E tudo... fazei-o em nome do Senhor Jesus, dando por ele graças a Deus Pai." },
-  { "id": 311, "theme": "Alegria", "reference": "Salmos 118:24", "text": "Este é o dia que fez o Senhor; regozijemo-nos e alegremo-nos nele." },
-  { "id": 312, "theme": "Coração", "reference": "Salmos 9:1", "text": "Eu te louvarei, Senhor, com todo o meu coração." },
-  { "id": 313, "theme": "Bênção", "reference": "Salmos 63:4", "text": "Assim eu te bendirei enquanto viver." },
-  { "id": 314, "theme": "Ação", "reference": "Efésios 5:20", "text": "Dando sempre graças por tudo." },
-  { "id": 315, "theme": "Cântico", "reference": "Salmos 28:7", "text": "O meu coração saltou de prazer, e com o meu cântico o louvarei." },
-  { "id": 316, "theme": "Tempo", "reference": "Salmos 34:1", "text": "Louvarei ao Senhor em todo o tempo." },
-  { "id": 317, "theme": "Louvor", "reference": "Salmos 92:1", "text": "Bom é louvar ao Senhor, e cantar louvores ao teu nome, ó Altíssimo." },
-  { "id": 318, "theme": "Regozijo", "reference": "Filipenses 4:4", "text": "Regozijai-vos sempre no Senhor." },
-  { "id": 319, "theme": "Convite", "reference": "Salmos 95:1", "text": "Vinde, cantemos ao Senhor." },
-  { "id": 320, "theme": "Eternidade", "reference": "Salmos 106:1", "text": "Louvai ao Senhor... porque a sua benignidade dura para sempre." },
-  { "id": 321, "theme": "Manhã", "reference": "Salmos 30:5", "text": "O choro pode durar uma noite, mas a alegria vem pela manhã." },
-  { "id": 322, "theme": "Bondade", "reference": "1 Crônicas 16:34", "text": "Louvai ao Senhor, porque ele é bom." },
-  { "id": 323, "theme": "Vida", "reference": "Salmos 150:6", "text": "Tudo quanto tem fôlego louve ao Senhor." },
-  { "id": 324, "theme": "Crescimento", "reference": "Colossenses 2:7", "text": "Arraigados e edificados nele... crescendo em ação de graças." },
-  { "id": 325, "theme": "Engrandecer", "reference": "Salmos 69:30", "text": "Louvarei o nome de Deus com um cântico, e engrandecê-lo-ei com ação de graças." },
-  { "id": 326, "theme": "Serviço", "reference": "Hebreus 12:28", "text": "Retenhamos a graça, pela qual sirvamos a Deus agradavelmente." },
-  { "id": 327, "theme": "Bem", "reference": "Salmos 13:6", "text": "Cantarei ao Senhor, porquanto me tem feito muito bem." },
-  { "id": 328, "theme": "Preparação", "reference": "Salmos 57:7", "text": "Preparado está o meu coração, ó Deus... cantarei e darei louvores." },
-  { "id": 329, "theme": "Dom", "reference": "2 Coríntios 9:15", "text": "Graças a Deus pelo seu dom inefável." },
-  { "id": 330, "theme": "Prazer", "reference": "Salmos 147:1", "text": "Louvai ao Senhor, porque é bom cantar louvores ao nosso Deus." },
-  { "id": 331, "theme": "Serviço", "reference": "Salmos 100:2", "text": "Servi ao Senhor com alegria." },
-  { "id": 332, "theme": "Reconhecimento", "reference": "1 Crônicas 29:13", "text": "Agora, pois, ó Deus nosso, graças te damos." },
-  { "id": 333, "theme": "Sacrifício", "reference": "Salmos 116:17", "text": "Oferecer-te-ei sacrifícios de louvor." },
-  { "id": 334, "theme": "Oferta", "reference": "Hebreus 13:15", "text": "Ofereçamos sempre por ele a Deus sacrifício de louvor." },
-  { "id": 335, "theme": "Luz", "reference": "João 8:12", "text": "Eu sou a luz do mundo." },
-  { "id": 336, "theme": "Visão", "reference": "Mateus 4:16", "text": "O povo, que estava assentado em trevas, viu uma grande luz." },
-  { "id": 337, "theme": "Brilho", "reference": "Isaías 60:1", "text": "Levanta-te, resplandece, porque vem a tua luz." },
-  { "id": 338, "theme": "Vitória", "reference": "João 1:5", "text": "A luz resplandece nas trevas, e as trevas não a prevaleceram." },
-  { "id": 339, "theme": "Exemplo", "reference": "Mateus 5:16", "text": "Assim resplandeça a vossa luz diante dos homens." },
-  { "id": 340, "theme": "Salvação", "reference": "Salmos 27:1", "text": "O Senhor é a minha luz e a minha salvação." },
-  { "id": 341, "theme": "Crer", "reference": "João 12:46", "text": "Eu sou a luz que vim ao mundo, para que todo aquele que crê em mim não permaneça nas trevas." },
-  { "id": 342, "theme": "Pureza", "reference": "1 João 1:5", "text": "Deus é luz, e não há nele trevas nenhumas." },
-  { "id": 343, "theme": "Consolo", "reference": "Apocalipse 21:4", "text": "E Deus limpará de seus olhos toda a lágrima." },
-  { "id": 344, "theme": "Morada", "reference": "João 14:2", "text": "Na casa de meu Pai há muitas moradas." },
-  { "id": 345, "theme": "Volta", "reference": "João 14:3", "text": "Virei outra vez, e vos levarei para mim mesmo." },
-  { "id": 346, "theme": "Transporte", "reference": "Colossenses 1:13", "text": "O qual nos tirou da potestade das trevas, e nos transportou para o reino do Filho." },
-  { "id": 347, "theme": "Fonte", "reference": "Salmos 36:9", "text": "Porque em ti está o manancial da vida; na tua luz veremos a luz." },
-  { "id": 348, "theme": "Filhos", "reference": "Efésios 5:8", "text": "Porque noutro tempo éreis trevas, mas agora sois luz no Senhor; andai como filhos da luz." },
-  { "id": 349, "theme": "Crescer", "reference": "Provérbios 4:18", "text": "Mas a vereda dos justos é como a luz da aurora, que vai brilhando mais e mais." },
-  { "id": 350, "theme": "Verdade", "reference": "João 1:9", "text": "Ali estava a luz verdadeira, que ilumina a todo o homem." },
-  { "id": 351, "theme": "Armas", "reference": "Romanos 13:12", "text": "Rejeitemos, pois, as obras das trevas, e vistamo-nos das armas da luz." },
-  { "id": 352, "theme": "Chamado", "reference": "1 Pedro 2:9", "text": "Aquele que vos chamou das trevas para a sua maravilhosa luz." },
-  { "id": 353, "theme": "Iluminação", "reference": "Salmos 18:28", "text": "O Senhor meu Deus iluminará as minhas trevas." },
-  { "id": 354, "theme": "Criação", "reference": "2 Coríntios 4:6", "text": "Porque Deus, que disse que das trevas resplandecesse a luz, é quem resplandeceu em nossos corações." },
-  { "id": 355, "theme": "Entendimento", "reference": "Salmos 119:130", "text": "A entrada das tuas palavras dá luz." },
-  { "id": 356, "theme": "Caminhar", "reference": "Isaías 2:5", "text": "Vinde, e andemos na luz do Senhor." },
-  { "id": 357, "theme": "Alegria", "reference": "Salmos 97:11", "text": "A luz semeia-se para o justo, e a alegria para os retos de coração." },
-  { "id": 358, "theme": "Guia", "reference": "Salmos 43:3", "text": "Envia a tua luz e a tua verdade, para que me guiem." },
-  { "id": 359, "theme": "Esperança", "reference": "Miquéias 7:8", "text": "Ainda que eu me assente nas trevas, o Senhor será a minha luz." },
-  { "id": 360, "theme": "Revelação", "reference": "Lucas 2:32", "text": "Luz para iluminar as nações." },
-  { "id": 361, "theme": "Amor", "reference": "1 João 2:10", "text": "Aquele que ama a seu irmão está na luz." },
-  { "id": 362, "theme": "Imutável", "reference": "Tiago 1:17", "text": "Pai das luzes, em quem não há mudança." },
-  { "id": 363, "theme": "Dia", "reference": "Apocalipse 22:5", "text": "E ali não haverá mais noite... porque o Senhor Deus os alumiará." },
-  { "id": 364, "theme": "Grande Luz", "reference": "Isaías 9:2", "text": "O povo que andava em trevas, viu uma grande luz." },
-  { "id": 365, "theme": "Companhia", "reference": "Mateus 28:20", "text": "E eis que eu estou convosco todos os dias, até a consumação dos séculos." }
-
-];
-
-function getDayOfYearLocal(d: Date): number {
-  const noon = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 12, 0, 0, 0);
-  const start = new Date(noon.getFullYear(), 0, 0, 12, 0, 0, 0);
-  const diff = noon.getTime() - start.getTime();
-  return Math.floor(diff / (1000 * 60 * 60 * 24));
-}
-
-function pickVerseForToday(now: Date): VerseItem | null {
-  if (!Array.isArray(VERSES_OF_DAY) || VERSES_OF_DAY.length === 0) return null;
-
-  const dayOfYear = getDayOfYearLocal(now);
-  let idx = dayOfYear - 1;
-
-  if (idx >= VERSES_OF_DAY.length) idx = VERSES_OF_DAY.length - 1;
-  if (idx < 0) idx = 0;
-
-  const v = VERSES_OF_DAY[idx];
-  if (!v || !v.reference || !v.text) return null;
-
-  return v;
-}
-
-/* ==========================
    SMALL UI PRIMITIVES
 ========================== */
-
-function Pill({
-  text,
-  variant = "neutral",
-}: {
-  text: string;
-  variant?: "neutral" | "success" | "warning" | "info";
-}) {
-  return (
-    <View
-      style={[
-        styles.pill,
-        variant === "success" && styles.pillSuccess,
-        variant === "warning" && styles.pillWarning,
-        variant === "info" && styles.pillInfo,
-      ]}
-    >
-      <Text style={styles.pillText}>{text}</Text>
-    </View>
-  );
-}
 
 function Card({
   children,
@@ -608,8 +184,62 @@ function Card({
   );
 }
 
+function QuickAccessCard({
+  iconSource,
+  title,
+  subtitle,
+  disabled = false,
+  onPress,
+}: {
+  iconSource: any;
+  title: string;
+  subtitle: string;
+  disabled?: boolean;
+  onPress?: () => void;
+}) {
+  return (
+    <TouchableOpacity
+      style={[styles.quickCard, disabled && styles.quickCardDisabled]}
+      onPress={onPress}
+      disabled={disabled}
+      activeOpacity={0.82}
+      accessibilityRole="button"
+      accessibilityLabel={disabled ? `${title}, em breve` : title}
+      accessibilityState={{ disabled }}
+    >
+      <Image
+        source={iconSource}
+        style={[styles.quickIconImage, disabled && styles.quickIconImageDisabled]}
+        resizeMode="contain"
+        accessibilityIgnoresInvertColors
+      />
+
+      <Text style={[styles.quickTitle, disabled && styles.quickTitleDisabled]} numberOfLines={2}>
+        {title}
+      </Text>
+
+      <Text style={[styles.quickSubtitle, disabled && styles.quickSubtitleDisabled]} numberOfLines={2}>
+        {subtitle}
+      </Text>
+
+      {disabled && (
+        <View style={styles.quickSoonPill}>
+          <Text style={styles.quickSoonText}>Em breve</Text>
+        </View>
+      )}
+    </TouchableOpacity>
+  );
+}
+
 export default function HomeScreen() {
   const navigation = useNavigation<NavigationProp>();
+  const { width: viewportWidth } = useWindowDimensions();
+  const isNarrowViewport = viewportWidth < 390;
+  const stackStats = viewportWidth < 420;
+  const motivationalWebImageHeight = Math.min(
+    320,
+    Math.max(180, viewportWidth * 0.55)
+  );
   const { handleScroll, resetChrome } = useAppShellChrome();
 
   useFocusEffect(
@@ -638,6 +268,8 @@ export default function HomeScreen() {
     source: "NOT_STARTED",
   });
 
+  const [homeDashboardV2, setHomeDashboardV2] = useState<HomeDashboardV2Snapshot | null>(null);
+
   // ✅ banner de feedback (aparece sempre)
   const [banner, setBanner] = useState<BannerState>(null);
 
@@ -647,9 +279,6 @@ export default function HomeScreen() {
   // ✅ Versículo do dia (modal)
   const [showVerseModal, setShowVerseModal] = useState(false);
   const [verseOfDay, setVerseOfDay] = useState<VerseItem | null>(null);
-
-  // ✅ Acessos rápidos recolhível
-  const [quickNavOpen, setQuickNavOpen] = useState(false);
 
   // ✅ Migração/ajuste do início do plano
   const [showStartAdjust, setShowStartAdjust] = useState(false);
@@ -669,12 +298,6 @@ export default function HomeScreen() {
 
   // ✅ sequência do plano (canônica) — usada só para exibir “primeiro dia” antes de iniciar
   const nonSundaySeq = useMemo(() => getNonSundaySequence(), []);
-
-  // ✅ fase (apenas informativa; continua usando intervalos das fases)
-  const currentPhase = useMemo(
-    () => phases.find((phase) => today >= phase.startDate && today <= phase.endDate),
-    [today]
-  );
 
   const isCompletedToday = useMemo(() => completedDays.includes(today), [completedDays, today]);
 
@@ -833,6 +456,16 @@ export default function HomeScreen() {
     [today, loadResolvedForDate, migrateLegacyStartIfNeeded]
   );
 
+  const loadHomeDashboardV2 = useCallback(async (dateIso: string) => {
+    try {
+      const snapshot = await loadHomeDashboardV2Snapshot(dateIso);
+      setHomeDashboardV2(snapshot);
+    } catch (err) {
+      console.log("Erro ao carregar dashboard V2 da Home", err);
+      setHomeDashboardV2(null);
+    }
+  }, []);
+
   const loadVerseOfDayIfNeeded = useCallback(async () => {
     try {
       if (!Array.isArray(VERSES_OF_DAY) || VERSES_OF_DAY.length === 0) return;
@@ -877,6 +510,7 @@ export default function HomeScreen() {
 
       await loadGratitude();
       await loadPlanStartAndOverdue(days);
+      await loadHomeDashboardV2(today);
       await runAutoBackup();
       await loadVerseOfDayIfNeeded();
     })();
@@ -895,6 +529,7 @@ export default function HomeScreen() {
 
       await loadGratitude();
       await loadPlanStartAndOverdue(days);
+      await loadHomeDashboardV2(today);
       await loadVerseOfDayIfNeeded();
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -947,6 +582,7 @@ export default function HomeScreen() {
       // recarrega leitura do dia e atrasos com esse início
       const days = await getCompletedDays();
       await loadPlanStartAndOverdue(days);
+      await loadHomeDashboardV2(today);
     } catch (err) {
       console.log("Erro ao definir data de início manual", err);
       setBanner({ kind: "error", title: "Erro", message: "Não foi possível definir a data de início." });
@@ -973,6 +609,7 @@ export default function HomeScreen() {
       setStreak(newStreak);
 
       await loadPlanStartAndOverdue(days);
+      await loadHomeDashboardV2(today);
 
       if (isMilestone(newStreak)) {
         notify("Marco alcançado ✅", getMilestoneMessage(newStreak));
@@ -1063,6 +700,7 @@ export default function HomeScreen() {
 
       const days = await getCompletedDays();
       await loadPlanStartAndOverdue(days);
+      await loadHomeDashboardV2(today);
     } catch (err) {
       console.log("Erro ao redistribuir atrasos", err);
       notify("Erro", "Não foi possível redistribuir as leituras atrasadas.");
@@ -1083,7 +721,69 @@ export default function HomeScreen() {
     return { text: "Em aberto", variant: "warning" as const };
   }, [planStartDate, todayIsSunday, resolvedToday.source, isCompletedToday]);
 
-  const quickNavLabel = useMemo(() => (quickNavOpen ? "Ocultar" : "Mostrar"), [quickNavOpen]);
+  const planProgressDisplay = useMemo(() => {
+    const snapshot = homeDashboardV2;
+
+    if (!snapshot) {
+      return {
+        state: "loading" as const,
+        percent: 0,
+        title: "Carregando progresso",
+        detail: "Atualizando sua jornada...",
+        phase: null as string | null,
+      };
+    }
+
+    if (snapshot.bridgeStatus === "NOT_STARTED") {
+      return {
+        state: "not_started" as const,
+        percent: 0,
+        title: "Plano ainda não iniciado",
+        detail: `0 de ${snapshot.progress.requiredReadingCount} leituras concluídas`,
+        phase: null as string | null,
+      };
+    }
+
+    if (snapshot.bridgeStatus === "LEGACY_START_REQUIRED") {
+      return {
+        state: "review" as const,
+        percent: 0,
+        title: "Alinhamento necessário",
+        detail: "Defina o início do plano para consolidar o progresso.",
+        phase: null as string | null,
+      };
+    }
+
+    if (!snapshot.canUseCanonicalProgress) {
+      return {
+        state: "review" as const,
+        percent: 0,
+        title: "Progresso em revisão",
+        detail: "Há dados que precisam de conferência antes do cálculo canônico.",
+        phase: null as string | null,
+      };
+    }
+
+    const completed = snapshot.progress.completedReadingCount;
+    const total = snapshot.progress.requiredReadingCount;
+    const percent = Math.round(snapshot.progress.completionPercent);
+
+    return {
+      state: snapshot.progress.isPlanComplete ? ("complete" as const) : ("ready" as const),
+      percent,
+      title: snapshot.progress.isPlanComplete ? "Plano concluído" : "Plano em andamento",
+      detail: `${completed} de ${total} leituras concluídas`,
+      phase: snapshot.currentPhase?.title ?? null,
+    };
+  }, [homeDashboardV2]);
+
+  const heroCtaLabel = useMemo(() => {
+    if (!planStartDate) return "Começar plano hoje";
+    if (resolvedToday.finished) return "Plano concluído";
+    if (resolvedToday.isSunday) return "Abrir meditação";
+    if (isCompletedToday) return "Revisar leitura";
+    return "Continuar leitura";
+  }, [planStartDate, resolvedToday.finished, resolvedToday.isSunday, isCompletedToday]);
 
   // Mostra card de alinhamento quando:
   // - existe progresso (completedDays) e
@@ -1092,48 +792,31 @@ export default function HomeScreen() {
   const hasLegacyProgress = useMemo(() => completedDays.length > 0, [completedDays.length]);
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <View style={styles.safeInner}>
-        <ScrollView
-          style={styles.scroll}
-          contentContainerStyle={styles.content}
-          onScroll={handleScroll}
-          scrollEventThrottle={16}
-        >
-          {/* HEADER */}
-          <View style={styles.headerWrap}>
-            <View style={styles.headerTop}>
-              <View style={styles.logoWrap}>
-                <Image source={require("../../assets/icon.png")} style={styles.logo} resizeMode="cover" />
-              </View>
+    <View style={styles.screen}>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.content}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
+      >
+        {devMode && (
+          <View style={styles.devPanel}>
+            <Text style={styles.devText}>🔧 Modo Desenvolvedor ativo</Text>
 
-              <View style={{ flex: 1 }}>
-                <Pressable onLongPress={toggleDevMode} delayLongPress={2000}>
-                  <Text style={styles.title}>{APP_INFO.name}</Text>
-                </Pressable>
-                <Text style={styles.subTitle}>Plano Anual • Leitura Bíblica</Text>
-              </View>
-            </View>
-
-            {devMode && (
-              <View style={styles.devPanel}>
-                <Text style={styles.devText}>🔧 Modo Desenvolvedor ativo</Text>
-
-                <TouchableOpacity
-                  style={styles.devBtn}
-                  onPress={() => {
-                    if (!__DEV__) return;
-                    setMockDate(null);
-                    notify("DEV", "Mock date removido (voltou para hoje real).");
-                  }}
-                >
-                  <Text style={styles.devBtnText}>Remover mockDate</Text>
-                </TouchableOpacity>
-              </View>
-            )}
+            <TouchableOpacity
+              style={styles.devBtn}
+              onPress={() => {
+                if (!__DEV__) return;
+                setMockDate(null);
+                notify("DEV", "Mock date removido (voltou para hoje real).");
+              }}
+            >
+              <Text style={styles.devBtnText}>Remover mockDate</Text>
+            </TouchableOpacity>
           </View>
+        )}
 
-          {/* BANNER */}
+        {/* BANNER */}
           {banner && (
             <Pressable
               onPress={() => setBanner(null)}
@@ -1152,7 +835,320 @@ export default function HomeScreen() {
             </Pressable>
           )}
 
-          {/* ✅ CARD: ALINHAMENTO (MIGRAÇÃO + AJUSTE) */}
+          {/* HERO 2.0 - JORNADA DO DIA */}
+          <View style={styles.heroCard}>
+            <View style={styles.heroImageFrame}>
+              <Image
+                source={require("../../assets/home/hero_img.png")}
+                style={styles.heroBackdropImage}
+                resizeMode="cover"
+                accessibilityIgnoresInvertColors
+              />
+
+              <Image
+                source={require("../../assets/home/overlays/hero_navy_fade.png")}
+                style={styles.heroFadeImage}
+                resizeMode="stretch"
+                accessibilityIgnoresInvertColors
+              />
+
+              <View
+                style={[
+                  styles.heroContentPanel,
+                  isNarrowViewport && styles.heroContentPanelNarrow,
+                ]}
+              >
+                <View style={styles.heroEyebrowRow}>
+                  <View style={styles.heroAccentLine} />
+                  <Text style={styles.heroEyebrow}>Sua jornada de hoje</Text>
+                </View>
+
+                <Text style={styles.heroDateText}>{todayLabel}</Text>
+
+                <Pressable
+                  onPress={openReading}
+                  onLongPress={toggleDevMode}
+                  delayLongPress={2000}
+                  accessibilityRole="button"
+                  accessibilityLabel="Abrir leitura do dia"
+                  style={styles.heroReferencePressable}
+                >
+                  <Text
+                    style={[
+                      styles.heroReference,
+                      isNarrowViewport && styles.heroReferenceNarrow,
+                    ]}
+                  >
+                    {resolvedToday.reference}
+                  </Text>
+                </Pressable>
+
+                <View style={styles.heroStatusPill}>
+                  <Text style={styles.heroStatusText}>{todayStatusPill.text}</Text>
+                </View>
+
+                <TouchableOpacity
+                  style={[
+                    styles.heroPrimaryBtn,
+                    isNarrowViewport && styles.heroPrimaryBtnNarrow,
+                    Platform.OS === "web" && styles.heroPrimaryBtnWeb,
+                  ]}
+                  onPress={planStartDate ? openReading : startPlanNowAndOpen}
+                  activeOpacity={0.86}
+                  accessibilityRole="button"
+                  accessibilityLabel={heroCtaLabel}
+                >
+                  <View style={styles.heroPrimaryBtnContent}>
+                    <Text
+                      style={[
+                        styles.heroPrimaryBtnIcon,
+                        Platform.OS === "web" && styles.heroPrimaryBtnIconWeb,
+                      ]}
+                    >
+                      📖
+                    </Text>
+                    <Text
+                      style={[
+                        styles.heroPrimaryBtnText,
+                        isNarrowViewport && styles.heroPrimaryBtnTextNarrow,
+                      ]}
+                    >
+                      {heroCtaLabel}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <View
+              style={[
+                styles.heroUtilityRow,
+                isNarrowViewport && styles.heroUtilityRowNarrow,
+              ]}
+            >
+              {canRegisterGratitudeToday && (
+                <Text
+                  style={[
+                    styles.heroGratitudeText,
+                    isNarrowViewport && styles.heroGratitudeTextNarrow,
+                    { color: todayGratitude ? colors.secondaryPressed : colors.muted },
+                  ]}
+                >
+                  {todayGratitude ? "🙏 Gratidão registrada" : "✍️ Gratidão: ainda não registrada"}
+                </Text>
+              )}
+
+              {planStartDate && !resolvedToday.isSunday && !resolvedToday.finished && (
+                <TouchableOpacity
+                  style={[
+                    styles.heroMarkReadBtn,
+                    isCompletedToday && styles.heroMarkReadBtnDisabled,
+                  ]}
+                  onPress={markAsCompleted}
+                  disabled={isCompletedToday}
+                  accessibilityRole="button"
+                  accessibilityLabel={isCompletedToday ? "Leitura concluída" : "Marcar leitura como concluída"}
+                >
+                  <Text
+                    style={[
+                      styles.heroMarkReadText,
+                      isCompletedToday && styles.heroMarkReadTextDisabled,
+                    ]}
+                  >
+                    {isCompletedToday ? "✓ Concluído" : "✓ Marcar lido"}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+
+          {/* PLANO DE LEITURA - PROGRESSO CANÔNICO V2 */}
+          <View style={styles.planSectionHeader}>
+            <View style={styles.planSectionTitleWrap}>
+              <Text style={styles.planSectionSymbol}>▤</Text>
+              <Text style={styles.planSectionTitle}>Plano de Leitura</Text>
+            </View>
+
+            <TouchableOpacity
+              onPress={() => navigation.navigate("PlanTab")}
+              accessibilityRole="button"
+              accessibilityLabel="Ver plano de leitura"
+            >
+              <Text style={styles.planSectionLink}>Ver plano ›</Text>
+            </TouchableOpacity>
+          </View>
+
+          <TouchableOpacity
+            style={styles.planProgressCard}
+            onPress={() => navigation.navigate("PlanTab")}
+            activeOpacity={0.88}
+            accessibilityRole="button"
+            accessibilityLabel={`Plano de leitura. ${planProgressDisplay.title}. ${planProgressDisplay.detail}`}
+          >
+            <View style={styles.planPercentCircle}>
+              <Text style={styles.planPercentValue}>{planProgressDisplay.percent}%</Text>
+            </View>
+
+            <View style={styles.planProgressMain}>
+              <Text style={styles.planProgressTitle} numberOfLines={2}>
+                {planProgressDisplay.title}
+              </Text>
+              <Text style={styles.planProgressDetail}>{planProgressDisplay.detail}</Text>
+
+              {planProgressDisplay.phase && (
+                <Text style={styles.planProgressPhase} numberOfLines={1}>
+                  {planProgressDisplay.phase}
+                </Text>
+              )}
+
+              <View style={styles.planProgressTrack}>
+                <View
+                  style={[
+                    styles.planProgressFill,
+                    { width: `${Math.min(100, Math.max(0, planProgressDisplay.percent))}%` },
+                  ]}
+                />
+              </View>
+            </View>
+
+            <Text style={styles.planProgressChevron}>›</Text>
+          </TouchableOpacity>
+
+          {/* OVERDUE */}
+          {planStartDate && overdueCount > 0 && (
+            <Card variant="warning">
+              <Text style={styles.sectionTitle}>⚠️ Leituras atrasadas</Text>
+              <Text style={styles.sectionMuted}>
+                {overdueCount} pendente{overdueCount !== 1 ? "s" : ""} (domingos não contam — domingo é livre)
+              </Text>
+
+              <View style={{ height: 12 }} />
+
+              <TouchableOpacity style={styles.primaryBtn} onPress={openOldestOverdue}>
+                <Text style={styles.btnText}>📖 Ler atraso mais antigo</Text>
+              </TouchableOpacity>
+
+              <View style={{ height: 10 }} />
+
+              <TouchableOpacity style={styles.secondaryBtn} onPress={handleRedistributeOverdue}>
+                <Text style={styles.btnText}>🔁 Redistribuir atrasos</Text>
+              </TouchableOpacity>
+            </Card>
+          )}
+
+          {/* ACESSOS RÁPIDOS 2x3 - CONTRATO OFICIAL */}
+          <View style={styles.quickSectionHeader}>
+            <View>
+              <Text style={styles.quickSectionEyebrow}>NAVEGAÇÃO</Text>
+              <Text style={styles.quickSectionTitle}>Acessos rápidos</Text>
+            </View>
+            <Text style={styles.quickSectionHint}>2 recursos ativos</Text>
+          </View>
+
+          <View style={styles.quickGrid}>
+            <QuickAccessCard
+              iconSource={require("../../assets/home/icons/biblia_icone.png")}
+              title="Bíblia"
+              subtitle="Leitor bíblico local"
+              disabled
+            />
+
+            <QuickAccessCard
+              iconSource={require("../../assets/home/icons/plano_icone.png")}
+              title="Plano de Leitura"
+              subtitle="Siga sua jornada"
+              onPress={() => navigation.navigate("PlanTab")}
+            />
+
+            <QuickAccessCard
+              iconSource={require("../../assets/home/icons/diario_icone.png")}
+              title="Meu Diário"
+              subtitle="Anote e reflita"
+              disabled
+            />
+
+            <QuickAccessCard
+              iconSource={require("../../assets/home/icons/estudos_icone.png")}
+              title="Estudos"
+              subtitle="Aprofunde temas"
+              disabled
+            />
+
+            <QuickAccessCard
+              iconSource={require("../../assets/home/icons/favoritos_icone.png")}
+              title="Favoritos"
+              subtitle="Conteúdos salvos"
+              disabled
+            />
+
+            <QuickAccessCard
+              iconSource={require("../../assets/home/icons/progresso_icone.png")}
+              title="Progresso"
+              subtitle="Acompanhe sua evolução"
+              onPress={() => navigation.navigate("Progress")}
+            />
+          </View>
+
+          {/* BANNER MOTIVACIONAL */}
+          <ImageBackground
+            source={require("../../assets/home/banner_motivacional.png")}
+            style={styles.motivationalBanner}
+            imageStyle={{ borderRadius: 18 }}
+            resizeMode="cover"
+            accessibilityIgnoresInvertColors
+          >
+            {Platform.OS === "web" && (
+              <Image
+                source={require("../../assets/home/banner_motivacional.png")}
+                style={[
+                  styles.motivationalBackdropWeb,
+                  { height: motivationalWebImageHeight },
+                ]}
+                resizeMode="cover"
+                accessibilityIgnoresInvertColors
+              />
+            )}
+
+            <Image
+              source={require("../../assets/home/overlays/banner_cream_fade.png")}
+              style={styles.motivationalFadeImage}
+              resizeMode="stretch"
+              accessibilityIgnoresInvertColors
+            />
+
+            <View style={styles.motivationalContent}>
+              <View style={styles.motivationalAccentLine} />
+              <Text style={styles.motivationalEyebrow}>PALAVRA PARA A JORNADA</Text>
+              <Text style={styles.motivationalText} numberOfLines={3}>
+                {dailyMessage}
+              </Text>
+            </View>
+          </ImageBackground>
+
+          {/* CONSTÂNCIA - BLOCO LEGADO PRESERVADO */}
+          <View style={[styles.statsGrid, stackStats && styles.statsGridNarrow]}>
+            <Card>
+              <Text style={styles.kpiLabel}>🔥 Streak</Text>
+              <Text style={styles.kpiValue}>
+                {streak} dia{streak !== 1 ? "s" : ""}
+              </Text>
+              {lastRead ? <Text style={styles.kpiHint}>Última: {lastRead}</Text> : <Text style={styles.kpiHint}>—</Text>}
+            </Card>
+
+            <Card>
+              <Text style={styles.kpiLabel}>🏅 Nível</Text>
+              <Text style={styles.kpiValue}>{level.title}</Text>
+              {nextMilestone.next ? (
+                <Text style={styles.kpiHint}>
+                  Próx.: {nextMilestone.next} (faltam {nextMilestone.remaining})
+                </Text>
+              ) : (
+                <Text style={styles.kpiHint}>Marcos concluídos</Text>
+              )}
+            </Card>
+          </View>
+
+          {/* AJUSTE DE ALINHAMENTO - FUNÇÃO REAL PRESERVADA, PRIORIDADE SECUNDÁRIA */}
           {planStartDate && hasLegacyProgress && (
             <Card>
               <Text style={styles.sectionTitle}>🧭 Alinhamento do plano</Text>
@@ -1171,7 +1167,7 @@ export default function HomeScreen() {
                     setShowStartAdjust(true);
                   }}
                 >
-                  <Text style={styles.btnText}>✏️ Ajustar data de início</Text>
+                  <Text style={[styles.btnText, { color: colors.primary }]}>✏️ Ajustar data de início</Text>
                 </TouchableOpacity>
               ) : (
                 <View style={styles.startAdjustBox}>
@@ -1213,156 +1209,6 @@ export default function HomeScreen() {
             </Card>
           )}
 
-          {/* HERO - LEITURA DO DIA (CTA PRINCIPAL) */}
-          <Card variant="highlight">
-            <View style={styles.heroTopRow}>
-              <View>
-                <Text style={styles.heroLabel}>Hoje</Text>
-                <Text style={styles.heroDate}>{todayLabel}</Text>
-              </View>
-
-              <Pill text={todayStatusPill.text} variant={todayStatusPill.variant} />
-            </View>
-
-            <Pressable onPress={openReading} accessibilityRole="button" accessibilityLabel="Abrir leitura do dia">
-              <Text style={styles.heroReference}>{resolvedToday.reference}</Text>
-            </Pressable>
-
-            {canRegisterGratitudeToday && (
-              <Text style={[styles.heroMeta, { color: todayGratitude ? colors.secondary : colors.muted }]}>
-                {todayGratitude ? "🙏 Gratidão registrada" : "✍️ Gratidão: ainda não registrada"}
-              </Text>
-            )}
-
-            <View style={{ height: 12 }} />
-
-            {!planStartDate ? (
-              <TouchableOpacity style={styles.primaryBtn} onPress={startPlanNowAndOpen}>
-                <Text style={styles.btnText}>🚀 Começar plano hoje</Text>
-              </TouchableOpacity>
-            ) : resolvedToday.isSunday ? (
-              <TouchableOpacity style={styles.primaryBtn} onPress={openReading}>
-                <Text style={styles.btnText}>🙏 Abrir meditação</Text>
-              </TouchableOpacity>
-            ) : (
-              <View style={styles.heroButtons}>
-                <TouchableOpacity style={[styles.primaryBtn, styles.heroBtn]} onPress={openReading}>
-                  <Text style={styles.btnText}>📖 Abrir</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[
-                    styles.secondaryBtn,
-                    styles.heroBtn,
-                    (isCompletedToday || resolvedToday.finished) && styles.btnDisabled,
-                  ]}
-                  onPress={markAsCompleted}
-                  disabled={isCompletedToday || resolvedToday.finished}
-                >
-                  <Text style={styles.btnText}>{isCompletedToday ? "✅ Concluído" : "✔️ Marcar lido"}</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-          </Card>
-
-          {/* OVERDUE */}
-          {planStartDate && overdueCount > 0 && (
-            <Card variant="warning">
-              <Text style={styles.sectionTitle}>⚠️ Leituras atrasadas</Text>
-              <Text style={styles.sectionMuted}>
-                {overdueCount} pendente{overdueCount !== 1 ? "s" : ""} (domingos não contam — domingo é livre)
-              </Text>
-
-              <View style={{ height: 12 }} />
-
-              <TouchableOpacity style={styles.primaryBtn} onPress={openOldestOverdue}>
-                <Text style={styles.btnText}>📖 Ler atraso mais antigo</Text>
-              </TouchableOpacity>
-
-              <View style={{ height: 10 }} />
-
-              <TouchableOpacity style={styles.secondaryBtn} onPress={handleRedistributeOverdue}>
-                <Text style={styles.btnText}>🔁 Redistribuir atrasos</Text>
-              </TouchableOpacity>
-            </Card>
-          )}
-
-          {/* STATS GRID */}
-          <View style={styles.statsGrid}>
-            <Card>
-              <Text style={styles.kpiLabel}>🔥 Streak</Text>
-              <Text style={styles.kpiValue}>
-                {streak} dia{streak !== 1 ? "s" : ""}
-              </Text>
-              {lastRead ? <Text style={styles.kpiHint}>Última: {lastRead}</Text> : <Text style={styles.kpiHint}>—</Text>}
-            </Card>
-
-            <Card>
-              <Text style={styles.kpiLabel}>🏅 Nível</Text>
-              <Text style={styles.kpiValue}>{level.title}</Text>
-              {nextMilestone.next ? (
-                <Text style={styles.kpiHint}>
-                  Próx.: {nextMilestone.next} (faltam {nextMilestone.remaining})
-                </Text>
-              ) : (
-                <Text style={styles.kpiHint}>Marcos concluídos</Text>
-              )}
-            </Card>
-          </View>
-
-          {/* MENSAGEM DO DIA */}
-          <Card>
-            <Text style={styles.sectionTitle}>💬 Mensagem do dia</Text>
-            <Text style={styles.sectionBody}>{dailyMessage}</Text>
-          </Card>
-
-          {/* FASE ATUAL */}
-          {currentPhase && (
-            <Card>
-              <Text style={styles.sectionTitle}>📘 Fase atual</Text>
-              <Text style={styles.sectionBodyStrong}>{currentPhase.title}</Text>
-              <Text style={styles.sectionMuted}>{currentPhase.description}</Text>
-            </Card>
-          )}
-
-          {/* QUICK NAV (RECOLHÍVEL) */}
-          <TouchableOpacity
-            style={styles.quickNavToggle}
-            onPress={() => setQuickNavOpen((p) => !p)}
-            accessibilityRole="button"
-            accessibilityLabel="Abrir ou fechar acessos rápidos"
-          >
-            <Text style={styles.quickNavToggleTitle}>Acessos rápidos</Text>
-            <View style={styles.quickNavToggleRight}>
-              <Text style={styles.quickNavToggleHint}>{quickNavLabel}</Text>
-              <Text style={styles.quickNavToggleChevron}>{quickNavOpen ? "˄" : "˅"}</Text>
-            </View>
-          </TouchableOpacity>
-
-          {quickNavOpen && (
-            <View style={styles.menuGrid}>
-              <TouchableOpacity style={styles.menuBtn} onPress={() => navigation.navigate("PlanTab")}>
-                <Text style={styles.menuEmoji}>📅</Text>
-                <Text style={styles.menuText}>Plano Anual</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity style={styles.menuBtn} onPress={() => navigation.navigate("Progress")}>
-                <Text style={styles.menuEmoji}>📊</Text>
-                <Text style={styles.menuText}>Progresso</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity style={styles.menuBtn} onPress={() => navigation.navigate("History")}>
-                <Text style={styles.menuEmoji}>📜</Text>
-                <Text style={styles.menuText}>Histórico</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity style={styles.menuBtn} onPress={() => navigation.navigate("Settings")}>
-                <Text style={styles.menuEmoji}>⚙️</Text>
-                <Text style={styles.menuText}>Configurações</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-
           <View style={{ height: 10 }} />
         </ScrollView>
 
@@ -1398,22 +1244,17 @@ export default function HomeScreen() {
             </View>
           </View>
         )}
-      </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
-const { width } = Dimensions.get("window");
 const CARD_MAX = 560;
 
 const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  safeInner: {
+  screen: {
     flex: 1,
     position: "relative",
+    backgroundColor: colors.background,
   },
   scroll: {
     flex: 1,
@@ -1426,47 +1267,9 @@ const styles = StyleSheet.create({
     maxWidth: CARD_MAX,
   },
 
-  /* HEADER */
-  headerWrap: {
+  devPanel: {
     marginTop: 6,
     marginBottom: 12,
-  },
-  headerTop: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  logoWrap: {
-    width: 52,
-    height: 52,
-    borderRadius: 16,
-    backgroundColor: "#fff",
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: "#000",
-    shadowOpacity: 0.06,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 2,
-  },
-  logo: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: "800",
-    color: colors.primary,
-  },
-  subTitle: {
-    marginTop: 2,
-    color: colors.muted,
-    fontSize: 12,
-  },
-
-  devPanel: {
-    marginTop: 10,
     backgroundColor: "#fff",
     borderRadius: 14,
     padding: 12,
@@ -1584,66 +1387,438 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
 
-  /* HERO */
-  heroTopRow: {
+  /* HERO 2.0 */
+  heroCard: {
+    marginBottom: 16,
+    borderRadius: 22,
+    overflow: "hidden",
+    backgroundColor: colors.surface,
+    shadowColor: colors.black,
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 3,
+  },
+  heroImageFrame: {
+    width: "100%",
+    aspectRatio: 16 / 9,
+    position: "relative",
+    overflow: "hidden",
+    backgroundColor: colors.primary,
+  },
+  heroBackdropImage: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    width: "100%",
+    height: "100%",
+    transform: [{ scale: 1.1 }, { translateX: 12 }],
+  },
+  heroFadeImage: {
+    ...StyleSheet.absoluteFillObject,
+    width: "100%",
+    height: "100%",
+  },
+  heroContentPanel: {
+    width: "62%",
+    height: "100%",
+    justifyContent: "center",
+    paddingHorizontal: 18,
+    paddingVertical: 14,
+  },
+  heroContentPanelNarrow: {
+    width: "66%",
+  },
+  heroEyebrowRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 5,
+  },
+  heroAccentLine: {
+    width: 26,
+    height: 3,
+    borderRadius: 999,
+    backgroundColor: colors.secondary,
+  },
+  heroEyebrow: {
+    color: colors.secondary,
+    fontSize: 11,
+    fontWeight: "900",
+  },
+  heroDateText: {
+    color: "rgba(255,255,255,0.76)",
+    fontSize: 10,
+    fontWeight: "700",
+    marginBottom: 7,
+  },
+  heroReferencePressable: {
+    alignSelf: "stretch",
+  },
+  heroReference: {
+    color: colors.textInverse,
+    fontSize: 22,
+    fontWeight: "900",
+    lineHeight: 27,
+  },
+  heroReferenceNarrow: {
+    fontSize: 19,
+    lineHeight: 23,
+  },
+  heroStatusPill: {
+    alignSelf: "flex-start",
+    marginTop: 8,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 999,
+    backgroundColor: "rgba(255,255,255,0.14)",
+  },
+  heroStatusText: {
+    color: colors.textInverse,
+    fontSize: 9,
+    fontWeight: "800",
+  },
+  heroPrimaryBtn: {
+    alignSelf: "flex-start",
+    marginTop: 6,
+    minHeight: 36,
+    minWidth: 170,
+    maxWidth: "64%",
+    borderRadius: 13,
+    paddingHorizontal: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: colors.secondary,
+  },
+  heroPrimaryBtnNarrow: {
+    minWidth: 150,
+  },
+  heroPrimaryBtnWeb: {
+    minWidth: 182,
+    maxWidth: "100%",
+    paddingHorizontal: 8,
+  },
+  heroPrimaryBtnText: {
+    color: colors.primary,
+    fontSize: 15,
+    lineHeight: 20,
+    fontWeight: "900",
+    textAlign: "center",
+  },
+  heroPrimaryBtnTextNarrow: {
+    fontSize: 14,
+    lineHeight: 19,
+  },
+
+  heroPrimaryBtnContent: {
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: 6,
+  },
+
+  heroPrimaryBtnIcon: {
+    fontSize: 24,
+    marginLeft: 68,
+  },
+  heroPrimaryBtnIconWeb: {
+    marginLeft: 0,
+  },
+
+  heroUtilityRow: {
+    minHeight: 58,
+    marginTop: -16,
+    paddingHorizontal: 14,
+    paddingTop: 20,
+    paddingBottom: 10,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    gap: 10,
-    marginBottom: 10,
+    gap: 8,
+    borderTopLeftRadius: 22,
+    borderTopRightRadius: 22,
+    backgroundColor: colors.surface,
+    zIndex: 3,
   },
-  heroLabel: {
-    fontSize: 12,
-    color: colors.muted,
+  heroUtilityRowNarrow: {
+    flexDirection: "column",
+    alignItems: "stretch",
+  },
+  heroGratitudeText: {
+    flexShrink: 1,
+    fontSize: 10.5,
     fontWeight: "700",
+    textAlign: "left",
   },
-  heroDate: {
-    fontSize: 16,
-    color: colors.text,
-    fontWeight: "800",
-    marginTop: 2,
+  heroGratitudeTextNarrow: {
+    textAlign: "center",
   },
-  heroReference: {
-    fontSize: 22,
-    fontWeight: "900",
+  heroMarkReadBtn: {
+    minHeight: 36,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: colors.primarySoft,
+  },
+  heroMarkReadBtnDisabled: {
+    backgroundColor: colors.secondarySoft,
+  },
+  heroMarkReadText: {
     color: colors.primary,
-    textAlign: "center",
-    marginTop: 2,
+    fontSize: 10.5,
+    fontWeight: "900",
   },
-  heroMeta: {
-    textAlign: "center",
-    fontSize: 12,
-    marginTop: 8,
-    fontWeight: "700",
-  },
-  heroButtons: {
-    flexDirection: width < 380 ? "column" : "row",
-    gap: 10,
-  },
-  heroBtn: {
-    flex: 1,
+  heroMarkReadTextDisabled: {
+    color: colors.secondaryPressed,
   },
 
-  /* PILL */
-  pill: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 999,
-    backgroundColor: "#f2f3f5",
+  /* PLANO DE LEITURA */
+  planSectionHeader: {
+    marginBottom: 9,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
-  pillSuccess: {
-    backgroundColor: "#eaf8ef",
+  planSectionTitleWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
   },
-  pillWarning: {
-    backgroundColor: "#fff1e0",
+  planSectionSymbol: {
+    color: colors.secondary,
+    fontSize: 20,
+    fontWeight: "900",
   },
-  pillInfo: {
-    backgroundColor: "#eaf2ff",
+  planSectionTitle: {
+    color: colors.primary,
+    fontSize: 14,
+    fontWeight: "900",
+    textTransform: "uppercase",
+    letterSpacing: 0.4,
   },
-  pillText: {
-    fontSize: 11,
-    fontWeight: "800",
+  planSectionLink: {
+    color: colors.secondaryPressed,
+    fontSize: 12,
+    fontWeight: "900",
+  },
+  planProgressCard: {
+    minHeight: 116,
+    marginBottom: 16,
+    borderRadius: 18,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    shadowColor: colors.black,
+    shadowOpacity: 0.04,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 7 },
+    elevation: 1,
+  },
+  planPercentCircle: {
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    borderWidth: 5,
+    borderColor: colors.secondary,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: colors.surfaceHighlight,
+  },
+  planPercentValue: {
+    color: colors.primary,
+    fontSize: 17,
+    fontWeight: "900",
+  },
+  planProgressMain: {
+    flex: 1,
+    minWidth: 0,
+  },
+  planProgressTitle: {
+    color: colors.primary,
+    fontSize: 14,
+    lineHeight: 18,
+    fontWeight: "900",
+  },
+  planProgressDetail: {
+    marginTop: 3,
     color: colors.text,
+    fontSize: 11,
+    fontWeight: "700",
+  },
+  planProgressPhase: {
+    marginTop: 3,
+    color: colors.muted,
+    fontSize: 10,
+  },
+  planProgressTrack: {
+    height: 5,
+    marginTop: 9,
+    borderRadius: 999,
+    overflow: "hidden",
+    backgroundColor: colors.surfaceAlt,
+  },
+  planProgressFill: {
+    height: "100%",
+    borderRadius: 999,
+    backgroundColor: colors.secondary,
+  },
+  planProgressChevron: {
+    color: colors.primary,
+    fontSize: 28,
+    fontWeight: "500",
+    marginLeft: 2,
+  },
+
+  /* ACESSOS RÁPIDOS 2x3 */
+  quickSectionHeader: {
+    marginTop: 2,
+    marginBottom: 10,
+    flexDirection: "row",
+    alignItems: "flex-end",
+    justifyContent: "space-between",
+  },
+  quickSectionEyebrow: {
+    color: colors.secondaryPressed,
+    fontSize: 9,
+    fontWeight: "900",
+    letterSpacing: 1.2,
+  },
+  quickSectionTitle: {
+    marginTop: 2,
+    color: colors.primary,
+    fontSize: 17,
+    fontWeight: "900",
+  },
+  quickSectionHint: {
+    color: colors.muted,
+    fontSize: 10,
+    fontWeight: "700",
+  },
+  quickGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    rowGap: 9,
+    marginBottom: 16,
+  },
+  quickCard: {
+    width: "31.5%",
+    height: 122,
+    borderRadius: 16,
+    paddingHorizontal: 7,
+    paddingVertical: 7,
+    alignItems: "center",
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    shadowColor: colors.black,
+    shadowOpacity: 0.035,
+    shadowRadius: 9,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 1,
+  },
+  quickCardDisabled: {
+    backgroundColor: colors.surfaceAlt,
+    borderColor: colors.divider,
+    opacity: 0.88,
+  },
+  quickIconImage: {
+    width: 42,
+    height: 42,
+    marginBottom: 4,
+  },
+  quickIconImageDisabled: {
+    opacity: 0.68,
+  },
+  quickTitle: {
+    minHeight: 24,
+    color: colors.primary,
+    fontSize: 10.2,
+    lineHeight: 12.5,
+    fontWeight: "900",
+    textAlign: "center",
+  },
+  quickTitleDisabled: {
+    color: colors.textMuted,
+  },
+  quickSubtitle: {
+    marginTop: 0,
+    color: colors.muted,
+    fontSize: 8.3,
+    lineHeight: 10.5,
+    textAlign: "center",
+  },
+  quickSubtitleDisabled: {
+    color: colors.textMuted,
+  },
+  quickSoonPill: {
+    marginTop: 4,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 999,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.divider,
+  },
+  quickSoonText: {
+    color: colors.muted,
+    fontSize: 7.5,
+    fontWeight: "900",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+
+  /* BANNER MOTIVACIONAL */
+  motivationalBanner: {
+    minHeight: 116,
+    marginBottom: 16,
+    borderRadius: 18,
+    overflow: "hidden",
+    justifyContent: "center",
+    backgroundColor: colors.secondarySoft,
+  },
+  motivationalBackdropWeb: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    width: "100%",
+  },
+  motivationalFadeImage: {
+    ...StyleSheet.absoluteFillObject,
+    width: "100%",
+    height: "100%",
+  },
+  motivationalContent: {
+    alignSelf: "flex-end",
+    width: "61%",
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  motivationalAccentLine: {
+    width: 32,
+    height: 3,
+    borderRadius: 999,
+    backgroundColor: colors.secondary,
+    marginBottom: 7,
+  },
+  motivationalEyebrow: {
+    color: colors.secondaryPressed,
+    fontSize: 8.5,
+    fontWeight: "900",
+    letterSpacing: 1.1,
+    marginBottom: 6,
+  },
+  motivationalText: {
+    color: colors.primary,
+    fontSize: 12.5,
+    lineHeight: 17.5,
+    fontWeight: "800",
   },
 
   /* BUTTONS */
@@ -1701,8 +1876,11 @@ const styles = StyleSheet.create({
 
   /* KPIs */
   statsGrid: {
-    flexDirection: width < 420 ? "column" : "row",
+    flexDirection: "row",
     gap: 12,
+  },
+  statsGridNarrow: {
+    flexDirection: "column",
   },
   kpiLabel: {
     fontSize: 12,
@@ -1722,74 +1900,6 @@ const styles = StyleSheet.create({
     color: colors.muted,
     textAlign: "center",
     marginTop: 6,
-  },
-
-  /* QUICK NAV (RECOLHÍVEL) */
-  quickNavToggle: {
-    marginTop: 6,
-    marginBottom: 10,
-    backgroundColor: "#fff",
-    borderRadius: 18,
-    paddingVertical: 14,
-    paddingHorizontal: 14,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    shadowColor: "#000",
-    shadowOpacity: 0.03,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 1,
-  },
-  quickNavToggleTitle: {
-    fontSize: 13,
-    fontWeight: "900",
-    color: colors.text,
-  },
-  quickNavToggleRight: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-  quickNavToggleHint: {
-    fontSize: 12,
-    color: colors.muted,
-    fontWeight: "800",
-  },
-  quickNavToggleChevron: {
-    fontSize: 18,
-    color: colors.muted,
-    fontWeight: "900",
-    marginTop: -2,
-  },
-
-  menuGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-    gap: 12,
-  },
-  menuBtn: {
-    width: width < 420 ? "100%" : "48%",
-    backgroundColor: "#fff",
-    borderRadius: 18,
-    paddingVertical: 16,
-    paddingHorizontal: 14,
-    marginBottom: 0,
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOpacity: 0.03,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 1,
-  },
-  menuEmoji: {
-    fontSize: 20,
-    marginBottom: 8,
-  },
-  menuText: {
-    color: colors.text,
-    fontWeight: "900",
   },
 
   /* VERSE MODAL */
