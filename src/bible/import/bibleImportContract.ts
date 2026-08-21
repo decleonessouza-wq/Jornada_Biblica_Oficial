@@ -1,9 +1,9 @@
 /**
- * Contratos do pipeline de ingestão bíblica.
+ * Contratos do pipeline de ingestao biblica.
  *
- * Esta fase define forma, invariantes e erros possíveis.
- * Download, parsing, normalização, hash e escrita SQLite serão implementados
- * em gates posteriores para manter rollback e validação isolados.
+ * O source artifact lock congela os bytes adquiridos da fonte aprovada.
+ * O normalized artifact lock somente existe depois de parsing, normalizacao,
+ * validacao e calculo do hash normalizado em gate posterior.
  */
 
 import type { BibleBookId } from "../../domain/bible/bibleReference";
@@ -13,16 +13,25 @@ export const BIBLE_IMPORTER_CONTRACT_VERSION = 1 as const;
 
 export type Sha256Hex = string;
 
+export type BibleSourceArtifactKind = "GIT_ARCHIVE_TAR" | "UTF8_TEXT";
+
 export type BibleSourceArtifactLock = Readonly<{
   versionId: BibleVersionId;
   sourceUrl: string;
   sourceRevision: string;
   sourceArtifact: string;
+  sourceArtifactKind: BibleSourceArtifactKind;
+  sourceArtifactOrigin: string;
   sourceSha256: Sha256Hex;
-  normalizedSha256: Sha256Hex;
-  importerVersion: typeof BIBLE_IMPORTER_CONTRACT_VERSION;
+  sourceByteLength: number;
   lockedAt: string;
 }>;
+
+export type BibleNormalizedArtifactLock = BibleSourceArtifactLock &
+  Readonly<{
+    normalizedSha256: Sha256Hex;
+    importerVersion: typeof BIBLE_IMPORTER_CONTRACT_VERSION;
+  }>;
 
 export type NormalizedBibleVerse = Readonly<{
   versionId: BibleVersionId;
@@ -64,7 +73,7 @@ export type BibleImportValidationReport = Readonly<{
 
 export type BibleImportPackage = Readonly<{
   versionId: BibleVersionId;
-  artifactLock: BibleSourceArtifactLock;
+  artifactLock: BibleNormalizedArtifactLock;
   verses: readonly NormalizedBibleVerse[];
   validation: BibleImportValidationReport;
 }>;

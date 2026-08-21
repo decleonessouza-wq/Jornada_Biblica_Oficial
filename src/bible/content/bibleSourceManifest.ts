@@ -18,7 +18,7 @@ import type {
 
 export type BibleSourceKind = "GIT_REPOSITORY" | "HISTORICAL_ARCHIVE";
 
-export type BibleSourceLockStatus = "PENDING_GATE_5_P5" | "LOCKED";
+export type BibleSourceLockStatus = "PENDING_GATE_5_P5" | "SOURCE_ARTIFACT_LOCKED" | "LOCKED";
 
 export type BibleSourceManifestEntry = Readonly<{
   versionId: BibleVersionId;
@@ -50,7 +50,7 @@ export const BIBLE_SOURCE_MANIFEST: readonly BibleSourceManifestEntry[] = [
     attributionNotice:
       "Bíblia Livre (BLIVRE), licenciada sob Creative Commons Atribuição 3.0 Brasil. A atribuição final será congelada junto ao artefato-fonte.",
     runtimeNetworkDependency: false,
-    artifactLockStatus: "PENDING_GATE_5_P5",
+    artifactLockStatus: "SOURCE_ARTIFACT_LOCKED",
   },
   {
     versionId: "ALM1911",
@@ -64,7 +64,7 @@ export const BIBLE_SOURCE_MANIFEST: readonly BibleSourceManifestEntry[] = [
     rightsEvidenceUrl: "https://www.gutenberg.org/ebooks/62383",
     attributionNotice: null,
     runtimeNetworkDependency: false,
-    artifactLockStatus: "PENDING_GATE_5_P5",
+    artifactLockStatus: "SOURCE_ARTIFACT_LOCKED",
   },
 ] as const;
 
