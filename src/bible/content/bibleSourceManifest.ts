@@ -81,3 +81,22 @@ export function getBibleSourceManifestEntry(
 
   return entry;
 }
+
+// === Phase 5-P5-P2-A1: authorized offline corpus variant policy ===
+
+export const BIBLE_OFFLINE_CORPUS_VARIANT_POLICY = {
+  BLIVRE: {
+    versionId: "BLIVRE",
+    sourceVariant: "N4",
+    textualBasis: "NESTLE_1904",
+    sourceProfile: "BibliaLivre textos/f4/n4 at locked source revision",
+    selectionGate: "5-P5-P2-A1",
+  },
+  ALM1911: {
+    versionId: "ALM1911",
+    sourceVariant: "GUTENBERG_62383",
+    textualBasis: "ALMEIDA_1911",
+    sourceProfile: "Project Gutenberg eBook 62383 plain UTF-8 text",
+    selectionGate: "5-P5-P2-A1",
+  },
+} as const;
