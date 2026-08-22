@@ -1,15 +1,19 @@
 /**
  * Ciclo de vida da conexão SQLite do domínio bíblico offline.
  *
- * Responsabilidades deliberadamente limitadas:
+ * Responsabilidades:
+ * - garantir que o seed empacotado esteja instalado antes da primeira abertura;
  * - abrir uma única conexão compartilhada;
  * - serializar fechamento e reabertura;
- * - não executar schema, migrations, seed, queries de domínio ou UI.
+ * - não executar migrations, queries de domínio ou UI.
  */
 
 import { openDatabaseAsync, type SQLiteDatabase } from "expo-sqlite";
 
-export const BIBLE_DATABASE_NAME = "biblia-jornada.db" as const;
+import { BIBLE_DATABASE_NAME } from "./bibleDatabaseConstants";
+import { ensureBibleSeedInstalled } from "./bibleDatabaseSeed";
+
+export { BIBLE_DATABASE_NAME } from "./bibleDatabaseConstants";
 
 let connectionPromise: Promise<SQLiteDatabase> | null = null;
 let closePromise: Promise<void> | null = null;
@@ -20,8 +24,16 @@ export async function openBibleDatabaseConnection(): Promise<SQLiteDatabase> {
   }
 
   if (!connectionPromise) {
-    connectionPromise = openDatabaseAsync(BIBLE_DATABASE_NAME).catch((error) => {
-      connectionPromise = null;
+    const currentConnection = (async () => {
+      await ensureBibleSeedInstalled();
+      return openDatabaseAsync(BIBLE_DATABASE_NAME);
+    })();
+
+    connectionPromise = currentConnection.catch((error) => {
+      if (connectionPromise === currentConnection) {
+        connectionPromise = null;
+      }
+
       throw error;
     });
   }
