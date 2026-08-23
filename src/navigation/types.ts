@@ -6,14 +6,22 @@ import type { BottomTabScreenProps } from "@react-navigation/bottom-tabs";
 import type { DrawerScreenProps } from "@react-navigation/drawer";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 
+import type { OfflineBibleReaderRouteParams } from "../bible/reader/bibleReaderContracts";
+
 export type ReadingRouteParams = {
   date: string;
   reference: string;
   isSunday?: boolean;
 };
 
+export type BibleStackParamList = {
+  BibleLibrary: undefined;
+  BibleReader: OfflineBibleReaderRouteParams;
+};
+
 export type MainTabParamList = {
   HomeTab: undefined;
+  BibleTab: NavigatorScreenParams<BibleStackParamList> | undefined;
   PlanTab: undefined;
 };
 
@@ -54,3 +62,7 @@ export type MainTabScreenProps<
     NativeStackScreenProps<RootStackParamList, "AppShell">
   >
 >;
+
+export type BibleStackScreenProps<
+  RouteName extends keyof BibleStackParamList,
+> = NativeStackScreenProps<BibleStackParamList, RouteName>;

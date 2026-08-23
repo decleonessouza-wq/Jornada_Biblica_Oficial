@@ -17,6 +17,7 @@ import {
   AppShellChromeProvider,
   useAppShellChrome,
 } from "./AppShellChromeContext";
+import BibleNavigator from "./BibleNavigator";
 import CustomTabBar from "./CustomTabBar";
 import { MainTabs } from "./navigationFactories";
 
@@ -102,6 +103,14 @@ function MainTabsNavigatorContent({
         component={HomeScreen}
         options={{
           title: APP_INFO.name,
+        }}
+      />
+
+      <MainTabs.Screen
+        name="BibleTab"
+        component={BibleNavigator}
+        options={{
+          title: "Bíblia",
         }}
       />
 
