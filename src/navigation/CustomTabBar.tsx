@@ -10,7 +10,7 @@ import { useAppShellChrome } from "./AppShellChromeContext";
 const BASE_BAR_HEIGHT = 46;
 const QUICK_ACTION_OVERHANG = 24;
 
-type RealTabRouteName = "HomeTab" | "PlanTab";
+type RealTabRouteName = "HomeTab" | "BibleTab" | "PlanTab";
 
 export type CustomTabBarProps = BottomTabBarProps & {
   onQuickAction: () => void;
@@ -184,7 +184,14 @@ export default function CustomTabBar({
             navigation={navigation}
           />
 
-          <DisabledTabButton label="Bíblia" symbol="▤" />
+          <RealTabButton
+            routeName="BibleTab"
+            label="Bíblia"
+            symbol="▤"
+            state={state}
+            descriptors={descriptors}
+            navigation={navigation}
+          />
 
           <View style={styles.quickActionSlot}>
             <Pressable
