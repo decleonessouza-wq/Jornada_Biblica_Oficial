@@ -912,6 +912,9 @@ export default function HomeScreen() {
                         styles.heroPrimaryBtnText,
                         isNarrowViewport && styles.heroPrimaryBtnTextNarrow,
                       ]}
+                      numberOfLines={1}
+                      adjustsFontSizeToFit
+                      minimumFontScale={0.82}
                     >
                       {heroCtaLabel}
                     </Text>
@@ -1042,7 +1045,7 @@ export default function HomeScreen() {
               <Text style={styles.quickSectionEyebrow}>NAVEGAÇÃO</Text>
               <Text style={styles.quickSectionTitle}>Acessos rápidos</Text>
             </View>
-            <Text style={styles.quickSectionHint}>2 recursos ativos</Text>
+            <Text style={styles.quickSectionHint}>3 recursos ativos</Text>
           </View>
 
           <View style={styles.quickGrid}>
@@ -1050,7 +1053,7 @@ export default function HomeScreen() {
               iconSource={require("../../assets/home/icons/biblia_icone.png")}
               title="Bíblia"
               subtitle="Leitor bíblico local"
-              disabled
+              onPress={() => navigation.navigate("BibleTab")}
             />
 
             <QuickAccessCard
@@ -1481,24 +1484,24 @@ const styles = StyleSheet.create({
   heroPrimaryBtn: {
     alignSelf: "flex-start",
     marginTop: 6,
-    minHeight: 36,
-    minWidth: 170,
-    maxWidth: "64%",
+    minHeight: 44,
+    maxWidth: "100%",
     borderRadius: 13,
-    paddingHorizontal: 18,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: colors.secondary,
   },
   heroPrimaryBtnNarrow: {
-    minWidth: 150,
+    paddingHorizontal: 12,
   },
   heroPrimaryBtnWeb: {
-    minWidth: 182,
     maxWidth: "100%",
-    paddingHorizontal: 8,
+    paddingHorizontal: 14,
   },
   heroPrimaryBtnText: {
+    flexShrink: 1,
     color: colors.primary,
     fontSize: 15,
     lineHeight: 20,
@@ -1511,15 +1514,17 @@ const styles = StyleSheet.create({
   },
 
   heroPrimaryBtnContent: {
-  flexDirection: "row",
-  alignItems: "center",
-  justifyContent: "center",
-  gap: 6,
+    maxWidth: "100%",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
   },
 
   heroPrimaryBtnIcon: {
-    fontSize: 24,
-    marginLeft: 68,
+    flexShrink: 0,
+    fontSize: 22,
+    marginLeft: 0,
   },
   heroPrimaryBtnIconWeb: {
     marginLeft: 0,

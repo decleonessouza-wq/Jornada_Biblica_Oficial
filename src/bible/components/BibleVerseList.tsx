@@ -10,6 +10,8 @@ import {
   Text,
   View,
   type ListRenderItem,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
   type ViewToken,
 } from "react-native";
 
@@ -23,6 +25,8 @@ type BibleVerseListProps = Readonly<{
   initialVerse?: number;
   onFirstVisibleVerseChange?: (verse: number) => void;
   onInitialRestoreComplete?: () => void;
+  onScrollOffsetChange?: (offsetY: number) => void;
+  contentTopInset?: number;
 }>;
 
 type ReaderTypography = Readonly<{
@@ -66,6 +70,8 @@ export function BibleVerseList({
   initialVerse,
   onFirstVisibleVerseChange,
   onInitialRestoreComplete,
+  onScrollOffsetChange,
+  contentTopInset = 0,
 }: BibleVerseListProps) {
   const listRef = useRef<FlatList<BibleVerseRecord>>(null);
   const restoreTargetVerseRef = useRef<number | null>(null);
@@ -76,6 +82,7 @@ export function BibleVerseList({
     useRef<ReturnType<typeof setTimeout> | null>(null);
   const firstVisibleCallbackRef = useRef(onFirstVisibleVerseChange);
   const restoreCompleteCallbackRef = useRef(onInitialRestoreComplete);
+  const scrollOffsetCallbackRef = useRef(onScrollOffsetChange);
 
   const typography = TYPOGRAPHY_BY_SCALE[fontScale];
 
@@ -96,6 +103,10 @@ export function BibleVerseList({
   useEffect(() => {
     restoreCompleteCallbackRef.current = onInitialRestoreComplete;
   }, [onInitialRestoreComplete]);
+
+  useEffect(() => {
+    scrollOffsetCallbackRef.current = onScrollOffsetChange;
+  }, [onScrollOffsetChange]);
 
   const clearRestoreTimers = useCallback(() => {
     if (restoreFallbackTimerRef.current !== null) {
@@ -241,6 +252,21 @@ export function BibleVerseList({
     initialVerse,
   ]);
 
+  const handleScroll = useCallback(
+    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+      if (!restoreCompletedRef.current) {
+        return;
+      }
+
+      const offsetY = Math.max(
+        0,
+        event.nativeEvent.contentOffset.y,
+      );
+
+      scrollOffsetCallbackRef.current?.(offsetY);
+    },
+    [],
+  );
   const handleScrollToIndexFailed = useCallback(
     ({
       index,
@@ -286,6 +312,7 @@ export function BibleVerseList({
       renderItem={renderItem}
       contentContainerStyle={[
         styles.content,
+        { paddingTop: styles.content.paddingTop + contentTopInset },
         verses.length === 0 && styles.emptyContent,
       ]}
       ItemSeparatorComponent={VerseSeparator}
@@ -295,6 +322,8 @@ export function BibleVerseList({
       windowSize={7}
       onViewableItemsChanged={onViewableItemsChanged}
       viewabilityConfig={viewabilityConfig}
+      onScroll={handleScroll}
+      scrollEventThrottle={16}
       onScrollToIndexFailed={handleScrollToIndexFailed}
       showsVerticalScrollIndicator={false}
     />

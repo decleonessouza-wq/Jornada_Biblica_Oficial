@@ -119,6 +119,77 @@ export function parseOfflineBibleReaderRouteParams(
   };
 }
 
+export function getPreviousOfflineBibleReaderRouteParams(
+  value: OfflineBibleReaderRouteParams,
+): OfflineBibleReaderRouteParams | null {
+  const current = parseOfflineBibleReaderRouteParams(value);
+
+  if (!current) {
+    return null;
+  }
+
+  if (current.chapter > 1) {
+    return {
+      ...current,
+      chapter: current.chapter - 1,
+    };
+  }
+
+  const currentBookIndex = BIBLE_BOOKS.findIndex(
+    (book) => book.id === current.bookId,
+  );
+
+  if (currentBookIndex <= 0) {
+    return null;
+  }
+
+  const previousBook = BIBLE_BOOKS[currentBookIndex - 1];
+
+  return {
+    versionId: current.versionId,
+    bookId: previousBook.id,
+    chapter: previousBook.chapterCount,
+  };
+}
+
+export function getNextOfflineBibleReaderRouteParams(
+  value: OfflineBibleReaderRouteParams,
+): OfflineBibleReaderRouteParams | null {
+  const current = parseOfflineBibleReaderRouteParams(value);
+
+  if (!current) {
+    return null;
+  }
+
+  const currentBook = getBibleBookById(current.bookId);
+
+  if (current.chapter < currentBook.chapterCount) {
+    return {
+      ...current,
+      chapter: current.chapter + 1,
+    };
+  }
+
+  const currentBookIndex = BIBLE_BOOKS.findIndex(
+    (book) => book.id === current.bookId,
+  );
+
+  if (
+    currentBookIndex < 0 ||
+    currentBookIndex >= BIBLE_BOOKS.length - 1
+  ) {
+    return null;
+  }
+
+  const nextBook = BIBLE_BOOKS[currentBookIndex + 1];
+
+  return {
+    versionId: current.versionId,
+    bookId: nextBook.id,
+    chapter: 1,
+  };
+}
+
 export function parseOfflineBibleLastReading(
   value: unknown,
 ): OfflineBibleLastReading | null {

@@ -45,7 +45,12 @@ function BibleReaderRoute({
   route,
 }: BibleStackScreenProps<"BibleReader">) {
   const handleRequestBack = () => {
-    if (navigation.canGoBack()) {
+    const state = navigation.getState();
+    const hasLibraryBeforeReader = state.routes
+      .slice(0, state.index)
+      .some((stackRoute) => stackRoute.name === "BibleLibrary");
+
+    if (hasLibraryBeforeReader) {
       navigation.goBack();
       return;
     }
@@ -53,10 +58,17 @@ function BibleReaderRoute({
     navigation.replace("BibleLibrary");
   };
 
+  const handleRequestReferenceChange = (
+    params: OfflineBibleReaderRouteParams,
+  ) => {
+    navigation.replace("BibleReader", params);
+  };
+
   return (
     <BibleReaderScreen
       params={route.params}
       onRequestBack={handleRequestBack}
+      onRequestReferenceChange={handleRequestReferenceChange}
     />
   );
 }

@@ -6,6 +6,7 @@ import React, {
 } from "react";
 import {
   ActivityIndicator,
+  Animated,
   Pressable,
   StyleSheet,
   Text,
@@ -13,12 +14,15 @@ import {
 } from "react-native";
 
 import type { BibleBook } from "../../domain/bible/bibleBooks";
+import type { BibleVersionId } from "../../domain/bible/bibleVersion";
 import { colors } from "../../theme/colors";
 import { BibleReaderFontControls } from "../components/BibleReaderFontControls";
 import { BibleReaderHeader } from "../components/BibleReaderHeader";
 import { BibleVerseList } from "../components/BibleVerseList";
 import {
   DEFAULT_BIBLE_READER_FONT_SCALE,
+  getNextOfflineBibleReaderRouteParams,
+  getPreviousOfflineBibleReaderRouteParams,
   parseOfflineBibleReaderRouteParams,
   type BibleReaderFontScale,
   type OfflineBibleLastReading,
@@ -35,11 +39,15 @@ import {
   loadOfflineBibleLastReading,
   saveOfflineBibleFontScale,
   saveOfflineBibleLastReading,
+  savePreferredOfflineBibleVersion,
 } from "../state/bibleReaderPreferencesStore";
 
 type BibleReaderScreenProps = Readonly<{
   params: OfflineBibleReaderRouteParams;
   onRequestBack?: () => void;
+  onRequestReferenceChange?: (
+    params: OfflineBibleReaderRouteParams,
+  ) => void;
 }>;
 
 type ReaderStatus =
@@ -52,6 +60,7 @@ type ReaderStatus =
 
 type ReaderData = Readonly<{
   version: BibleInstalledVersion;
+  versions: readonly BibleInstalledVersion[];
   book: BibleBook;
   chapter: BibleChapterRecord;
 }>;
@@ -60,10 +69,13 @@ const GENERIC_LOAD_ERROR =
   "Não foi possível carregar este capítulo agora. Tente novamente.";
 
 const VISIBLE_VERSE_PERSIST_DEBOUNCE_MS = 500;
+const READER_CHROME_SCROLL_NOISE_PX = 0.5;
+const READER_CHROME_HIDDEN_EPSILON_PX = 1;
 
 export default function BibleReaderScreen({
   params,
   onRequestBack,
+  onRequestReferenceChange,
 }: BibleReaderScreenProps) {
   const repositoryRef = useRef<BibleRepository | null>(null);
   const generationRef = useRef(0);
@@ -73,6 +85,9 @@ export default function BibleReaderScreen({
   const pendingVerseRef = useRef<number | null>(null);
   const verseSaveTimerRef =
     useRef<ReturnType<typeof setTimeout> | null>(null);
+  const readerChromeTranslateYRef = useRef(new Animated.Value(0));
+  const readerChromeOffsetRef = useRef(0);
+  const lastReadingScrollOffsetRef = useRef<number | null>(null);
 
   const [status, setStatus] = useState<ReaderStatus>("loading");
   const [data, setData] = useState<ReaderData | null>(null);
@@ -83,6 +98,27 @@ export default function BibleReaderScreen({
   const [fontScale, setFontScale] = useState<BibleReaderFontScale>(
     DEFAULT_BIBLE_READER_FONT_SCALE,
   );
+  const [readerChromeHeight, setReaderChromeHeight] =
+    useState<number | null>(null);
+  const [readerChromeHidden, setReaderChromeHidden] = useState(false);
+
+  const resetReaderChrome = useCallback(() => {
+    readerChromeOffsetRef.current = 0;
+    lastReadingScrollOffsetRef.current = null;
+    readerChromeTranslateYRef.current.setValue(0);
+    setReaderChromeHidden(false);
+  }, []);
+
+  const handleReaderChromeLayout = useCallback((height: number) => {
+    if (!Number.isFinite(height) || height <= 0) {
+      return;
+    }
+
+    const nextHeight = Math.ceil(height);
+    setReaderChromeHeight((currentHeight) =>
+      currentHeight === nextHeight ? currentHeight : nextHeight,
+    );
+  }, []);
 
   const clearVersePersistenceTimer = useCallback(() => {
     if (verseSaveTimerRef.current !== null) {
@@ -205,9 +241,11 @@ export default function BibleReaderScreen({
         return;
       }
 
-      const version = installedVersions.find(
-        (candidate) =>
-          candidate.id === parsedParams.versionId && candidate.enabled,
+      const enabledVersions = installedVersions.filter(
+        (candidate) => candidate.enabled,
+      );
+      const version = enabledVersions.find(
+        (candidate) => candidate.id === parsedParams.versionId,
       );
 
       if (!version) {
@@ -280,6 +318,7 @@ export default function BibleReaderScreen({
       setFontScale(savedFontScale);
       setData({
         version,
+        versions: enabledVersions,
         book,
         chapter,
       });
@@ -306,6 +345,8 @@ export default function BibleReaderScreen({
   ]);
 
   useEffect(() => {
+    resetReaderChrome();
+
     void loadReader();
 
     return () => {
@@ -314,7 +355,7 @@ export default function BibleReaderScreen({
       activeReadingRef.current = null;
       verseTrackingReadyRef.current = false;
     };
-  }, [flushPendingVisibleVerse, loadReader]);
+  }, [flushPendingVisibleVerse, loadReader, resetReaderChrome]);
 
   const handleInitialRestoreComplete = useCallback(() => {
     verseTrackingReadyRef.current = true;
@@ -370,6 +411,52 @@ export default function BibleReaderScreen({
     [clearVersePersistenceTimer, persistLastReadingNonFatal],
   );
 
+  const handleReadingScrollOffsetChange = useCallback(
+    (offsetY: number) => {
+      if (
+        readerChromeHeight === null ||
+        !Number.isFinite(offsetY) ||
+        offsetY < 0
+      ) {
+        return;
+      }
+
+      const previousOffset = lastReadingScrollOffsetRef.current;
+      lastReadingScrollOffsetRef.current = offsetY;
+
+      if (previousOffset === null) {
+        return;
+      }
+
+      const delta = offsetY - previousOffset;
+
+      if (Math.abs(delta) < READER_CHROME_SCROLL_NOISE_PX) {
+        return;
+      }
+
+      const currentChromeOffset = readerChromeOffsetRef.current;
+      const nextChromeOffset = Math.min(
+        readerChromeHeight,
+        Math.max(0, currentChromeOffset + delta),
+      );
+
+      if (Math.abs(nextChromeOffset - currentChromeOffset) < 0.1) {
+        return;
+      }
+
+      readerChromeOffsetRef.current = nextChromeOffset;
+      readerChromeTranslateYRef.current.setValue(-nextChromeOffset);
+
+      const nextHidden =
+        nextChromeOffset >=
+        readerChromeHeight - READER_CHROME_HIDDEN_EPSILON_PX;
+
+      setReaderChromeHidden((currentHidden) =>
+        currentHidden === nextHidden ? currentHidden : nextHidden,
+      );
+    },
+    [readerChromeHeight],
+  );
   const handleFontScaleChange = useCallback(
     (nextFontScale: BibleReaderFontScale) => {
       if (nextFontScale === fontScale) {
@@ -383,6 +470,51 @@ export default function BibleReaderScreen({
       });
     },
     [fontScale],
+  );
+
+  const handleReferenceChange = useCallback(
+    (nextParams: OfflineBibleReaderRouteParams) => {
+      const validatedParams =
+        parseOfflineBibleReaderRouteParams(nextParams);
+
+      if (!validatedParams || !onRequestReferenceChange) {
+        return;
+      }
+
+      flushPendingVisibleVerse();
+      onRequestReferenceChange(validatedParams);
+    },
+    [flushPendingVisibleVerse, onRequestReferenceChange],
+  );
+
+  const handleVersionChange = useCallback(
+    (versionId: BibleVersionId) => {
+      if (versionId === params.versionId) {
+        return;
+      }
+
+      const nextParams = parseOfflineBibleReaderRouteParams({
+        versionId,
+        bookId: params.bookId,
+        chapter: params.chapter,
+      });
+
+      if (!nextParams) {
+        return;
+      }
+
+      void savePreferredOfflineBibleVersion(versionId).catch((error) => {
+        console.warn("BIBLE_READER_PREFERRED_VERSION_SAVE_FAILED", error);
+      });
+
+      handleReferenceChange(nextParams);
+    },
+    [
+      handleReferenceChange,
+      params.bookId,
+      params.chapter,
+      params.versionId,
+    ],
   );
 
   if (status === "loading") {
@@ -439,19 +571,57 @@ export default function BibleReaderScreen({
     );
   }
 
+  const previousParams =
+    getPreviousOfflineBibleReaderRouteParams(params);
+  const nextParams = getNextOfflineBibleReaderRouteParams(params);
+
+  const readerChromeAnimatedStyle = {
+    transform: [
+      {
+        translateY: readerChromeTranslateYRef.current,
+      },
+    ],
+  };
+
   return (
     <View style={styles.screen}>
-      <BibleReaderHeader
-        version={data.version}
-        book={data.book}
-        chapter={data.chapter.chapter}
-        onRequestBack={onRequestBack}
-      />
+      <Animated.View
+        accessibilityElementsHidden={readerChromeHidden}
+        importantForAccessibility={
+          readerChromeHidden ? "no-hide-descendants" : "auto"
+        }
+        pointerEvents={readerChromeHidden ? "none" : "auto"}
+        onLayout={(event) => {
+          handleReaderChromeLayout(event.nativeEvent.layout.height);
+        }}
+        style={[styles.readerChrome, readerChromeAnimatedStyle]}
+      >
+        <BibleReaderHeader
+          version={data.version}
+          versions={data.versions}
+          book={data.book}
+          chapter={data.chapter.chapter}
+          canGoPrevious={previousParams !== null}
+          canGoNext={nextParams !== null}
+          onRequestBack={onRequestBack}
+          onRequestPrevious={
+            previousParams
+              ? () => handleReferenceChange(previousParams)
+              : undefined
+          }
+          onRequestNext={
+            nextParams
+              ? () => handleReferenceChange(nextParams)
+              : undefined
+          }
+          onSelectVersion={handleVersionChange}
+        />
 
-      <BibleReaderFontControls
-        value={fontScale}
-        onChange={handleFontScaleChange}
-      />
+        <BibleReaderFontControls
+          value={fontScale}
+          onChange={handleFontScaleChange}
+        />
+      </Animated.View>
 
       <BibleVerseList
         verses={data.chapter.verses}
@@ -459,6 +629,8 @@ export default function BibleReaderScreen({
         initialVerse={initialVerse}
         onFirstVisibleVerseChange={handleFirstVisibleVerseChange}
         onInitialRestoreComplete={handleInitialRestoreComplete}
+        onScrollOffsetChange={handleReadingScrollOffsetChange}
+        contentTopInset={readerChromeHeight ?? 0}
       />
     </View>
   );
@@ -528,6 +700,14 @@ function ReaderState({
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
+    backgroundColor: colors.background,
+  },
+  readerChrome: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 2,
     backgroundColor: colors.background,
   },
   stateScreen: {
