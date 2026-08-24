@@ -35,9 +35,9 @@ export function BibleVersionSelector({
   return (
     <View style={styles.container}>
       <View style={styles.heading}>
-        <Text style={styles.label}>Versão da Bíblia</Text>
+        <Text style={styles.label}>Escolha sua versão</Text>
         <Text style={styles.helper}>
-          Troque sem perder o livro e o capítulo atuais.
+          Selecione a versão que deseja usar em sua leitura.
         </Text>
       </View>
 

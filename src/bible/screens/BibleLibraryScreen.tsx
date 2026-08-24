@@ -5,6 +5,7 @@ import React, {
   useRef,
   useState,
 } from "react";
+import { useFocusEffect } from "@react-navigation/native";
 import {
   ActivityIndicator,
   Modal,
@@ -19,6 +20,7 @@ import { getBibleBookById } from "../../domain/bible/bibleBooks";
 import type { BibleBookId } from "../../domain/bible/bibleReference";
 import type { BibleVersionId } from "../../domain/bible/bibleVersion";
 import { colors } from "../../theme/colors";
+import { useAppShellChrome } from "../../navigation/AppShellChromeContext";
 import { BibleBookList } from "../components/BibleBookList";
 import { BibleChapterSelector } from "../components/BibleChapterSelector";
 import { BibleVersionSelector } from "../components/BibleVersionSelector";
@@ -46,11 +48,12 @@ type BibleLibraryScreenProps = Readonly<{
 type CatalogStatus = "loading" | "ready" | "empty" | "error";
 
 const LOAD_ERROR_MESSAGE =
-  "Não foi possível carregar a Bíblia offline. Tente novamente.";
+  "Não foi possível carregar a Bíblia agora. Tente novamente.";
 
 export default function BibleLibraryScreen({
   onSelectChapter,
 }: BibleLibraryScreenProps) {
+  const { handleScroll, resetChrome } = useAppShellChrome();
   const repositoryRef = useRef<BibleRepository | null>(null);
   const catalogGenerationRef = useRef(0);
 
@@ -183,6 +186,12 @@ export default function BibleLibraryScreen({
     };
   }, [loadCatalog]);
 
+  useFocusEffect(
+    useCallback(() => {
+      resetChrome();
+    }, [resetChrome]),
+  );
+
   const handleSelectVersion = useCallback(
     async (versionId: BibleVersionId) => {
       const repository = repositoryRef.current;
@@ -292,9 +301,9 @@ export default function BibleLibraryScreen({
     return (
       <View style={styles.centerState}>
         <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={styles.centerTitle}>Carregando Bíblia offline</Text>
+        <Text style={styles.centerTitle}>Preparando sua Bíblia</Text>
         <Text style={styles.centerText}>
-          Preparando versões, livros e capítulos disponíveis no aparelho.
+          Organizando livros, capítulos e versões para sua leitura.
         </Text>
       </View>
     );
@@ -329,19 +338,21 @@ export default function BibleLibraryScreen({
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
       >
         <View style={styles.header}>
           <View style={styles.headerTopLine}>
-            <Text style={styles.eyebrow}>BÍBLIA OFFLINE</Text>
+            <Text style={styles.eyebrow}>BÍBLIA SAGRADA</Text>
             <View style={styles.offlineBadge}>
-              <Text style={styles.offlineBadgeText}>NO APARELHO</Text>
+              <Text style={styles.offlineBadgeText}>SEMPRE COM VOCÊ</Text>
             </View>
           </View>
 
-          <Text style={styles.title}>Sua Bíblia, pronta para a jornada</Text>
+          <Text style={styles.title}>Uma Bíblia completa e prática para sua edificação</Text>
           <Text style={styles.subtitle}>
-            Escolha a versão e o livro. Os capítulos abrem em uma seleção
-            rápida, sem tirar o foco da leitura.
+            Leia, medite e aprofunde-se na Palavra de Deus com acesso
+            simples e rápido a livros, capítulos e versões.
           </Text>
         </View>
 
@@ -364,7 +375,7 @@ export default function BibleLibraryScreen({
                 {lastReading.verse ? `:${lastReading.verse}` : ""}
               </Text>
               <Text style={styles.continueMeta}>
-                {continueReadingVersion.displayName} · posição salva
+                {continueReadingVersion.displayName} · última leitura
               </Text>
             </View>
 
