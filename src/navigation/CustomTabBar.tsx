@@ -1,4 +1,5 @@
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
+import { getFocusedRouteNameFromRoute } from "@react-navigation/native";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import Animated, { useAnimatedStyle } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -132,6 +133,17 @@ export default function CustomTabBar({
   const insets = useSafeAreaInsets();
   const { chromeProgress } = useAppShellChrome();
 
+  const focusedParentRoute = state.routes[state.index];
+  const bibleRoute = state.routes.find(
+    (route) => route.name === "BibleTab",
+  );
+  const focusedBibleRouteName = bibleRoute
+    ? getFocusedRouteNameFromRoute(bibleRoute)
+    : undefined;
+  const isBibleReaderFocused =
+    focusedParentRoute?.name === "BibleTab" &&
+    focusedBibleRouteName === "BibleReader";
+
   const bottomPadding = Math.max(insets.bottom, 8);
   const hiddenHeight = insets.bottom;
   const visibleHeight =
@@ -153,6 +165,10 @@ export default function CustomTabBar({
       },
     ],
   }));
+
+  if (isBibleReaderFocused) {
+    return null;
+  }
 
   return (
     <Animated.View style={[styles.animatedShell, shellAnimatedStyle]}>

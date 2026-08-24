@@ -44,7 +44,12 @@ export function BibleReaderHeader({
               pressed && styles.backButtonPressed,
             ]}
           >
-            <Text style={styles.backButtonText}>Voltar</Text>
+            <View style={styles.backButtonContent}>
+              <Text accessible={false} style={styles.backButtonIcon}>
+                ←
+              </Text>
+              <Text style={styles.backButtonText}>Voltar</Text>
+            </View>
           </Pressable>
         ) : (
           <View style={styles.backPlaceholder} />
@@ -52,10 +57,10 @@ export function BibleReaderHeader({
 
         <View
           accessibilityRole="text"
-          accessibilityLabel={`Leitura offline, ${version.displayName}`}
+          accessibilityLabel={`Leitura disponível sem internet, ${version.displayName}`}
           style={styles.offlineBadge}
         >
-          <Text style={styles.offlineBadgeText}>OFFLINE</Text>
+          <Text style={styles.offlineBadgeText}>SEM INTERNET</Text>
         </View>
       </View>
 
@@ -175,15 +180,29 @@ const styles = StyleSheet.create({
   backButton: {
     minHeight: 44,
     justifyContent: "center",
-    paddingRight: 12,
+    borderRadius: 12,
+    backgroundColor: colors.secondary,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
   },
   backButtonPressed: {
-    opacity: 0.7,
+    backgroundColor: colors.secondaryPressed,
+  },
+  backButtonContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  backButtonIcon: {
+    color: colors.primary,
+    fontSize: 18,
+    lineHeight: 20,
+    fontWeight: "900",
   },
   backButtonText: {
     color: colors.primary,
     fontSize: 14,
-    fontWeight: "700",
+    fontWeight: "800",
   },
   backPlaceholder: {
     width: 1,
@@ -248,13 +267,13 @@ const styles = StyleSheet.create({
   },
   chapterButton: {
     flex: 1,
-    minHeight: 42,
+    minHeight: 44,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.secondary,
     borderRadius: 12,
-    backgroundColor: colors.surfaceAlt,
+    backgroundColor: colors.primarySoft,
     paddingHorizontal: 10,
   },
   chapterButtonDisabled: {
