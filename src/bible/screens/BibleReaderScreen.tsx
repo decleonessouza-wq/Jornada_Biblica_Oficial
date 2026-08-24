@@ -13,12 +13,15 @@ import {
 } from "react-native";
 
 import type { BibleBook } from "../../domain/bible/bibleBooks";
+import type { BibleVersionId } from "../../domain/bible/bibleVersion";
 import { colors } from "../../theme/colors";
 import { BibleReaderFontControls } from "../components/BibleReaderFontControls";
 import { BibleReaderHeader } from "../components/BibleReaderHeader";
 import { BibleVerseList } from "../components/BibleVerseList";
 import {
   DEFAULT_BIBLE_READER_FONT_SCALE,
+  getNextOfflineBibleReaderRouteParams,
+  getPreviousOfflineBibleReaderRouteParams,
   parseOfflineBibleReaderRouteParams,
   type BibleReaderFontScale,
   type OfflineBibleLastReading,
@@ -35,11 +38,15 @@ import {
   loadOfflineBibleLastReading,
   saveOfflineBibleFontScale,
   saveOfflineBibleLastReading,
+  savePreferredOfflineBibleVersion,
 } from "../state/bibleReaderPreferencesStore";
 
 type BibleReaderScreenProps = Readonly<{
   params: OfflineBibleReaderRouteParams;
   onRequestBack?: () => void;
+  onRequestReferenceChange?: (
+    params: OfflineBibleReaderRouteParams,
+  ) => void;
 }>;
 
 type ReaderStatus =
@@ -52,6 +59,7 @@ type ReaderStatus =
 
 type ReaderData = Readonly<{
   version: BibleInstalledVersion;
+  versions: readonly BibleInstalledVersion[];
   book: BibleBook;
   chapter: BibleChapterRecord;
 }>;
@@ -64,6 +72,7 @@ const VISIBLE_VERSE_PERSIST_DEBOUNCE_MS = 500;
 export default function BibleReaderScreen({
   params,
   onRequestBack,
+  onRequestReferenceChange,
 }: BibleReaderScreenProps) {
   const repositoryRef = useRef<BibleRepository | null>(null);
   const generationRef = useRef(0);
@@ -205,9 +214,11 @@ export default function BibleReaderScreen({
         return;
       }
 
-      const version = installedVersions.find(
-        (candidate) =>
-          candidate.id === parsedParams.versionId && candidate.enabled,
+      const enabledVersions = installedVersions.filter(
+        (candidate) => candidate.enabled,
+      );
+      const version = enabledVersions.find(
+        (candidate) => candidate.id === parsedParams.versionId,
       );
 
       if (!version) {
@@ -280,6 +291,7 @@ export default function BibleReaderScreen({
       setFontScale(savedFontScale);
       setData({
         version,
+        versions: enabledVersions,
         book,
         chapter,
       });
@@ -385,6 +397,51 @@ export default function BibleReaderScreen({
     [fontScale],
   );
 
+  const handleReferenceChange = useCallback(
+    (nextParams: OfflineBibleReaderRouteParams) => {
+      const validatedParams =
+        parseOfflineBibleReaderRouteParams(nextParams);
+
+      if (!validatedParams || !onRequestReferenceChange) {
+        return;
+      }
+
+      flushPendingVisibleVerse();
+      onRequestReferenceChange(validatedParams);
+    },
+    [flushPendingVisibleVerse, onRequestReferenceChange],
+  );
+
+  const handleVersionChange = useCallback(
+    (versionId: BibleVersionId) => {
+      if (versionId === params.versionId) {
+        return;
+      }
+
+      const nextParams = parseOfflineBibleReaderRouteParams({
+        versionId,
+        bookId: params.bookId,
+        chapter: params.chapter,
+      });
+
+      if (!nextParams) {
+        return;
+      }
+
+      void savePreferredOfflineBibleVersion(versionId).catch((error) => {
+        console.warn("BIBLE_READER_PREFERRED_VERSION_SAVE_FAILED", error);
+      });
+
+      handleReferenceChange(nextParams);
+    },
+    [
+      handleReferenceChange,
+      params.bookId,
+      params.chapter,
+      params.versionId,
+    ],
+  );
+
   if (status === "loading") {
     return (
       <ReaderState
@@ -439,13 +496,31 @@ export default function BibleReaderScreen({
     );
   }
 
+  const previousParams =
+    getPreviousOfflineBibleReaderRouteParams(params);
+  const nextParams = getNextOfflineBibleReaderRouteParams(params);
+
   return (
     <View style={styles.screen}>
       <BibleReaderHeader
         version={data.version}
+        versions={data.versions}
         book={data.book}
         chapter={data.chapter.chapter}
+        canGoPrevious={previousParams !== null}
+        canGoNext={nextParams !== null}
         onRequestBack={onRequestBack}
+        onRequestPrevious={
+          previousParams
+            ? () => handleReferenceChange(previousParams)
+            : undefined
+        }
+        onRequestNext={
+          nextParams
+            ? () => handleReferenceChange(nextParams)
+            : undefined
+        }
+        onSelectVersion={handleVersionChange}
       />
 
       <BibleReaderFontControls

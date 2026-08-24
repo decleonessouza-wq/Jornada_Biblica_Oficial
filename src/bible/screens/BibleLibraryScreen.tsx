@@ -165,10 +165,21 @@ export default function BibleLibraryScreen({
         const nextBooks = await repository.listBooks(versionId);
         await savePreferredOfflineBibleVersion(versionId);
 
+        const nextSelectedBook =
+          selectedBookId === null
+            ? null
+            : nextBooks.find((book) => book.id === selectedBookId) ?? null;
+        const nextSelectedChapter =
+          nextSelectedBook !== null &&
+          selectedChapter !== null &&
+          selectedChapter <= nextSelectedBook.chapterCount
+            ? selectedChapter
+            : null;
+
         setSelectedVersionId(versionId);
         setBooks(nextBooks);
-        setSelectedBookId(null);
-        setSelectedChapter(null);
+        setSelectedBookId(nextSelectedBook?.id ?? null);
+        setSelectedChapter(nextSelectedChapter);
         setStatus(nextBooks.length > 0 ? "ready" : "empty");
       } catch (error) {
         console.warn("BIBLE_LIBRARY_VERSION_CHANGE_FAILED", error);
@@ -179,7 +190,12 @@ export default function BibleLibraryScreen({
         setBooksLoading(false);
       }
     },
-    [booksLoading, selectedVersionId],
+    [
+      booksLoading,
+      selectedBookId,
+      selectedChapter,
+      selectedVersionId,
+    ],
   );
 
   const handleSelectBook = useCallback((bookId: BibleBookId) => {

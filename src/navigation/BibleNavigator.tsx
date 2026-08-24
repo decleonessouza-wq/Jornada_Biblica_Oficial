@@ -58,10 +58,17 @@ function BibleReaderRoute({
     navigation.replace("BibleLibrary");
   };
 
+  const handleRequestReferenceChange = (
+    params: OfflineBibleReaderRouteParams,
+  ) => {
+    navigation.replace("BibleReader", params);
+  };
+
   return (
     <BibleReaderScreen
       params={route.params}
       onRequestBack={handleRequestBack}
+      onRequestReferenceChange={handleRequestReferenceChange}
     />
   );
 }
