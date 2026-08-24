@@ -30,7 +30,7 @@ export function BibleChapterSelector({
       <View style={styles.emptyState}>
         <Text style={styles.emptyTitle}>Selecione um livro</Text>
         <Text style={styles.emptyText}>
-          Os capítulos aparecerão aqui após a escolha do livro.
+          Os capítulos aparecerão após a escolha do livro.
         </Text>
       </View>
     );
@@ -38,10 +38,9 @@ export function BibleChapterSelector({
 
   return (
     <View style={styles.container}>
-      <View style={styles.heading}>
-        <Text style={styles.label}>Escolha o capítulo</Text>
-        <Text style={styles.bookName}>{book.canonicalName}</Text>
-      </View>
+      <Text style={styles.helper}>
+        {book.chapterCount} {book.chapterCount === 1 ? "capítulo" : "capítulos"} disponíveis
+      </Text>
 
       <View style={styles.chapterGrid}>
         {chapters.map((chapter) => {
@@ -82,17 +81,9 @@ const styles = StyleSheet.create({
   container: {
     gap: 12,
   },
-  heading: {
-    gap: 2,
-  },
-  label: {
-    color: colors.textStrong,
-    fontSize: 15,
-    fontWeight: "700",
-  },
-  bookName: {
+  helper: {
     color: colors.textMuted,
-    fontSize: 13,
+    fontSize: 12,
   },
   chapterGrid: {
     flexDirection: "row",
@@ -100,14 +91,14 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   chapterButton: {
-    width: 44,
-    height: 44,
+    width: 48,
+    height: 48,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 12,
-    backgroundColor: colors.surface,
+    borderRadius: 13,
+    backgroundColor: colors.surfaceAlt,
   },
   chapterButtonSelected: {
     borderColor: colors.primary,
@@ -120,9 +111,9 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   chapterNumber: {
-    color: colors.text,
+    color: colors.textStrong,
     fontSize: 14,
-    fontWeight: "700",
+    fontWeight: "800",
   },
   chapterNumberSelected: {
     color: colors.textInverse,
