@@ -54,6 +54,15 @@ export default function AppDrawerNavigator() {
           drawerLabel: "Início",
           headerShown: false,
         }}
+        listeners={({ navigation }) => ({
+          drawerItemPress: (event) => {
+            event.preventDefault();
+            navigation.navigate("MainTabs", {
+              screen: "HomeTab",
+            });
+            navigation.closeDrawer();
+          },
+        })}
       >
         {({ navigation }) => {
           const handleOpenPlan = () => {
