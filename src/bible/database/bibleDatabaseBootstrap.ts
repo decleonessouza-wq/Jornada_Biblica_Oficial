@@ -3,10 +3,15 @@
  *
  * O seed validado é instalado antes da abertura da conexão. Depois disso:
  * - WAL e foreign keys são habilitados;
- * - migrations estruturais são executadas;
+ * - migrations estruturais promovem a cópia runtime até o schema atual;
  * - schema, integridade, proveniência e contagens do corpus são validados.
  *
- * FTS e integração com navegação/UI continuam fora deste gate.
+ * O schema do seed empacotado e o schema runtime são conceitos distintos:
+ * o seed permanece v1 e a cópia instalada pode avançar por migrations.
+ *
+ * A infraestrutura de busca materializa o backend apropriado por plataforma:
+ * FTS5 no nativo e índice compacto portátil no Web. Navegação/UI permanecem
+ * fora deste módulo.
  */
 
 import type { SQLiteDatabase } from "expo-sqlite";
@@ -20,7 +25,12 @@ import {
   runBibleDatabaseMigrations,
 } from "./bibleDatabaseMigrations";
 import { BIBLE_DATABASE_SCHEMA_VERSION } from "./bibleDatabaseSchema";
-import { BIBLE_SEED_CONTRACT } from "./bibleDatabaseSeed";
+import {
+  BIBLE_SEED_CONTRACT,
+  confirmBibleSeedInstallationValidated,
+  invalidateBibleSeedInstallationValidation,
+} from "./bibleDatabaseSeed";
+import { ensureBibleSearchIndexReady } from "./bibleSearchIndex";
 
 const BIBLE_DATABASE_REQUIRED_TABLES = [
   "bible_meta",
@@ -28,6 +38,9 @@ const BIBLE_DATABASE_REQUIRED_TABLES = [
   "bible_books",
   "bible_chapters",
   "bible_verses",
+  "bible_search_documents",
+  "bible_search_dictionary",
+  "bible_search_postings",
 ] as const;
 
 type BibleForeignKeysPragmaRow = Readonly<{
@@ -98,9 +111,9 @@ async function validateBibleDatabase(
     );
   }
 
-  if (userVersion !== BIBLE_SEED_CONTRACT.schemaVersion) {
+  if (BIBLE_SEED_CONTRACT.schemaVersion > BIBLE_DATABASE_SCHEMA_VERSION) {
     throw new Error(
-      `BIBLE_DATABASE_SEED_SCHEMA_VERSION_MISMATCH:${userVersion}`,
+      `BIBLE_DATABASE_SEED_SCHEMA_NEWER_THAN_RUNTIME:SEED=${BIBLE_SEED_CONTRACT.schemaVersion}:RUNTIME=${BIBLE_DATABASE_SCHEMA_VERSION}`,
     );
   }
 
@@ -313,10 +326,14 @@ async function performBibleDatabaseBootstrap(): Promise<SQLiteDatabase> {
     await database.execAsync("PRAGMA foreign_keys = ON;");
 
     await runBibleDatabaseMigrations(database);
+    await ensureBibleSearchIndexReady(database);
     await validateBibleDatabase(database);
+    confirmBibleSeedInstallationValidated();
 
     return database;
   } catch (error) {
+    invalidateBibleSeedInstallationValidation();
+
     try {
       await closeBibleDatabaseConnection();
     } catch {

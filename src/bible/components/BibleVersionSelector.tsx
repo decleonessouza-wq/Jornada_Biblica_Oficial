@@ -52,6 +52,7 @@ export function BibleVersionSelector({
               key={version.id}
               accessibilityRole="radio"
               accessibilityLabel={`Selecionar ${version.displayName}`}
+              aria-selected={selected}
               accessibilityState={{
                 selected,
                 disabled: itemDisabled,

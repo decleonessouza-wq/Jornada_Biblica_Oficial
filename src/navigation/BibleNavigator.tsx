@@ -8,7 +8,12 @@ import {
 
 import BibleLibraryScreen from "../bible/screens/BibleLibraryScreen";
 import BibleReaderScreen from "../bible/screens/BibleReaderScreen";
+import BibleSearchScreen from "../bible/screens/BibleSearchScreen";
+import type { BibleSearchResult } from "../bible/repositories/bibleSearchRepository";
+import type { BibleReference } from "../domain/bible/bibleReference";
+import type { BibleVersionId } from "../domain/bible/bibleVersion";
 import {
+  getOfflineBibleReaderRouteParamsForReference,
   parseOfflineBibleReaderRouteParams,
   type OfflineBibleReaderRouteParams,
 } from "../bible/reader/bibleReaderContracts";
@@ -33,9 +38,72 @@ function BibleLibraryRoute({
 }: BibleStackScreenProps<"BibleLibrary">) {
   return (
     <BibleLibraryScreen
+      onRequestSearch={() => {
+        navigation.navigate("BibleSearch");
+      }}
       onSelectChapter={(params) => {
         navigation.navigate("BibleReader", params);
       }}
+    />
+  );
+}
+
+function BibleSearchRoute({
+  navigation,
+}: BibleStackScreenProps<"BibleSearch">) {
+  const handleRequestBack = () => {
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+      return;
+    }
+
+    navigation.replace("BibleLibrary");
+  };
+
+  const handleOpenResult = (result: BibleSearchResult) => {
+    const params = parseOfflineBibleReaderRouteParams({
+      versionId: result.versionId,
+      bookId: result.bookId,
+      chapter: result.chapter,
+      verse: result.verse,
+    });
+
+    if (!params) {
+      console.warn(
+        "BIBLE_SEARCH_RESULT_TO_READER_ROUTE_INVALID",
+        result,
+      );
+      return;
+    }
+
+    navigation.navigate("BibleReader", params);
+  };
+
+  const handleOpenReference = (
+    reference: BibleReference,
+    versionId: BibleVersionId,
+  ) => {
+    const params = getOfflineBibleReaderRouteParamsForReference(
+      reference,
+      versionId,
+    );
+
+    if (!params) {
+      console.warn(
+        "BIBLE_SEARCH_REFERENCE_TO_READER_ROUTE_INVALID",
+        reference,
+      );
+      return;
+    }
+
+    navigation.navigate("BibleReader", params);
+  };
+
+  return (
+    <BibleSearchScreen
+      onRequestBack={handleRequestBack}
+      onRequestOpenReference={handleOpenReference}
+      onRequestOpenResult={handleOpenResult}
     />
   );
 }
@@ -157,6 +225,10 @@ export default function BibleNavigator() {
       <BibleStack.Screen
         name="BibleLibrary"
         component={BibleLibraryRoute}
+      />
+      <BibleStack.Screen
+        name="BibleSearch"
+        component={BibleSearchRoute}
       />
       <BibleStack.Screen
         name="BibleReader"
