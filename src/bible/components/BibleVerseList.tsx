@@ -6,6 +6,7 @@ import React, {
 } from "react";
 import {
   FlatList,
+  Platform,
   StyleSheet,
   Text,
   View,
@@ -23,6 +24,7 @@ type BibleVerseListProps = Readonly<{
   verses: readonly BibleVerseRecord[];
   fontScale: BibleReaderFontScale;
   initialVerse?: number;
+  highlightedVerse?: number;
   onFirstVisibleVerseChange?: (verse: number) => void;
   onInitialRestoreComplete?: () => void;
   onScrollOffsetChange?: (offsetY: number) => void;
@@ -34,6 +36,47 @@ type ReaderTypography = Readonly<{
   verseTextSize: number;
   verseLineHeight: number;
 }>;
+
+type NativeMeasurableNode = {
+  measureInWindow: (
+    callback: (
+      x: number,
+      y: number,
+      width: number,
+      height: number,
+    ) => void,
+  ) => void;
+};
+
+function isNativeMeasurableNode(
+  node: unknown,
+): node is NativeMeasurableNode {
+  if (
+    typeof node !== "object" ||
+    node === null ||
+    !("measureInWindow" in node)
+  ) {
+    return false;
+  }
+
+  return (
+    typeof (
+      node as { measureInWindow?: unknown }
+    ).measureInWindow === "function"
+  );
+}
+type WebMeasuredNode = {
+  getBoundingClientRect: () => {
+    top: number;
+    bottom: number;
+  };
+};
+
+type WebScrollableNode = WebMeasuredNode & {
+  scrollTop: number;
+  scrollHeight: number;
+  clientHeight: number;
+};
 
 const TYPOGRAPHY_BY_SCALE: Record<
   BibleReaderFontScale,
@@ -63,11 +106,13 @@ const TYPOGRAPHY_BY_SCALE: Record<
 
 const INITIAL_RESTORE_FALLBACK_MS = 1200;
 const INITIAL_RESTORE_RETRY_MS = 120;
+const NATIVE_RESTORE_POSITION_EPSILON_PX = 3;
 
 export function BibleVerseList({
   verses,
   fontScale,
   initialVerse,
+  highlightedVerse,
   onFirstVisibleVerseChange,
   onInitialRestoreComplete,
   onScrollOffsetChange,
@@ -80,6 +125,14 @@ export function BibleVerseList({
     useRef<ReturnType<typeof setTimeout> | null>(null);
   const restoreRetryTimerRef =
     useRef<ReturnType<typeof setTimeout> | null>(null);
+  const webMeasuredRestoreTimerRef =
+    useRef<ReturnType<typeof setTimeout> | null>(null);
+  const nativeMeasuredRestoreTimerRef =
+    useRef<ReturnType<typeof setTimeout> | null>(null);
+  const currentScrollOffsetRef = useRef(0);
+  const contentTopInsetRef = useRef(contentTopInset);
+  const targetVerseRef =
+    useRef<React.ComponentRef<typeof View> | null>(null);
   const firstVisibleCallbackRef = useRef(onFirstVisibleVerseChange);
   const restoreCompleteCallbackRef = useRef(onInitialRestoreComplete);
   const scrollOffsetCallbackRef = useRef(onScrollOffsetChange);
@@ -108,6 +161,10 @@ export function BibleVerseList({
     scrollOffsetCallbackRef.current = onScrollOffsetChange;
   }, [onScrollOffsetChange]);
 
+  useEffect(() => {
+    contentTopInsetRef.current = contentTopInset;
+  }, [contentTopInset]);
+
   const clearRestoreTimers = useCallback(() => {
     if (restoreFallbackTimerRef.current !== null) {
       clearTimeout(restoreFallbackTimerRef.current);
@@ -117,6 +174,16 @@ export function BibleVerseList({
     if (restoreRetryTimerRef.current !== null) {
       clearTimeout(restoreRetryTimerRef.current);
       restoreRetryTimerRef.current = null;
+    }
+
+    if (webMeasuredRestoreTimerRef.current !== null) {
+      clearTimeout(webMeasuredRestoreTimerRef.current);
+      webMeasuredRestoreTimerRef.current = null;
+    }
+
+    if (nativeMeasuredRestoreTimerRef.current !== null) {
+      clearTimeout(nativeMeasuredRestoreTimerRef.current);
+      nativeMeasuredRestoreTimerRef.current = null;
     }
   }, []);
 
@@ -136,36 +203,183 @@ export function BibleVerseList({
     [],
   );
 
+  const attemptWebMeasuredRestore = useCallback(() => {
+    if (
+      Platform.OS !== "web" ||
+      restoreCompletedRef.current
+    ) {
+      return;
+    }
+
+    const targetNode =
+      targetVerseRef.current as unknown as WebMeasuredNode | null;
+    const scrollNode =
+      listRef.current?.getScrollableNode() as unknown as
+        | WebScrollableNode
+        | null
+        | undefined;
+
+    if (
+      targetNode === null ||
+      scrollNode === null ||
+      scrollNode === undefined ||
+      typeof targetNode.getBoundingClientRect !== "function" ||
+      typeof scrollNode.getBoundingClientRect !== "function"
+    ) {
+      return;
+    }
+
+    const targetRect = targetNode.getBoundingClientRect();
+    const containerRect = scrollNode.getBoundingClientRect();
+    const rawOffset =
+      scrollNode.scrollTop +
+      targetRect.top -
+      containerRect.top;
+
+    if (!Number.isFinite(rawOffset)) {
+      return;
+    }
+
+    const maxScrollTop = Math.max(
+      0,
+      scrollNode.scrollHeight - scrollNode.clientHeight,
+    );
+    const boundedOffset = Math.max(
+      0,
+      Math.min(maxScrollTop, rawOffset),
+    );
+
+    scrollNode.scrollTop = boundedOffset;
+
+    const restoredTargetRect = targetNode.getBoundingClientRect();
+    const restoredContainerRect = scrollNode.getBoundingClientRect();
+    const targetIsVisible =
+      restoredTargetRect.bottom > restoredContainerRect.top &&
+      restoredTargetRect.top < restoredContainerRect.bottom;
+
+    if (targetIsVisible) {
+      completeInitialRestore();
+    }
+  }, [completeInitialRestore]);
+
+  const attemptNativeMeasuredRestore = useCallback(() => {
+    if (Platform.OS === "web" || restoreCompletedRef.current) {
+      return;
+    }
+
+    const targetNode = targetVerseRef.current;
+    const scrollNode = listRef.current?.getNativeScrollRef();
+    const topInset = contentTopInsetRef.current;
+
+    if (
+      !targetNode ||
+      !isNativeMeasurableNode(scrollNode) ||
+      !Number.isFinite(topInset) ||
+      topInset <= 0
+    ) {
+      return;
+    }
+
+    targetNode.measureInWindow(
+      (_targetX, targetY, _targetWidth, targetHeight) => {
+        if (
+          restoreCompletedRef.current ||
+          !Number.isFinite(targetY) ||
+          !Number.isFinite(targetHeight) ||
+          targetHeight <= 0
+        ) {
+          return;
+        }
+
+        scrollNode.measureInWindow(
+          (_listX, listY, _listWidth, listHeight) => {
+            if (
+              restoreCompletedRef.current ||
+              !Number.isFinite(listY) ||
+              !Number.isFinite(listHeight) ||
+              listHeight <= 0
+            ) {
+              return;
+            }
+
+            const desiredTargetY = listY + topInset;
+            const targetDelta = targetY - desiredTargetY;
+
+            if (
+              Math.abs(targetDelta) <=
+              NATIVE_RESTORE_POSITION_EPSILON_PX
+            ) {
+              completeInitialRestore();
+              return;
+            }
+
+            const nextOffset = Math.max(
+              0,
+              currentScrollOffsetRef.current + targetDelta,
+            );
+
+            if (!Number.isFinite(nextOffset)) {
+              return;
+            }
+
+            currentScrollOffsetRef.current = nextOffset;
+
+            listRef.current?.scrollToOffset({
+              offset: nextOffset,
+              animated: false,
+            });
+          },
+        );
+      },
+    );
+  }, [completeInitialRestore]);
   const renderItem = useCallback<ListRenderItem<BibleVerseRecord>>(
-    ({ item }) => (
-      <View
-        accessible
-        accessibilityRole="text"
-        accessibilityLabel={`Versículo ${item.verse}. ${item.text}`}
-        style={styles.verseRow}
-      >
-        <Text
+    ({ item }) => {
+      const isHighlighted = item.verse === highlightedVerse;
+      const isRestoreTarget = item.verse === initialVerse;
+
+      return (
+        <View
+          ref={isRestoreTarget ? targetVerseRef : undefined}
+          testID={
+            isHighlighted ? "bible-reader-highlighted-verse" : undefined
+          }
+          accessible
+          accessibilityRole="text"
+          accessibilityLabel={`${
+            isHighlighted ? "Resultado da busca. " : ""
+          }Vers?culo ${item.verse}. ${item.text}`}
           style={[
-            styles.verseNumber,
-            { fontSize: typography.verseNumberSize },
+            styles.verseRow,
+            isHighlighted && styles.verseRowHighlighted,
           ]}
         >
-          {item.verse}
-        </Text>
-        <Text
-          style={[
-            styles.verseText,
-            {
-              fontSize: typography.verseTextSize,
-              lineHeight: typography.verseLineHeight,
-            },
-          ]}
-        >
-          {item.text}
-        </Text>
-      </View>
-    ),
-    [typography],
+          <Text
+            style={[
+              styles.verseNumber,
+              { fontSize: typography.verseNumberSize },
+              isHighlighted && styles.verseNumberHighlighted,
+            ]}
+          >
+            {item.verse}
+          </Text>
+
+          <Text
+            style={[
+              styles.verseText,
+              {
+                fontSize: typography.verseTextSize,
+                lineHeight: typography.verseLineHeight,
+              },
+              isHighlighted && styles.verseTextHighlighted,
+            ]}
+          >
+            {item.text}
+          </Text>
+        </View>
+      );
+    },
+    [highlightedVerse, initialVerse, typography],
   );
 
   const viewabilityConfig = useRef({
@@ -195,13 +409,14 @@ export function BibleVerseList({
       const targetVerse = restoreTargetVerseRef.current;
 
       if (
+        Platform.OS !== "web" &&
         targetVerse !== null &&
         !restoreCompletedRef.current &&
         orderedVisibleItems.some(
           (token) => token.item.verse === targetVerse,
         )
       ) {
-        completeInitialRestore();
+        attemptNativeMeasuredRestore();
       }
 
       if (!restoreCompletedRef.current) {
@@ -229,16 +444,81 @@ export function BibleVerseList({
     restoreTargetVerseRef.current = initialVerse;
     restoreCompletedRef.current = false;
 
+    const runWebMeasuredRestore = (): void => {
+      if (
+        Platform.OS !== "web" ||
+        restoreCompletedRef.current
+      ) {
+        return;
+      }
+
+      attemptWebMeasuredRestore();
+
+      if (restoreCompletedRef.current) {
+        return;
+      }
+
+      webMeasuredRestoreTimerRef.current = setTimeout(
+        runWebMeasuredRestore,
+        INITIAL_RESTORE_RETRY_MS,
+      );
+    };
+
+    const runNativeMeasuredRestore = (): void => {
+      if (Platform.OS === "web" || restoreCompletedRef.current) {
+        return;
+      }
+
+      attemptNativeMeasuredRestore();
+
+      if (restoreCompletedRef.current) {
+        return;
+      }
+
+      nativeMeasuredRestoreTimerRef.current = setTimeout(
+        runNativeMeasuredRestore,
+        INITIAL_RESTORE_RETRY_MS,
+      );
+    };
+
+
     const startTimer = setTimeout(() => {
       listRef.current?.scrollToIndex({
         index: initialIndex,
         animated: false,
         viewPosition: 0,
       });
+
+      if (Platform.OS === "web") {
+        webMeasuredRestoreTimerRef.current = setTimeout(
+          runWebMeasuredRestore,
+          INITIAL_RESTORE_RETRY_MS,
+        );
+      } else {
+        nativeMeasuredRestoreTimerRef.current = setTimeout(
+          runNativeMeasuredRestore,
+          INITIAL_RESTORE_RETRY_MS,
+        );
+      }
     }, 0);
 
     restoreFallbackTimerRef.current = setTimeout(() => {
-      completeInitialRestore();
+      if (Platform.OS === "web") {
+        completeInitialRestore();
+        return;
+      }
+
+      if (restoreCompletedRef.current) {
+        return;
+      }
+
+      listRef.current?.scrollToIndex({
+        index: initialIndex,
+        animated: false,
+        viewPosition: 0,
+      });
+
+      attemptNativeMeasuredRestore();
     }, INITIAL_RESTORE_FALLBACK_MS);
 
     return () => {
@@ -246,6 +526,8 @@ export function BibleVerseList({
       clearRestoreTimers();
     };
   }, [
+    attemptNativeMeasuredRestore,
+    attemptWebMeasuredRestore,
     clearRestoreTimers,
     completeInitialRestore,
     initialIndex,
@@ -254,14 +536,16 @@ export function BibleVerseList({
 
   const handleScroll = useCallback(
     (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-      if (!restoreCompletedRef.current) {
-        return;
-      }
-
       const offsetY = Math.max(
         0,
         event.nativeEvent.contentOffset.y,
       );
+
+      currentScrollOffsetRef.current = offsetY;
+
+      if (!restoreCompletedRef.current) {
+        return;
+      }
 
       scrollOffsetCallbackRef.current?.(offsetY);
     },
@@ -279,8 +563,15 @@ export function BibleVerseList({
         return;
       }
 
+      const estimatedOffset = Math.max(
+        0,
+        averageItemLength * index,
+      );
+
+      currentScrollOffsetRef.current = estimatedOffset;
+
       listRef.current?.scrollToOffset({
-        offset: Math.max(0, averageItemLength * index),
+        offset: estimatedOffset,
         animated: false,
       });
 
@@ -363,15 +654,31 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     paddingVertical: 13,
   },
+  verseRowHighlighted: {
+    marginVertical: 4,
+    paddingHorizontal: 10,
+    backgroundColor: colors.surfaceHighlight,
+    borderLeftWidth: 4,
+    borderLeftColor: colors.secondary,
+    borderRadius: 10,
+  },
   verseNumber: {
     width: 32,
     paddingTop: 2,
     color: colors.secondaryPressed,
     fontWeight: "800",
   },
+  verseNumberHighlighted: {
+    color: colors.secondaryPressed,
+    fontWeight: "900",
+  },
   verseText: {
     flex: 1,
     color: colors.text,
+  },
+  verseTextHighlighted: {
+    color: colors.textStrong,
+    fontWeight: "600",
   },
   separator: {
     height: 1,

@@ -2,7 +2,6 @@ import React, { useEffect } from "react";
 import {
   AppState,
   AppStateStatus,
-  Platform,
 } from "react-native";
 
 import { bootstrapBibleDatabase } from "./src/bible/database/bibleDatabaseBootstrap";
@@ -17,10 +16,6 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (Platform.OS === "web") {
-      return;
-    }
-
     void bootstrapBibleDatabase().catch((error: unknown) => {
       console.error("[BibleDatabase] bootstrap failed", error);
     });

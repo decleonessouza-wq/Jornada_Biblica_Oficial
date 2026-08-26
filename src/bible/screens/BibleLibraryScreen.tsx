@@ -43,6 +43,7 @@ import {
 
 type BibleLibraryScreenProps = Readonly<{
   onSelectChapter?: (params: OfflineBibleReaderRouteParams) => void;
+  onRequestSearch?: () => void;
 }>;
 
 type CatalogStatus = "loading" | "ready" | "empty" | "error";
@@ -52,6 +53,7 @@ const LOAD_ERROR_MESSAGE =
 
 export default function BibleLibraryScreen({
   onSelectChapter,
+  onRequestSearch,
 }: BibleLibraryScreenProps) {
   const { handleScroll, resetChrome } = useAppShellChrome();
   const repositoryRef = useRef<BibleRepository | null>(null);
@@ -356,6 +358,30 @@ export default function BibleLibraryScreen({
           </Text>
         </View>
 
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Buscar na Bíblia"
+          onPress={onRequestSearch}
+          style={({ pressed }) => [
+            styles.searchEntry,
+            pressed && styles.searchEntryPressed,
+          ]}
+          testID="bible-library-search-entry"
+        >
+
+          <View style={styles.searchEntryContent}>
+            <Text style={styles.searchEntryEyebrow}>BUSCA BÍBLICA</Text>
+            <Text style={styles.searchEntryTitle}>Buscar na Bíblia</Text>
+            <Text style={styles.searchEntryText}>
+              Encontre palavras, frases ou referências em segundos.
+            </Text>
+          </View>
+
+          <Text accessible={false} style={styles.searchEntryArrow}>
+            ›
+          </Text>
+        </Pressable>
+
         {lastReading && continueReadingBook && continueReadingVersion && (
           <Pressable
             accessibilityRole="button"
@@ -544,6 +570,47 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: 14,
     lineHeight: 20,
+  },
+  searchEntry: {
+    minHeight: 88,
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: colors.primary,
+    borderRadius: 18,
+    backgroundColor: colors.primarySoft,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  searchEntryPressed: {
+    opacity: 0.84,
+  },
+  searchEntryContent: {
+    flex: 1,
+  },
+  searchEntryEyebrow: {
+    color: colors.primary,
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 0.8,
+  },
+  searchEntryTitle: {
+    marginTop: 3,
+    color: colors.textStrong,
+    fontSize: 18,
+    fontWeight: "800",
+  },
+  searchEntryText: {
+    marginTop: 4,
+    color: colors.textMuted,
+    fontSize: 12,
+    lineHeight: 18,
+  },
+  searchEntryArrow: {
+    marginLeft: 14,
+    color: colors.primary,
+    fontSize: 32,
+    fontWeight: "400",
   },
   continueCard: {
     minHeight: 96,

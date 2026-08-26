@@ -6,14 +6,16 @@
  * - banco mais novo que o app falha fechado;
  * - cada migration roda dentro de transação;
  * - a versão só avança depois do corpo da migration concluir;
- * - FTS, seed do corpus e queries de repository não pertencem a este módulo.
+ * - o seed empacotado continua imutável e é promovido apenas na cópia runtime;
+ * - população dos índices de busca e queries de repository não pertencem aqui.
  */
 
 import type { SQLiteDatabase } from "expo-sqlite";
 
 import {
-  BIBLE_DATABASE_SCHEMA_SQL,
+  BIBLE_DATABASE_SCHEMA_V1_SQL,
   BIBLE_DATABASE_SCHEMA_VERSION,
+  BIBLE_DATABASE_SEARCH_SCHEMA_V2_SQL,
 } from "./bibleDatabaseSchema";
 
 type BibleDatabaseUserVersionRow = Readonly<{
@@ -29,7 +31,13 @@ const BIBLE_DATABASE_MIGRATIONS: readonly BibleDatabaseMigration[] = [
   {
     version: 1,
     up: async (database) => {
-      await database.execAsync(BIBLE_DATABASE_SCHEMA_SQL);
+      await database.execAsync(BIBLE_DATABASE_SCHEMA_V1_SQL);
+    },
+  },
+  {
+    version: 2,
+    up: async (database) => {
+      await database.execAsync(BIBLE_DATABASE_SEARCH_SCHEMA_V2_SQL);
     },
   },
 ] as const;

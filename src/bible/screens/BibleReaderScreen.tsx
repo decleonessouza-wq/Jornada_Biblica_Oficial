@@ -56,6 +56,7 @@ type ReaderStatus =
   | "invalidParams"
   | "versionUnavailable"
   | "chapterMissing"
+  | "verseMissing"
   | "error";
 
 type ReaderData = Readonly<{
@@ -274,7 +275,20 @@ export default function BibleReaderScreen({
         throw new Error("BIBLE_READER_CHAPTER_IDENTITY_MISMATCH");
       }
 
+      const requestedVerse = parsedParams.verse;
+      const requestedVerseAvailable =
+        requestedVerse === undefined ||
+        chapter.verses.some(
+          (verse) => verse.verse === requestedVerse,
+        );
+
+      if (!requestedVerseAvailable) {
+        setStatus("verseMissing");
+        return;
+      }
+
       const savedVerseMatchesCurrentChapter =
+        requestedVerse === undefined &&
         savedLastReading !== null &&
         savedLastReading.versionId === parsedParams.versionId &&
         savedLastReading.bookId === parsedParams.bookId &&
@@ -284,12 +298,14 @@ export default function BibleReaderScreen({
           (verse) => verse.verse === savedLastReading.verse,
         );
 
-      const restoredVerse = savedVerseMatchesCurrentChapter
-        ? savedLastReading.verse
-        : undefined;
+      const initialTargetVerse =
+        requestedVerse ??
+        (savedVerseMatchesCurrentChapter
+          ? savedLastReading.verse
+          : undefined);
 
       const chapterReading: OfflineBibleLastReading =
-        restoredVerse === undefined
+        initialTargetVerse === undefined
           ? {
               versionId: parsedParams.versionId,
               bookId: parsedParams.bookId,
@@ -299,7 +315,7 @@ export default function BibleReaderScreen({
               versionId: parsedParams.versionId,
               bookId: parsedParams.bookId,
               chapter: parsedParams.chapter,
-              verse: restoredVerse,
+              verse: initialTargetVerse,
             };
 
       await persistLastReadingNonFatal(
@@ -312,9 +328,10 @@ export default function BibleReaderScreen({
       }
 
       activeReadingRef.current = parsedParams;
-      verseTrackingReadyRef.current = restoredVerse === undefined;
+      verseTrackingReadyRef.current =
+        initialTargetVerse === undefined;
 
-      setInitialVerse(restoredVerse);
+      setInitialVerse(initialTargetVerse);
       setFontScale(savedFontScale);
       setData({
         version,
@@ -340,6 +357,7 @@ export default function BibleReaderScreen({
     flushPendingVisibleVerse,
     params.bookId,
     params.chapter,
+    params.verse,
     params.versionId,
     persistLastReadingNonFatal,
   ]);
@@ -560,6 +578,16 @@ export default function BibleReaderScreen({
     );
   }
 
+  if (status === "verseMissing") {
+    return (
+      <ReaderState
+        title="Versículo não encontrado"
+        message="O versículo solicitado não está disponível neste capítulo da versão selecionada."
+        onRequestBack={onRequestBack}
+      />
+    );
+  }
+
   if (status === "error" || !data) {
     return (
       <ReaderState
@@ -627,6 +655,7 @@ export default function BibleReaderScreen({
         verses={data.chapter.verses}
         fontScale={fontScale}
         initialVerse={initialVerse}
+        highlightedVerse={params.verse}
         onFirstVisibleVerseChange={handleFirstVisibleVerseChange}
         onInitialRestoreComplete={handleInitialRestoreComplete}
         onScrollOffsetChange={handleReadingScrollOffsetChange}

@@ -54,7 +54,12 @@
       }
     },
     "plugins": [
-      "expo-sqlite",
+      [
+        "expo-sqlite",
+        {
+          "enableFTS": true
+        }
+      ],
       "expo-asset"
     ]
   }

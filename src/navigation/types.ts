@@ -16,6 +16,7 @@ export type ReadingRouteParams = {
 
 export type BibleStackParamList = {
   BibleLibrary: undefined;
+  BibleSearch: undefined;
   BibleReader: OfflineBibleReaderRouteParams;
 };
 

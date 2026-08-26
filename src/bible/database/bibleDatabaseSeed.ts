@@ -1,13 +1,22 @@
 /**
- * Instalador nativo do seed SQLite bíblico empacotado.
+ * Instalador multiplataforma do seed SQLite bíblico empacotado.
  *
- * Regras:
+ * Regras comuns:
  * - o asset validado é a única origem de materialização runtime;
- * - a cópia ocorre antes da primeira abertura da conexão;
- * - o SHA-256 e o tamanho são validados antes e depois da cópia;
- * - o banco não é sobrescrito a cada boot;
- * - um marcador sidecar identifica qual seed empacotado já foi instalado;
- * - o banco bíblico contém apenas corpus e metadados, nunca backup do usuário.
+ * - a materialização ocorre antes da primeira abertura da conexão;
+ * - o seed empacotado permanece imutável em schema v1;
+ * - o banco runtime contém corpus e índices locais, nunca backup do usuário.
+ *
+ * Native:
+ * - valida SHA-256/tamanho antes e depois da cópia;
+ * - marcador sidecar acompanha a cópia física.
+ *
+ * Web:
+ * - usa o importador oficial do expo-sqlite/wa-sqlite;
+ * - o banco persiste no VFS Web;
+ * - marcador localStorage só é confirmado DEPOIS de migrations, índices,
+ *   integridade, proveniência e contagens passarem no bootstrap;
+ * - marcador ausente/desatualizado força reimportação segura do seed.
  */
 
 import { Asset } from "expo-asset";
@@ -29,6 +38,9 @@ declare const require: (path: string) => number;
 const BIBLE_SEED_ASSET_MODULE = require(
   "../../../assets/bible/biblia-jornada-seed-v1.db",
 );
+
+const BIBLE_WEB_SEED_MARKER_STORAGE_KEY =
+  `biblia-jornada:web-seed:${BIBLE_DATABASE_NAME}` as const;
 
 export const BIBLE_SEED_CONTRACT = {
   contractVersion: 1,
@@ -70,6 +82,12 @@ type BibleSeedInstallMarker = Readonly<{
   assetBytes: number;
 }>;
 
+type BibleWebStorage = Readonly<{
+  getItem: (key: string) => string | null;
+  setItem: (key: string, value: string) => void;
+  removeItem: (key: string) => void;
+}>;
+
 export type BibleSeedInstallResult = Readonly<{
   status: "ALREADY_INSTALLED" | "INSTALLED";
   databaseUri: string;
@@ -106,6 +124,20 @@ function expectedMarker(): BibleSeedInstallMarker {
   };
 }
 
+function isExpectedMarker(
+  parsed: Partial<BibleSeedInstallMarker>,
+): boolean {
+  const expected = expectedMarker();
+
+  return (
+    parsed.schema === expected.schema &&
+    parsed.contractVersion === expected.contractVersion &&
+    parsed.assetName === expected.assetName &&
+    parsed.assetSha256 === expected.assetSha256 &&
+    parsed.assetBytes === expected.assetBytes
+  );
+}
+
 async function markerMatches(file: File): Promise<boolean> {
   if (!file.exists) {
     return false;
@@ -116,15 +148,7 @@ async function markerMatches(file: File): Promise<boolean> {
       await file.text(),
     ) as Partial<BibleSeedInstallMarker>;
 
-    const expected = expectedMarker();
-
-    return (
-      parsed.schema === expected.schema &&
-      parsed.contractVersion === expected.contractVersion &&
-      parsed.assetName === expected.assetName &&
-      parsed.assetSha256 === expected.assetSha256 &&
-      parsed.assetBytes === expected.assetBytes
-    );
+    return isExpectedMarker(parsed);
   } catch {
     return false;
   }
@@ -133,6 +157,104 @@ async function markerMatches(file: File): Promise<boolean> {
 function deleteIfExists(file: File): void {
   if (file.exists) {
     file.delete();
+  }
+}
+
+function getBibleWebStorage(): BibleWebStorage {
+  try {
+    const storage = (
+      globalThis as typeof globalThis & {
+        localStorage?: BibleWebStorage;
+      }
+    ).localStorage;
+
+    if (!storage) {
+      throw new Error("LOCAL_STORAGE_UNAVAILABLE");
+    }
+
+    return storage;
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : String(error);
+
+    throw new Error(
+      `BIBLE_WEB_SEED_MARKER_STORAGE_UNAVAILABLE:${message}`,
+    );
+  }
+}
+
+function webMarkerMatches(): boolean {
+  const storage = getBibleWebStorage();
+
+  try {
+    const raw = storage.getItem(
+      BIBLE_WEB_SEED_MARKER_STORAGE_KEY,
+    );
+
+    if (!raw) {
+      return false;
+    }
+
+    const parsed = JSON.parse(
+      raw,
+    ) as Partial<BibleSeedInstallMarker>;
+
+    return isExpectedMarker(parsed);
+  } catch {
+    return false;
+  }
+}
+
+async function performBibleWebSeedInstallation(): Promise<BibleSeedInstallResult> {
+  const markerMatchesExpected = webMarkerMatches();
+
+  if (!markerMatchesExpected) {
+    getBibleWebStorage().removeItem(
+      BIBLE_WEB_SEED_MARKER_STORAGE_KEY,
+    );
+  }
+
+  await SQLite.importDatabaseFromAssetAsync(
+    BIBLE_DATABASE_NAME,
+    {
+      assetId: BIBLE_SEED_ASSET_MODULE,
+      forceOverwrite: !markerMatchesExpected,
+    },
+  );
+
+  return {
+    status: markerMatchesExpected
+      ? "ALREADY_INSTALLED"
+      : "INSTALLED",
+    databaseUri: BIBLE_DATABASE_NAME,
+    assetSha256: BIBLE_SEED_CONTRACT.assetSha256,
+    assetBytes: BIBLE_SEED_CONTRACT.assetBytes,
+  };
+}
+
+export function confirmBibleSeedInstallationValidated(): void {
+  if (Platform.OS !== "web") {
+    return;
+  }
+
+  getBibleWebStorage().setItem(
+    BIBLE_WEB_SEED_MARKER_STORAGE_KEY,
+    JSON.stringify(expectedMarker()),
+  );
+}
+
+export function invalidateBibleSeedInstallationValidation(): void {
+  if (Platform.OS !== "web") {
+    return;
+  }
+
+  try {
+    getBibleWebStorage().removeItem(
+      BIBLE_WEB_SEED_MARKER_STORAGE_KEY,
+    );
+  } catch {
+    // Preserve the primary bootstrap error. A blocked marker store already
+    // makes the next Web bootstrap fail closed during installation.
   }
 }
 
@@ -194,11 +316,7 @@ async function resolveValidatedPackagedSeed(): Promise<File> {
   return source;
 }
 
-async function performBibleSeedInstallation(): Promise<BibleSeedInstallResult> {
-  if (Platform.OS === "web") {
-    throw new Error("BIBLE_SEED_NATIVE_INSTALLER_UNSUPPORTED_ON_WEB");
-  }
-
+async function performBibleNativeSeedInstallation(): Promise<BibleSeedInstallResult> {
   const databaseDirectoryUri = toFileSystemDirectoryUri(
     SQLite.defaultDatabaseDirectory,
   );
@@ -311,6 +429,14 @@ async function performBibleSeedInstallation(): Promise<BibleSeedInstallResult> {
     assetSha256: installedSha,
     assetBytes: databaseFile.size,
   };
+}
+
+async function performBibleSeedInstallation(): Promise<BibleSeedInstallResult> {
+  if (Platform.OS === "web") {
+    return performBibleWebSeedInstallation();
+  }
+
+  return performBibleNativeSeedInstallation();
 }
 
 export function ensureBibleSeedInstalled(): Promise<BibleSeedInstallResult> {

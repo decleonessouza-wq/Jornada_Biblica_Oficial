@@ -10,7 +10,10 @@ import {
   BIBLE_BOOKS,
   getBibleBookById,
 } from "../../domain/bible/bibleBooks";
-import type { BibleBookId } from "../../domain/bible/bibleReference";
+import type {
+  BibleBookId,
+  BibleReference,
+} from "../../domain/bible/bibleReference";
 import {
   DEFAULT_BIBLE_VERSION_ID,
   isBibleVersionId,
@@ -28,6 +31,7 @@ export type OfflineBibleReaderRouteParams = Readonly<{
   versionId: BibleVersionId;
   bookId: BibleBookId;
   chapter: number;
+  verse?: number;
 }>;
 
 export type OfflineBibleRouteContract = Readonly<{
@@ -101,7 +105,7 @@ export function parseOfflineBibleReaderRouteParams(
     return null;
   }
 
-  const { versionId, bookId, chapter } = value;
+  const { versionId, bookId, chapter, verse } = value;
 
   if (
     typeof versionId !== "string" ||
@@ -112,11 +116,59 @@ export function parseOfflineBibleReaderRouteParams(
     return null;
   }
 
-  return {
-    versionId,
-    bookId,
-    chapter,
-  };
+  if (verse !== undefined && !isPositiveInteger(verse)) {
+    return null;
+  }
+
+  return verse === undefined
+    ? { versionId, bookId, chapter }
+    : { versionId, bookId, chapter, verse };
+}
+
+export function getOfflineBibleReaderRouteParamsForReference(
+  reference: BibleReference,
+  versionId: BibleVersionId,
+): OfflineBibleReaderRouteParams | null {
+  const firstPassage = reference.passages[0];
+
+  switch (firstPassage.kind) {
+    case "WHOLE_BOOK":
+      return parseOfflineBibleReaderRouteParams({
+        versionId,
+        bookId: firstPassage.bookId,
+        chapter: 1,
+      });
+
+    case "CHAPTER":
+      return parseOfflineBibleReaderRouteParams({
+        versionId,
+        bookId: firstPassage.bookId,
+        chapter: firstPassage.chapter,
+      });
+
+    case "CHAPTER_RANGE":
+      return parseOfflineBibleReaderRouteParams({
+        versionId,
+        bookId: firstPassage.bookId,
+        chapter: firstPassage.startChapter,
+      });
+
+    case "VERSE":
+      return parseOfflineBibleReaderRouteParams({
+        versionId,
+        bookId: firstPassage.bookId,
+        chapter: firstPassage.chapter,
+        verse: firstPassage.verse,
+      });
+
+    case "VERSE_RANGE":
+      return parseOfflineBibleReaderRouteParams({
+        versionId,
+        bookId: firstPassage.bookId,
+        chapter: firstPassage.start.chapter,
+        verse: firstPassage.start.verse,
+      });
+  }
 }
 
 export function getPreviousOfflineBibleReaderRouteParams(
@@ -130,7 +182,8 @@ export function getPreviousOfflineBibleReaderRouteParams(
 
   if (current.chapter > 1) {
     return {
-      ...current,
+      versionId: current.versionId,
+      bookId: current.bookId,
       chapter: current.chapter - 1,
     };
   }
@@ -165,7 +218,8 @@ export function getNextOfflineBibleReaderRouteParams(
 
   if (current.chapter < currentBook.chapterCount) {
     return {
-      ...current,
+      versionId: current.versionId,
+      bookId: current.bookId,
       chapter: current.chapter + 1,
     };
   }
