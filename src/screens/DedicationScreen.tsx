@@ -138,9 +138,9 @@ export default function DedicationScreen() {
             <View style={styles.quoteBox}>
               <Text style={styles.quoteTitle}>📖 Verso-chave</Text>
               <Text style={styles.quoteText}>
-                "Pois a palavra de Deus é viva e eficaz, e mais afiada que qualquer espada de dois
+                “Pois a palavra de Deus é viva e eficaz, e mais afiada que qualquer espada de dois
                 gumes; ela penetra até o ponto de dividir alma e espírito, juntas e medulas, e
-                julga os pensamentos e as intenções do coração."
+                julga os pensamentos e as intenções do coração.”
               </Text>
               <Text style={styles.quoteRef}>— Hebreus 4:12</Text>
             </View>
