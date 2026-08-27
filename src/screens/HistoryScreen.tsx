@@ -655,7 +655,7 @@ export default function HistoryScreen() {
                             {!!gratitude && (
                               <View style={styles.gratitudeBox}>
                                 <Text style={styles.gratitudeTitle}>🙏 Gratidão</Text>
-                                <Text style={styles.gratitudeText}>"{gratitude}"</Text>
+                                <Text style={styles.gratitudeText}>“{gratitude}”</Text>
                               </View>
                             )}
                           </View>

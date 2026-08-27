@@ -1,0 +1,11 @@
+appId: com.decleones.jornadabiblica
+---
+- launchApp:
+    clearState: true
+- assertVisible: "Bíblia Jornada"
+- assertVisible: "Bem-vindo"
+- tapOn:
+    text: "Ex: João Silva"
+- inputText: "Teste Maestro"
+- hideKeyboard
+- assertVisible: "Começar Jornada ➝"

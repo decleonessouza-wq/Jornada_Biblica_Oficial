@@ -1223,7 +1223,7 @@ export default function HomeScreen() {
 
               {!!verseOfDay.theme && <Text style={styles.verseTheme}>{verseOfDay.theme}</Text>}
 
-              <Text style={styles.verseText}>"{verseOfDay.text}"</Text>
+              <Text style={styles.verseText}>“{verseOfDay.text}”</Text>
 
               <Text style={styles.verseRef}>{verseOfDay.reference}</Text>
 

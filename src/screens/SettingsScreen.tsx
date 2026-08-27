@@ -721,7 +721,7 @@ export default function SettingsScreen() {
               <Text style={styles.bold}>Como Funciona na Prática</Text>
               {"\n"}• <Text style={styles.bold}>Ritmo Sustentável:</Text> A quantidade de leitura diária foi pensada para ser
               profunda, mas perfeitamente possível de realizar em meio à correria do dia a dia.
-              {"\n"}• <Text style={styles.bold}>O Valor da Pausa (Domingos):</Text> Reservamos seus domingos para "Meditar".
+              {"\n"}• <Text style={styles.bold}>O Valor da Pausa (Domingos):</Text> Reservamos seus domingos para “Meditar”.
               Acreditamos que não basta ler; é preciso ruminar a Palavra. Use esse dia para orar sobre o que leu na semana e
               deixar as verdades sobre a salvação criarem raízes em seu coração.
             </Text>
@@ -746,7 +746,7 @@ export default function SettingsScreen() {
 
             <View style={styles.quoteBox}>
               <Text style={styles.quoteText}>
-                "E a vida eterna é esta: que te conheçam, a ti só, por único Deus verdadeiro, e a Jesus Cristo, a quem enviaste."
+                “E a vida eterna é esta: que te conheçam, a ti só, por único Deus verdadeiro, e a Jesus Cristo, a quem enviaste.”
               </Text>
               <Text style={styles.quoteRef}>(João 17:3)</Text>
             </View>
