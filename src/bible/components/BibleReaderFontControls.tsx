@@ -96,7 +96,7 @@ const styles = StyleSheet.create({
   container: {
     borderBottomWidth: 1,
     borderBottomColor: colors.divider,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.primary,
     paddingHorizontal: 18,
     paddingVertical: 12,
   },
@@ -108,12 +108,12 @@ const styles = StyleSheet.create({
   },
   title: {
     flex: 1,
-    color: colors.textStrong,
+    color: colors.secondary,
     fontSize: 13,
     fontWeight: "700",
   },
   currentValue: {
-    color: colors.textMuted,
+    color: colors.textInverse,
     fontSize: 12,
     fontWeight: "600",
   },
@@ -134,8 +134,8 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   optionSelected: {
-    borderColor: colors.primary,
-    backgroundColor: colors.primarySoft,
+    borderColor: colors.secondaryPressed,
+    backgroundColor: colors.secondarySoft,
   },
   optionPressed: {
     opacity: 0.72,

@@ -1,9 +1,10 @@
 import React from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 
 import type { BibleBook } from "../../domain/bible/bibleBooks";
 import type { BibleVersionId } from "../../domain/bible/bibleVersion";
 import { colors } from "../../theme/colors";
+import { BIBLE_BOOK_ART } from "../assets/bibleBookArt";
 import type { BibleInstalledVersion } from "../repositories/bibleRepository";
 
 type BibleReaderHeaderProps = Readonly<{
@@ -11,6 +12,7 @@ type BibleReaderHeaderProps = Readonly<{
   versions: readonly BibleInstalledVersion[];
   book: BibleBook;
   chapter: number;
+  topInset?: number;
   canGoPrevious: boolean;
   canGoNext: boolean;
   onRequestBack?: () => void;
@@ -24,6 +26,7 @@ export function BibleReaderHeader({
   versions,
   book,
   chapter,
+  topInset = 0,
   canGoPrevious,
   canGoNext,
   onRequestBack,
@@ -32,7 +35,31 @@ export function BibleReaderHeader({
   onSelectVersion,
 }: BibleReaderHeaderProps) {
   return (
-    <View style={styles.container}>
+    <View
+      testID="bible-reader-header"
+      style={[
+        styles.container,
+        { paddingTop: 14 + Math.max(0, topInset) },
+      ]}
+    >
+      <View
+        pointerEvents="none"
+        testID="bible-book-art-frame"
+        style={styles.backgroundImageFrame}
+      >
+        <Image
+          accessible={false}
+          testID="bible-book-art"
+          source={BIBLE_BOOK_ART[book.id]}
+          resizeMode="stretch"
+          style={styles.backgroundImage}
+        />
+      </View>
+      <View
+        testID="bible-book-art-overlay"
+        pointerEvents="none"
+        style={styles.backgroundOverlay}
+      />
       <View style={styles.topRow}>
         {onRequestBack ? (
           <Pressable
@@ -164,12 +191,26 @@ export function BibleReaderHeader({
 
 const styles = StyleSheet.create({
   container: {
+    position: "relative",
+    overflow: "hidden",
+    aspectRatio: 4 / 3,
     borderBottomWidth: 1,
     borderBottomColor: colors.divider,
     backgroundColor: colors.surface,
     paddingHorizontal: 18,
     paddingTop: 14,
     paddingBottom: 14,
+  },
+  backgroundImageFrame: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  backgroundImage: {
+    width: "100%",
+    height: "100%",
+  },
+  backgroundOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(13, 43, 69, 0.10)",
   },
   topRow: {
     minHeight: 32,
@@ -222,15 +263,21 @@ const styles = StyleSheet.create({
   },
   title: {
     marginTop: 2,
-    color: colors.textStrong,
+    color: colors.textInverse,
     fontSize: 28,
     fontWeight: "800",
+    textShadowColor: "rgba(13, 43, 69, 0.78)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
   },
   versionName: {
     marginTop: 4,
-    color: colors.textMuted,
+    color: colors.textInverse,
     fontSize: 13,
     lineHeight: 18,
+    textShadowColor: "rgba(13, 43, 69, 0.82)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
   versionOptions: {
     marginTop: 10,

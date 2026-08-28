@@ -1,4 +1,5 @@
 import React from "react";
+import { StyleSheet } from "react-native";
 import {
   fireEvent,
   render,
@@ -6,6 +7,7 @@ import {
 } from "@testing-library/react-native";
 
 import { BibleReaderHeader } from "../src/bible/components/BibleReaderHeader";
+import { BIBLE_BOOK_ART } from "../src/bible/assets/bibleBookArt";
 import { getBibleBookById } from "../src/domain/bible/bibleBooks";
 import type { BibleInstalledVersion } from "../src/bible/repositories/bibleRepository";
 
@@ -63,6 +65,71 @@ describe("BibleReaderHeader", () => {
     ).toBeTruthy();
   });
 
+  it("renders the current book art as an absolute background layer", () => {
+    render(
+      <BibleReaderHeader
+        version={blivre}
+        versions={[blivre]}
+        book={getBibleBookById("JHN")}
+        chapter={3}
+        canGoPrevious
+        canGoNext
+      />,
+    );
+
+    const header =
+      screen.getByTestId("bible-reader-header");
+
+    const artwork =
+      screen.getByTestId("bible-book-art");
+
+    const overlay =
+      screen.getByTestId("bible-book-art-overlay");
+
+    expect(artwork.props.source).toBe(BIBLE_BOOK_ART.JHN);
+    expect(artwork.props.resizeMode).toBe("stretch");
+    expect(artwork.props.accessible).toBe(false);
+
+    expect(
+      StyleSheet.flatten(header.props.style),
+    ).toEqual(
+      expect.objectContaining({
+        aspectRatio: 4 / 3,
+        overflow: "hidden",
+      }),
+    );
+
+    expect(
+      StyleSheet.flatten(overlay.props.style),
+    ).toEqual(
+      expect.objectContaining({
+        backgroundColor: "rgba(13, 43, 69, 0.10)",
+      }),
+    );
+
+    expect(
+      StyleSheet.flatten(
+        screen.getByTestId("bible-book-art-frame").props.style,
+      ),
+    ).toEqual(
+      expect.objectContaining({
+        position: "absolute",
+        top: 0,
+        right: 0,
+        bottom: 0,
+        left: 0,
+      }),
+    );
+
+    expect(
+      StyleSheet.flatten(artwork.props.style),
+    ).toEqual(
+      expect.objectContaining({
+        width: "100%",
+        height: "100%",
+      }),
+    );
+  });
   it("emits back, next chapter and version-selection actions", () => {
     const onRequestBack = jest.fn();
     const onRequestPrevious = jest.fn();
@@ -178,5 +245,58 @@ describe("BibleReaderHeader", () => {
     expect(
       onSelectVersion,
     ).not.toHaveBeenCalled();
+  });
+
+  it("keeps artwork edge-to-edge behind the native status bar", () => {
+    render(
+      <BibleReaderHeader
+        version={blivre}
+        versions={[blivre, alm1911]}
+        book={getBibleBookById("GEN")}
+        chapter={1}
+        topInset={24}
+        canGoPrevious={false}
+        canGoNext
+      />,
+    );
+
+    const header =
+      screen.getByTestId("bible-reader-header");
+
+    const artwork =
+      screen.getByTestId("bible-book-art");
+
+    expect(
+      StyleSheet.flatten(header.props.style),
+    ).toEqual(
+      expect.objectContaining({
+        aspectRatio: 4 / 3,
+        paddingTop: 38,
+        overflow: "hidden",
+      }),
+    );
+
+    expect(
+      StyleSheet.flatten(
+        screen.getByTestId("bible-book-art-frame").props.style,
+      ),
+    ).toEqual(
+      expect.objectContaining({
+        position: "absolute",
+        top: 0,
+        right: 0,
+        bottom: 0,
+        left: 0,
+      }),
+    );
+
+    expect(
+      StyleSheet.flatten(artwork.props.style),
+    ).toEqual(
+      expect.objectContaining({
+        width: "100%",
+        height: "100%",
+      }),
+    );
   });
 });
