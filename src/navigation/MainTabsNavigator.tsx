@@ -1,4 +1,7 @@
-import { DrawerActions } from "@react-navigation/native";
+import {
+  DrawerActions,
+  getFocusedRouteNameFromRoute,
+} from "@react-navigation/native";
 import { StyleSheet, View } from "react-native";
 import Animated, { useAnimatedStyle } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -81,19 +84,30 @@ function MainTabsNavigatorContent({
   return (
     <MainTabs.Navigator
       initialRouteName="HomeTab"
-      screenOptions={({ navigation }) => ({
-        headerShown: true,
-        header: () => (
-          <AnimatedAppShellHeader
-            onOpenDrawer={() =>
-              navigation.dispatch(DrawerActions.openDrawer())
-            }
-            onOpenNotifications={() =>
-              navigation.dispatch(DrawerActions.jumpTo("Settings"))
-            }
-          />
-        ),
-      })}
+      screenOptions={({ navigation, route }) => {
+        const focusedBibleRoute =
+          route.name === "BibleTab"
+            ? getFocusedRouteNameFromRoute(route)
+            : undefined;
+
+        const readerFocused =
+          route.name === "BibleTab" &&
+          focusedBibleRoute === "BibleReader";
+
+        return {
+          headerShown: !readerFocused,
+          header: () => (
+            <AnimatedAppShellHeader
+              onOpenDrawer={() =>
+                navigation.dispatch(DrawerActions.openDrawer())
+              }
+              onOpenNotifications={() =>
+                navigation.dispatch(DrawerActions.jumpTo("Settings"))
+              }
+            />
+          ),
+        };
+      }}
       tabBar={(props) => (
         <CustomTabBar {...props} onQuickAction={onQuickAction} />
       )}

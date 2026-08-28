@@ -12,6 +12,7 @@ import {
   Text,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import type { BibleBook } from "../../domain/bible/bibleBooks";
 import type { BibleVersionId } from "../../domain/bible/bibleVersion";
@@ -78,6 +79,8 @@ export default function BibleReaderScreen({
   onRequestBack,
   onRequestReferenceChange,
 }: BibleReaderScreenProps) {
+  const insets = useSafeAreaInsets();
+
   const repositoryRef = useRef<BibleRepository | null>(null);
   const generationRef = useRef(0);
   const activeReadingRef =
@@ -629,6 +632,7 @@ export default function BibleReaderScreen({
           versions={data.versions}
           book={data.book}
           chapter={data.chapter.chapter}
+          topInset={insets.top}
           canGoPrevious={previousParams !== null}
           canGoNext={nextParams !== null}
           onRequestBack={onRequestBack}
@@ -680,8 +684,15 @@ function ReaderState({
   onRetry,
   onRequestBack,
 }: ReaderStateProps) {
+  const insets = useSafeAreaInsets();
+
   return (
-    <View style={styles.stateScreen}>
+    <View
+      style={[
+        styles.stateScreen,
+        { paddingTop: 16 + insets.top },
+      ]}
+    >
       {onRequestBack && (
         <Pressable
           accessibilityRole="button"
