@@ -3,9 +3,11 @@ import {
   DrawerItemList,
 } from "@react-navigation/drawer";
 import type { DrawerContentComponentProps } from "@react-navigation/drawer";
-import { Image, StyleSheet, Text, View } from "react-native";
+import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { colors } from "../theme/colors";
+
+import { PROFILE_NAVIGATION } from "./navigationSurfacePolicy";
 
 export default function AppDrawerContent(props: DrawerContentComponentProps) {
   return (
@@ -30,6 +32,27 @@ export default function AppDrawerContent(props: DrawerContentComponentProps) {
 
       <View style={styles.items}>
         <DrawerItemList {...props} />
+
+        <Pressable
+          accessible
+          accessibilityRole="button"
+          accessibilityLabel={`${PROFILE_NAVIGATION.label}. Em breve.`}
+          accessibilityState={{ disabled: true }}
+          disabled
+          style={styles.disabledProfileItem}
+        >
+          <Text accessible={false} style={styles.disabledProfileSymbol}>
+            O
+          </Text>
+
+          <Text style={styles.disabledProfileLabel}>
+            {PROFILE_NAVIGATION.label}
+          </Text>
+
+          <Text style={styles.disabledProfileStatus}>
+            Em breve
+          </Text>
+        </Pressable>
       </View>
 
       <View style={styles.footer}>
@@ -110,6 +133,37 @@ const styles = StyleSheet.create({
 
   items: {
     paddingTop: 10,
+  },
+
+  disabledProfileItem: {
+    alignItems: "center",
+    flexDirection: "row",
+    marginHorizontal: 12,
+    minHeight: 48,
+    opacity: 0.55,
+    paddingHorizontal: 12,
+  },
+
+  disabledProfileSymbol: {
+    color: colors.textMuted,
+    fontSize: 19,
+    fontWeight: "700",
+    marginRight: 18,
+    textAlign: "center",
+    width: 24,
+  },
+
+  disabledProfileLabel: {
+    color: colors.textMuted,
+    flex: 1,
+    fontSize: 14,
+    fontWeight: "600",
+  },
+
+  disabledProfileStatus: {
+    color: colors.textMuted,
+    fontSize: 10,
+    fontWeight: "700",
   },
 
   footer: {
