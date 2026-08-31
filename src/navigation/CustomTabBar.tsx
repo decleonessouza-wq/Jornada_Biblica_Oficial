@@ -6,6 +6,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { colors } from "../theme/colors";
 
+import { PRIMARY_HYMNAL_NAVIGATION } from "./navigationSurfacePolicy";
+
 import { useAppShellChrome } from "./AppShellChromeContext";
 
 const BASE_BAR_HEIGHT = 46;
@@ -232,7 +234,7 @@ export default function CustomTabBar({
             navigation={navigation}
           />
 
-          <DisabledTabButton label="Perfil" symbol="○" />
+          <DisabledTabButton label={PRIMARY_HYMNAL_NAVIGATION.label} symbol="H" />
           </View>
         </View>
       </Animated.View>
