@@ -1,12 +1,19 @@
 /**
- * Schema lógico v1 do banco offline da Harpa.
+ * Logical schema v2 for the offline hymnal database.
  *
- * O schema v1 representa somente o corpus autoritativo e sua proveniência.
- * Infraestrutura de busca é uma evolução posterior e não pertence a este
- * contrato estrutural.
+ * History:
+ * - v1: authoritative hymnal corpus and provenance;
+ * - v2: persistent portable structures for textual search.
+ *
+ * The packaged seed remains immutable at schema v1. Only the installed
+ * runtime copy is promoted by sequential migrations.
+ *
+ * Native FTS5 is not part of the mandatory structural schema because the
+ * Web runtime does not guarantee FTS5. Native creates it at runtime behind
+ * an explicit capability check.
  */
 
-export const HYMNAL_DATABASE_SCHEMA_VERSION = 1 as const;
+export const HYMNAL_DATABASE_SCHEMA_VERSION = 2 as const;
 
 export const HYMNAL_DATABASE_SCHEMA_V1_SQL = `
 PRAGMA foreign_keys = ON;
@@ -183,5 +190,57 @@ CREATE TABLE IF NOT EXISTS hymn_sections (
 PRAGMA user_version = 1;
 `.trim();
 
-export const HYMNAL_DATABASE_SCHEMA_SQL =
-  HYMNAL_DATABASE_SCHEMA_V1_SQL;
+export const HYMNAL_DATABASE_SEARCH_SCHEMA_V2_SQL = `
+CREATE TABLE IF NOT EXISTS hymnal_search_documents (
+  document_id INTEGER PRIMARY KEY NOT NULL,
+  edition_id TEXT NOT NULL,
+  hymn_id TEXT NOT NULL,
+  normalized_text TEXT NOT NULL,
+
+  UNIQUE (edition_id, hymn_id),
+
+  FOREIGN KEY (
+    edition_id,
+    hymn_id
+  )
+    REFERENCES hymns(
+      edition_id,
+      id
+    )
+    ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS hymnal_search_dictionary (
+  term_id INTEGER PRIMARY KEY NOT NULL,
+  term TEXT NOT NULL UNIQUE
+    CHECK (length(trim(term)) > 0)
+);
+
+CREATE TABLE IF NOT EXISTS hymnal_search_postings (
+  term_id INTEGER NOT NULL,
+  document_id INTEGER NOT NULL,
+  term_frequency INTEGER NOT NULL DEFAULT 1
+    CHECK (term_frequency > 0),
+
+  PRIMARY KEY (
+    term_id,
+    document_id
+  ),
+
+  FOREIGN KEY (term_id)
+    REFERENCES hymnal_search_dictionary(term_id)
+    ON DELETE CASCADE,
+
+  FOREIGN KEY (document_id)
+    REFERENCES hymnal_search_documents(document_id)
+    ON DELETE CASCADE
+) WITHOUT ROWID;
+`.trim();
+
+export const HYMNAL_DATABASE_SCHEMA_SQL = `
+${HYMNAL_DATABASE_SCHEMA_V1_SQL}
+
+${HYMNAL_DATABASE_SEARCH_SCHEMA_V2_SQL}
+
+PRAGMA user_version = ${HYMNAL_DATABASE_SCHEMA_VERSION};
+`.trim();

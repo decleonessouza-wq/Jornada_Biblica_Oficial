@@ -7,7 +7,8 @@
  * - structural migrations promote the runtime copy;
  * - schema, integrity, tables, corpus counts, provenance, and edition
  *   metadata are validated fail closed;
- * - search, repository queries, and presentation layers are excluded.
+ * - the platform search index is materialized before final validation;
+ * - repository queries and presentation layers remain excluded.
  */
 
 import type {
@@ -33,6 +34,10 @@ import {
   confirmHymnalSeedInstallationValidated,
   invalidateHymnalSeedInstallationValidation,
 } from "./hymnalDatabaseSeed";
+import {
+  ensureHymnalSearchIndexReady,
+  type HymnalSearchIndexReadyResult,
+} from "./hymnalSearchIndex";
 
 const HYMNAL_DATABASE_REQUIRED_TABLES = [
   "hymnal_meta",
@@ -40,6 +45,9 @@ const HYMNAL_DATABASE_REQUIRED_TABLES = [
   "hymnal_installations",
   "hymns",
   "hymn_sections",
+  "hymnal_search_documents",
+  "hymnal_search_dictionary",
+  "hymnal_search_postings",
 ] as const;
 
 type CountRow = Readonly<{
@@ -189,14 +197,6 @@ async function validateCorpusCounts(
 ): Promise<void> {
   const checks = [
     [
-      "meta",
-      await getCount(
-        database,
-        "SELECT COUNT(*) AS count FROM hymnal_meta;",
-      ),
-      0,
-    ],
-    [
       "editions",
       await getCount(
         database,
@@ -345,29 +345,46 @@ async function validateInstallationProvenance(
   }
 }
 
-async function validateNoSearchTables(
-  database: SQLiteDatabase,
-): Promise<void> {
-  const count = await getCount(
-    database,
-    `SELECT COUNT(*) AS count
-       FROM sqlite_master
-      WHERE type = 'table'
-        AND (
-          lower(name) LIKE '%fts%' OR
-          lower(name) LIKE '%search%'
-        );`,
-  );
-
-  if (count !== 0) {
+function validateSearchIndex(
+  result: HymnalSearchIndexReadyResult,
+): void {
+  if (
+    result.documentCount !==
+    HYMNAL_SEED_CONTRACT.hymnRows
+  ) {
     throw new Error(
-      `HYMNAL_DATABASE_UNEXPECTED_SEARCH_TABLE_COUNT:${count}`,
+      `HYMNAL_DATABASE_SEARCH_DOCUMENT_COUNT_MISMATCH:EXPECTED=${HYMNAL_SEED_CONTRACT.hymnRows}:ACTUAL=${result.documentCount}`,
+    );
+  }
+
+  if (
+    result.backend === "PORTABLE_SQLITE" &&
+    (
+      result.dictionaryRowCount <= 0 ||
+      result.postingRowCount <= 0
+    )
+  ) {
+    throw new Error(
+      `HYMNAL_DATABASE_PORTABLE_SEARCH_COUNTS_INVALID:DICTIONARY=${result.dictionaryRowCount}:POSTINGS=${result.postingRowCount}`,
+    );
+  }
+
+  if (
+    result.backend === "FTS5" &&
+    (
+      result.dictionaryRowCount !== 0 ||
+      result.postingRowCount !== 0
+    )
+  ) {
+    throw new Error(
+      `HYMNAL_DATABASE_FTS_SEARCH_PORTABLE_COUNTS_NOT_ZERO:DICTIONARY=${result.dictionaryRowCount}:POSTINGS=${result.postingRowCount}`,
     );
   }
 }
 
 async function validateHymnalDatabase(
   database: SQLiteDatabase,
+  searchIndex: HymnalSearchIndexReadyResult,
 ): Promise<void> {
   const userVersion =
     await getHymnalDatabaseUserVersion(
@@ -408,7 +425,7 @@ async function validateHymnalDatabase(
   await validateCorpusCounts(database);
   await validateEditionMetadata(database);
   await validateInstallationProvenance(database);
-  await validateNoSearchTables(database);
+  validateSearchIndex(searchIndex);
 }
 
 async function performHymnalDatabaseBootstrap(): Promise<SQLiteDatabase> {
@@ -427,7 +444,15 @@ async function performHymnalDatabaseBootstrap(): Promise<SQLiteDatabase> {
       database,
     );
 
-    await validateHymnalDatabase(database);
+    const searchIndex =
+      await ensureHymnalSearchIndexReady(
+        database,
+      );
+
+    await validateHymnalDatabase(
+      database,
+      searchIndex,
+    );
 
     confirmHymnalSeedInstallationValidated();
 

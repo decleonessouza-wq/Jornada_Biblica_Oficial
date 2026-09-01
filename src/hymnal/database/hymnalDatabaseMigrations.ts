@@ -1,12 +1,13 @@
 /**
- * Runner sequencial de migrations do banco offline da Harpa.
+ * Sequential migration runner for the offline hymnal database.
  *
- * Regras:
- * - PRAGMA user_version é a autoridade estrutural;
- * - banco mais novo que o app falha fechado;
- * - cada migration executa dentro de transação;
- * - versão só avança depois do corpo concluir;
- * - seed, conexão, bootstrap e queries de domínio não pertencem aqui.
+ * Rules:
+ * - PRAGMA user_version is the structural authority;
+ * - databases newer than the app fail closed;
+ * - every migration runs in a transaction;
+ * - version advances only after the migration body succeeds;
+ * - the packaged seed remains immutable at schema v1;
+ * - search index population does not belong to migrations.
  */
 
 import type { SQLiteDatabase } from "expo-sqlite";
@@ -14,6 +15,7 @@ import type { SQLiteDatabase } from "expo-sqlite";
 import {
   HYMNAL_DATABASE_SCHEMA_V1_SQL,
   HYMNAL_DATABASE_SCHEMA_VERSION,
+  HYMNAL_DATABASE_SEARCH_SCHEMA_V2_SQL,
 } from "./hymnalDatabaseSchema";
 
 type HymnalDatabaseUserVersionRow = Readonly<{
@@ -34,6 +36,14 @@ const HYMNAL_DATABASE_MIGRATIONS:
       up: async (database) => {
         await database.execAsync(
           HYMNAL_DATABASE_SCHEMA_V1_SQL,
+        );
+      },
+    },
+    {
+      version: 2,
+      up: async (database) => {
+        await database.execAsync(
+          HYMNAL_DATABASE_SEARCH_SCHEMA_V2_SQL,
         );
       },
     },

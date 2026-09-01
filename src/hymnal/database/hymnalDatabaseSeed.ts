@@ -330,17 +330,11 @@ async function existingNativeInstallationMatches(
   databaseFile: File,
   markerFile: File,
 ): Promise<boolean> {
-  if (
-    !databaseFile.exists ||
-    databaseFile.size !== HYMNAL_SEED_CONTRACT.assetBytes ||
-    !(await markerMatches(markerFile))
-  ) {
-    return false;
-  }
-
-  const installedSha = await sha256File(databaseFile);
-
-  return installedSha === HYMNAL_SEED_CONTRACT.assetSha256;
+  return (
+    databaseFile.exists &&
+    databaseFile.size > 0 &&
+    (await markerMatches(markerFile))
+  );
 }
 
 async function performHymnalNativeSeedInstallation(): Promise<HymnalSeedInstallResult> {
