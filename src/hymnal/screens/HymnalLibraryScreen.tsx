@@ -7,6 +7,7 @@ import React, {
 } from "react";
 import {
   ActivityIndicator,
+  Pressable,
   StyleSheet,
   Text,
   View,
@@ -96,6 +97,8 @@ export default function HymnalLibraryScreen({
     useState(false);
   const [searchError, setSearchError] =
     useState<string | null>(null);
+  const [loadMoreError, setLoadMoreError] =
+    useState<string | null>(null);
 
   const clearSearchState = useCallback(
     (clearInput: boolean) => {
@@ -106,6 +109,7 @@ export default function HymnalLibraryScreen({
       setSearching(false);
       setLoadingMore(false);
       setSearchError(null);
+      setLoadMoreError(null);
 
       if (clearInput) {
         setSearchQuery("");
@@ -312,6 +316,7 @@ export default function HymnalLibraryScreen({
       validateSearchInput();
 
     if (validationMessage) {
+      setLoadMoreError(null);
       setSearchError(validationMessage);
       return;
     }
@@ -324,6 +329,7 @@ export default function HymnalLibraryScreen({
 
     setSearching(true);
     setSearchError(null);
+    setLoadMoreError(null);
     setHighlightedHymnNumber(null);
 
     try {
@@ -403,6 +409,7 @@ export default function HymnalLibraryScreen({
 
     setLoadingMore(true);
     setSearchError(null);
+    setLoadMoreError(null);
 
     try {
       let repository =
@@ -445,7 +452,7 @@ export default function HymnalLibraryScreen({
         "HYMNAL_LIBRARY_SEARCH_MORE_FAILED",
         error,
       );
-      setSearchError(
+      setLoadMoreError(
         "Não foi possível carregar mais resultados agora.",
       );
     } finally {
@@ -501,7 +508,22 @@ export default function HymnalLibraryScreen({
         <Text style={styles.centerText}>
           {LOAD_ERROR_MESSAGE}
         </Text>
-      </View>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Tentar abrir a Harpa novamente"
+          onPress={() => {
+            void loadCatalog();
+          }}
+          style={({ pressed }) => [
+            styles.retryButton,
+            pressed && styles.retryButtonPressed,
+          ]}
+          testID="hymnal-library-retry"
+        >
+          <Text style={styles.retryButtonText}>
+            Tentar novamente
+          </Text>
+        </Pressable>      </View>
     );
   }
 
@@ -556,13 +578,16 @@ export default function HymnalLibraryScreen({
           searching={searching}
           loadingMore={loadingMore}
           errorMessage={searchError}
+          loadMoreErrorMessage={loadMoreError}
           onChangeQuery={(value) => {
             setSearchQuery(value);
             setSearchError(null);
+            setLoadMoreError(null);
           }}
           onChangeMode={(mode) => {
             setSearchMode(mode);
             setSearchError(null);
+            setLoadMoreError(null);
           }}
           onSubmit={() => {
             void handleSearch();
@@ -746,5 +771,22 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     marginTop: 8,
     textAlign: "center",
+  },
+  retryButton: {
+    alignItems: "center",
+    backgroundColor: colors.primary,
+    borderRadius: 14,
+    justifyContent: "center",
+    marginTop: 18,
+    minHeight: 48,
+    paddingHorizontal: 20,
+  },
+  retryButtonPressed: {
+    backgroundColor: colors.primaryPressed,
+  },
+  retryButtonText: {
+    color: colors.textInverse,
+    fontSize: 14,
+    fontWeight: "800",
   },
 });

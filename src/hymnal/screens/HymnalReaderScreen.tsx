@@ -63,6 +63,8 @@ export default function HymnalReaderScreen({
     useState<ReaderStatus>("loading");
   const [hymn, setHymn] =
     useState<Hymn | null>(null);
+  const [retryGeneration, setRetryGeneration] =
+    useState(0);
 
   useEffect(() => {
     let active = true;
@@ -109,7 +111,7 @@ export default function HymnalReaderScreen({
     return () => {
       active = false;
     };
-  }, [editionId, hymnId]);
+  }, [editionId, hymnId, retryGeneration]);
 
   return (
     <View style={styles.screen}>
@@ -172,7 +174,24 @@ export default function HymnalReaderScreen({
           <Text style={styles.stateText}>
             O conteúdo não pôde ser carregado agora.
           </Text>
-        </View>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Tentar abrir o hino novamente"
+            onPress={() => {
+              setRetryGeneration(
+                (current) => current + 1,
+              );
+            }}
+            style={({ pressed }) => [
+              styles.retryButton,
+              pressed && styles.retryButtonPressed,
+            ]}
+            testID="hymnal-reader-retry"
+          >
+            <Text style={styles.retryButtonText}>
+              Tentar novamente
+            </Text>
+          </Pressable>        </View>
       )}
 
       {status === "ready" && hymn && (
@@ -267,6 +286,23 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     marginTop: 8,
     textAlign: "center",
+  },
+  retryButton: {
+    alignItems: "center",
+    backgroundColor: colors.primary,
+    borderRadius: 14,
+    justifyContent: "center",
+    marginTop: 18,
+    minHeight: 48,
+    paddingHorizontal: 20,
+  },
+  retryButtonPressed: {
+    backgroundColor: colors.primaryPressed,
+  },
+  retryButtonText: {
+    color: colors.textInverse,
+    fontSize: 14,
+    fontWeight: "800",
   },
   content: {
     paddingBottom: 36,

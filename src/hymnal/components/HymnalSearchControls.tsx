@@ -23,6 +23,7 @@ type HymnalSearchControlsProps = Readonly<{
   searching: boolean;
   loadingMore: boolean;
   errorMessage: string | null;
+  loadMoreErrorMessage: string | null;
   onChangeQuery: (value: string) => void;
   onChangeMode: (
     mode: HymnalSearchTextMode,
@@ -41,6 +42,7 @@ export default function HymnalSearchControls({
   searching,
   loadingMore,
   errorMessage,
+  loadMoreErrorMessage,
   onChangeQuery,
   onChangeMode,
   onSubmit,
@@ -245,6 +247,16 @@ export default function HymnalSearchControls({
             </Pressable>
           )}
         </View>
+      )}
+
+      {active && loadMoreErrorMessage && (
+        <Text
+          accessibilityLiveRegion="polite"
+          style={styles.errorText}
+          testID="hymnal-search-load-more-error"
+        >
+          {loadMoreErrorMessage}
+        </Text>
       )}
     </View>
   );
