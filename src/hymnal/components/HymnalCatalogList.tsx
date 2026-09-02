@@ -22,6 +22,8 @@ const ITEM_STRIDE =
   ITEM_HEIGHT + ITEM_SEPARATOR_HEIGHT;
 
 type HymnalCatalogListProps = Readonly<{
+  header: React.ReactElement;
+  emptyState?: React.ReactElement | null;
   hymns: readonly HymnalHymnSummary[];
   highlightedHymnNumber: number | null;
   onPressHymn: (
@@ -39,6 +41,8 @@ const HymnalCatalogList =
     HymnalCatalogListProps
   >(function HymnalCatalogList(
     {
+      header,
+      emptyState,
       hymns,
       highlightedHymnNumber,
       onPressHymn,
@@ -49,6 +53,7 @@ const HymnalCatalogList =
       useRef<FlatList<HymnalHymnSummary> | null>(
         null,
       );
+    const headerHeightRef = useRef(0);
 
     useImperativeHandle(
       ref,
@@ -62,10 +67,18 @@ const HymnalCatalogList =
             return;
           }
 
-          listRef.current?.scrollToIndex({
+          const headerHeight =
+            headerHeightRef.current;
+
+          if (headerHeight <= 0) {
+            return;
+          }
+
+          listRef.current?.scrollToOffset({
             animated: true,
-            index,
-            viewPosition: 0,
+            offset:
+              headerHeight +
+              ITEM_STRIDE * index,
           });
         },
       }),
@@ -75,7 +88,19 @@ const HymnalCatalogList =
     return (
       <FlatList
         ref={listRef}
+        style={styles.list}
         data={hymns}
+        ListHeaderComponent={
+          <View
+            onLayout={(event) => {
+              headerHeightRef.current =
+                event.nativeEvent.layout.height;
+            }}
+          >
+            {header}
+          </View>
+        }
+        ListEmptyComponent={emptyState ?? null}
         keyExtractor={(hymn) =>
           `${hymn.editionId}:${hymn.id}`
         }
@@ -131,11 +156,7 @@ const HymnalCatalogList =
         ItemSeparatorComponent={() => (
           <View style={styles.separator} />
         )}
-        getItemLayout={(_, index) => ({
-          index,
-          length: ITEM_STRIDE,
-          offset: ITEM_STRIDE * index,
-        })}
+
         contentContainerStyle={styles.content}
         initialNumToRender={12}
         maxToRenderPerBatch={12}
@@ -149,6 +170,9 @@ const HymnalCatalogList =
 export default HymnalCatalogList;
 
 const styles = StyleSheet.create({
+  list: {
+    flex: 1,
+  },
   content: {
     paddingBottom: 28,
     paddingHorizontal: 20,

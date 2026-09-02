@@ -550,110 +550,115 @@ export default function HymnalLibraryScreen({
   const showingSearchResults =
     activeSearch !== null;
 
-  return (
-    <View style={styles.screen}>
-      <View style={styles.headerArea}>
-        <View style={styles.hero}>
-          <Text style={styles.eyebrow}>
-            HARPA CRISTÃ
-          </Text>
-          <Text
-            accessibilityRole="header"
-            style={styles.title}
-          >
-            Biblioteca de hinos
-          </Text>
-          <Text style={styles.description}>
-            {edition.displayName} · {hymns.length} hinos
-            disponíveis offline.
-          </Text>
-        </View>
-
-        <HymnalSearchControls
-          query={searchQuery}
-          mode={searchMode}
-          active={showingSearchResults}
-          resultCount={searchResults.length}
-          hasMore={searchHasMore}
-          searching={searching}
-          loadingMore={loadingMore}
-          errorMessage={searchError}
-          loadMoreErrorMessage={loadMoreError}
-          onChangeQuery={(value) => {
-            setSearchQuery(value);
-            setSearchError(null);
-            setLoadMoreError(null);
-          }}
-          onChangeMode={(mode) => {
-            setSearchMode(mode);
-            setSearchError(null);
-            setLoadMoreError(null);
-          }}
-          onSubmit={() => {
-            void handleSearch();
-          }}
-          onClear={handleClearSearch}
-          onLoadMore={() => {
-            void handleLoadMore();
-          }}
-        />
-
-        <HymnalNumberJump
-          maxNumber={highestHymnNumber}
-          onSubmitNumber={handleJumpToNumber}
-        />
-
-        <View style={styles.catalogHeading}>
-          <View style={styles.catalogHeadingText}>
-            <Text style={styles.catalogEyebrow}>
-              {showingSearchResults
-                ? "RESULTADOS DA BUSCA"
-                : "CATÁLOGO COMPLETO"}
-            </Text>
-            <Text style={styles.catalogTitle}>
-              {showingSearchResults
-                ? `“${activeSearch.query}”`
-                : "Todos os hinos"}
-            </Text>
-          </View>
-
-          <View
-            accessible
-            accessibilityLabel={
-              showingSearchResults
-                ? `${searchResults.length} resultados carregados`
-                : `${hymns.length} hinos no catálogo`
-            }
-            style={styles.countBadge}
-          >
-            <Text style={styles.countBadgeText}>
-              {displayedHymns.length}
-            </Text>
-          </View>
-        </View>
+  const catalogHeader = (
+    <View style={styles.headerArea}>
+      <View style={styles.hero}>
+        <Text style={styles.eyebrow}>
+          HARPA CRISTÃ
+        </Text>
+        <Text
+          accessibilityRole="header"
+          style={styles.title}
+        >
+          Biblioteca de hinos
+        </Text>
+        <Text style={styles.description}>
+          {edition.displayName} · {hymns.length} hinos
+          disponíveis offline.
+        </Text>
       </View>
 
-      {showingSearchResults &&
-      searchResults.length === 0 ? (
-        <View style={styles.emptySearchState}>
-          <Text style={styles.emptySearchTitle}>
-            Nenhum hino encontrado
+      <HymnalSearchControls
+        query={searchQuery}
+        mode={searchMode}
+        active={showingSearchResults}
+        resultCount={searchResults.length}
+        hasMore={searchHasMore}
+        searching={searching}
+        loadingMore={loadingMore}
+        errorMessage={searchError}
+        loadMoreErrorMessage={loadMoreError}
+        onChangeQuery={(value) => {
+          setSearchQuery(value);
+          setSearchError(null);
+          setLoadMoreError(null);
+        }}
+        onChangeMode={(mode) => {
+          setSearchMode(mode);
+          setSearchError(null);
+          setLoadMoreError(null);
+        }}
+        onSubmit={() => {
+          void handleSearch();
+        }}
+        onClear={handleClearSearch}
+        onLoadMore={() => {
+          void handleLoadMore();
+        }}
+      />
+
+      <HymnalNumberJump
+        maxNumber={highestHymnNumber}
+        onSubmitNumber={handleJumpToNumber}
+      />
+
+      <View style={styles.catalogHeading}>
+        <View style={styles.catalogHeadingText}>
+          <Text style={styles.catalogEyebrow}>
+            {showingSearchResults
+              ? "RESULTADOS DA BUSCA"
+              : "CATÁLOGO COMPLETO"}
           </Text>
-          <Text style={styles.emptySearchText}>
-            Tente outra palavra ou frase, ou limpe a
-            busca para voltar ao catálogo completo.
+          <Text style={styles.catalogTitle}>
+            {showingSearchResults
+              ? `“${activeSearch.query}”`
+              : "Todos os hinos"}
           </Text>
         </View>
-      ) : (
-        <HymnalCatalogList
-          ref={catalogListRef}
-          hymns={displayedHymns}
-          highlightedHymnNumber={
-            highlightedHymnNumber
+
+        <View
+          accessible
+          accessibilityLabel={
+            showingSearchResults
+              ? `${searchResults.length} resultados carregados`
+              : `${hymns.length} hinos no catálogo`
           }
-          onPressHymn={handleOpenHymn}
-        />
-      )}
+          style={styles.countBadge}
+        >
+          <Text style={styles.countBadgeText}>
+            {displayedHymns.length}
+          </Text>
+        </View>
+      </View>
+    </View>
+  );
+
+  const emptyState =
+    showingSearchResults &&
+    searchResults.length === 0 ? (
+      <View style={styles.emptySearchState}>
+        <Text style={styles.emptySearchTitle}>
+          Nenhum hino encontrado
+        </Text>
+        <Text style={styles.emptySearchText}>
+          Tente outra palavra ou frase, ou limpe a
+          busca para voltar ao catálogo completo.
+        </Text>
+      </View>
+    ) : null;
+
+  return (
+    <View style={styles.screen}>
+      <HymnalCatalogList
+        ref={catalogListRef}
+        header={catalogHeader}
+        emptyState={emptyState}
+        hymns={displayedHymns}
+        highlightedHymnNumber={
+          highlightedHymnNumber
+        }
+        onPressHymn={handleOpenHymn}
+      />
     </View>
   );
 }
@@ -664,7 +669,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   headerArea: {
-    paddingHorizontal: 20,
     paddingTop: 20,
   },
   hero: {
@@ -736,7 +740,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     paddingBottom: 48,
-    paddingHorizontal: 28,
+    paddingHorizontal: 8,
   },
   emptySearchTitle: {
     color: colors.textStrong,

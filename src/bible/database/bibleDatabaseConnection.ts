@@ -10,6 +10,7 @@
 
 import { openDatabaseAsync, type SQLiteDatabase } from "expo-sqlite";
 
+import { runWebSQLiteBootstrapCriticalSection } from "../../services/webSQLiteBootstrapCriticalSection";
 import { BIBLE_DATABASE_NAME } from "./bibleDatabaseConstants";
 import { ensureBibleSeedInstalled } from "./bibleDatabaseSeed";
 
@@ -24,10 +25,12 @@ export async function openBibleDatabaseConnection(): Promise<SQLiteDatabase> {
   }
 
   if (!connectionPromise) {
-    const currentConnection = (async () => {
-      await ensureBibleSeedInstalled();
-      return openDatabaseAsync(BIBLE_DATABASE_NAME);
-    })();
+    const currentConnection = runWebSQLiteBootstrapCriticalSection(
+      async () => {
+        await ensureBibleSeedInstalled();
+        return openDatabaseAsync(BIBLE_DATABASE_NAME);
+      },
+    );
 
     connectionPromise = currentConnection.catch((error) => {
       if (connectionPromise === currentConnection) {
