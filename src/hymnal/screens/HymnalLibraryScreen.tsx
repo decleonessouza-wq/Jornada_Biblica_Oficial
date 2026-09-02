@@ -20,12 +20,21 @@ import HymnalCatalogList, {
   type HymnalCatalogListHandle,
 } from "../components/HymnalCatalogList";
 import HymnalNumberJump from "../components/HymnalNumberJump";
+import HymnalSearchControls from "../components/HymnalSearchControls";
 import type {
   HymnalHymnSummary,
 } from "../repositories/hymnalRepository";
 import {
+  HYMNAL_SEARCH_DEFAULT_LIMIT,
+  type HymnalSearchRepository,
+  type HymnalSearchTextMode,
+} from "../repositories/hymnalSearchRepository";
+import {
   createSQLiteHymnalRepository,
 } from "../repositories/sqliteHymnalRepository";
+import {
+  createSQLiteHymnalSearchRepository,
+} from "../repositories/sqliteHymnalSearchRepository";
 import {
   HymnalCatalogService,
 } from "../services/hymnalCatalogService";
@@ -36,13 +45,26 @@ type CatalogStatus =
   | "empty"
   | "error";
 
+type ActiveSearch = Readonly<{
+  query: string;
+  mode: HymnalSearchTextMode;
+}>;
+
 const LOAD_ERROR_MESSAGE =
   "Não foi possível carregar a Harpa agora.";
 
+const SEARCH_ERROR_MESSAGE =
+  "Não foi possível buscar na Harpa agora.";
+
 export default function HymnalLibraryScreen() {
   const catalogGenerationRef = useRef(0);
+  const searchGenerationRef = useRef(0);
   const catalogListRef =
     useRef<HymnalCatalogListHandle | null>(null);
+  const searchRepositoryRef =
+    useRef<HymnalSearchRepository | null>(null);
+  const pendingCatalogJumpIndexRef =
+    useRef<number | null>(null);
 
   const [status, setStatus] =
     useState<CatalogStatus>("loading");
@@ -53,6 +75,40 @@ export default function HymnalLibraryScreen() {
   const [highlightedHymnNumber, setHighlightedHymnNumber] =
     useState<number | null>(null);
 
+  const [searchQuery, setSearchQuery] =
+    useState("");
+  const [searchMode, setSearchMode] =
+    useState<HymnalSearchTextMode>("WORD");
+  const [activeSearch, setActiveSearch] =
+    useState<ActiveSearch | null>(null);
+  const [searchResults, setSearchResults] =
+    useState<readonly HymnalHymnSummary[]>([]);
+  const [searchHasMore, setSearchHasMore] =
+    useState(false);
+  const [searching, setSearching] =
+    useState(false);
+  const [loadingMore, setLoadingMore] =
+    useState(false);
+  const [searchError, setSearchError] =
+    useState<string | null>(null);
+
+  const clearSearchState = useCallback(
+    (clearInput: boolean) => {
+      searchGenerationRef.current += 1;
+      setActiveSearch(null);
+      setSearchResults([]);
+      setSearchHasMore(false);
+      setSearching(false);
+      setLoadingMore(false);
+      setSearchError(null);
+
+      if (clearInput) {
+        setSearchQuery("");
+      }
+    },
+    [],
+  );
+
   const loadCatalog = useCallback(async () => {
     const generation =
       catalogGenerationRef.current + 1;
@@ -62,6 +118,9 @@ export default function HymnalLibraryScreen() {
     setEdition(null);
     setHymns([]);
     setHighlightedHymnNumber(null);
+    searchRepositoryRef.current = null;
+    pendingCatalogJumpIndexRef.current = null;
+    clearSearchState(true);
 
     try {
       const repository =
@@ -125,15 +184,40 @@ export default function HymnalLibraryScreen() {
       setHighlightedHymnNumber(null);
       setStatus("error");
     }
-  }, []);
+  }, [clearSearchState]);
 
   useEffect(() => {
     void loadCatalog();
 
     return () => {
       catalogGenerationRef.current += 1;
+      searchGenerationRef.current += 1;
     };
   }, [loadCatalog]);
+
+  useEffect(() => {
+    if (
+      activeSearch !== null ||
+      pendingCatalogJumpIndexRef.current === null
+    ) {
+      return;
+    }
+
+    const targetIndex =
+      pendingCatalogJumpIndexRef.current;
+    pendingCatalogJumpIndexRef.current = null;
+
+    const animationFrame =
+      requestAnimationFrame(() => {
+        catalogListRef.current?.scrollToIndex(
+          targetIndex,
+        );
+      });
+
+    return () => {
+      cancelAnimationFrame(animationFrame);
+    };
+  }, [activeSearch]);
 
   const highestHymnNumber = useMemo(
     () =>
@@ -141,6 +225,14 @@ export default function HymnalLibraryScreen() {
         ? hymns[hymns.length - 1]?.number ?? 1
         : 1,
     [hymns],
+  );
+
+  const displayedHymns = useMemo(
+    () =>
+      activeSearch !== null
+        ? searchResults
+        : hymns,
+    [activeSearch, hymns, searchResults],
   );
 
   const handleJumpToNumber = useCallback(
@@ -155,14 +247,212 @@ export default function HymnalLibraryScreen() {
       }
 
       setHighlightedHymnNumber(hymnNumber);
+
+      if (activeSearch !== null) {
+        pendingCatalogJumpIndexRef.current =
+          targetIndex;
+        clearSearchState(true);
+        return true;
+      }
+
       catalogListRef.current?.scrollToIndex(
         targetIndex,
       );
 
       return true;
     },
-    [hymns],
+    [
+      activeSearch,
+      clearSearchState,
+      hymns,
+    ],
   );
+
+  const validateSearchInput = useCallback(
+    (): string | null => {
+      const trimmedQuery = searchQuery.trim();
+
+      if (trimmedQuery.length === 0) {
+        return "Digite uma palavra ou frase para buscar.";
+      }
+
+      if (
+        searchMode === "WORD" &&
+        trimmedQuery.split(/\s+/).length !== 1
+      ) {
+        return "No modo Palavra, digite apenas uma palavra.";
+      }
+
+      return null;
+    },
+    [searchMode, searchQuery],
+  );
+
+  const handleSearch = useCallback(async () => {
+    if (!edition || searching || loadingMore) {
+      return;
+    }
+
+    const validationMessage =
+      validateSearchInput();
+
+    if (validationMessage) {
+      setSearchError(validationMessage);
+      return;
+    }
+
+    const query = searchQuery.trim();
+    const mode = searchMode;
+    const generation =
+      searchGenerationRef.current + 1;
+    searchGenerationRef.current = generation;
+
+    setSearching(true);
+    setSearchError(null);
+    setHighlightedHymnNumber(null);
+
+    try {
+      let repository =
+        searchRepositoryRef.current;
+
+      if (!repository) {
+        repository =
+          await createSQLiteHymnalSearchRepository();
+        searchRepositoryRef.current = repository;
+      }
+
+      const page =
+        await repository.searchText({
+          editionId: edition.id,
+          query,
+          mode,
+          offset: 0,
+          limit: HYMNAL_SEARCH_DEFAULT_LIMIT,
+        });
+
+      if (
+        searchGenerationRef.current !== generation
+      ) {
+        return;
+      }
+
+      setSearchQuery(query);
+      setActiveSearch({
+        query,
+        mode,
+      });
+      setSearchResults(page.items);
+      setSearchHasMore(page.hasMore);
+    } catch (error) {
+      if (
+        searchGenerationRef.current !== generation
+      ) {
+        return;
+      }
+
+      console.warn(
+        "HYMNAL_LIBRARY_SEARCH_FAILED",
+        error,
+      );
+      setSearchError(SEARCH_ERROR_MESSAGE);
+    } finally {
+      if (
+        searchGenerationRef.current === generation
+      ) {
+        setSearching(false);
+      }
+    }
+  }, [
+    edition,
+    loadingMore,
+    searchMode,
+    searchQuery,
+    searching,
+    validateSearchInput,
+  ]);
+
+  const handleLoadMore = useCallback(async () => {
+    if (
+      !edition ||
+      !activeSearch ||
+      !searchHasMore ||
+      searching ||
+      loadingMore
+    ) {
+      return;
+    }
+
+    const generation =
+      searchGenerationRef.current + 1;
+    searchGenerationRef.current = generation;
+
+    setLoadingMore(true);
+    setSearchError(null);
+
+    try {
+      let repository =
+        searchRepositoryRef.current;
+
+      if (!repository) {
+        repository =
+          await createSQLiteHymnalSearchRepository();
+        searchRepositoryRef.current = repository;
+      }
+
+      const page =
+        await repository.searchText({
+          editionId: edition.id,
+          query: activeSearch.query,
+          mode: activeSearch.mode,
+          offset: searchResults.length,
+          limit: HYMNAL_SEARCH_DEFAULT_LIMIT,
+        });
+
+      if (
+        searchGenerationRef.current !== generation
+      ) {
+        return;
+      }
+
+      setSearchResults((current) => [
+        ...current,
+        ...page.items,
+      ]);
+      setSearchHasMore(page.hasMore);
+    } catch (error) {
+      if (
+        searchGenerationRef.current !== generation
+      ) {
+        return;
+      }
+
+      console.warn(
+        "HYMNAL_LIBRARY_SEARCH_MORE_FAILED",
+        error,
+      );
+      setSearchError(
+        "Não foi possível carregar mais resultados agora.",
+      );
+    } finally {
+      if (
+        searchGenerationRef.current === generation
+      ) {
+        setLoadingMore(false);
+      }
+    }
+  }, [
+    activeSearch,
+    edition,
+    loadingMore,
+    searchHasMore,
+    searchResults.length,
+    searching,
+  ]);
+
+  const handleClearSearch = useCallback(() => {
+    pendingCatalogJumpIndexRef.current = null;
+    clearSearchState(true);
+  }, [clearSearchState]);
 
   if (status === "loading") {
     return (
@@ -220,6 +510,9 @@ export default function HymnalLibraryScreen() {
     );
   }
 
+  const showingSearchResults =
+    activeSearch !== null;
+
   return (
     <View style={styles.screen}>
       <View style={styles.headerArea}>
@@ -239,40 +532,87 @@ export default function HymnalLibraryScreen() {
           </Text>
         </View>
 
+        <HymnalSearchControls
+          query={searchQuery}
+          mode={searchMode}
+          active={showingSearchResults}
+          resultCount={searchResults.length}
+          hasMore={searchHasMore}
+          searching={searching}
+          loadingMore={loadingMore}
+          errorMessage={searchError}
+          onChangeQuery={(value) => {
+            setSearchQuery(value);
+            setSearchError(null);
+          }}
+          onChangeMode={(mode) => {
+            setSearchMode(mode);
+            setSearchError(null);
+          }}
+          onSubmit={() => {
+            void handleSearch();
+          }}
+          onClear={handleClearSearch}
+          onLoadMore={() => {
+            void handleLoadMore();
+          }}
+        />
+
         <HymnalNumberJump
           maxNumber={highestHymnNumber}
           onSubmitNumber={handleJumpToNumber}
         />
 
         <View style={styles.catalogHeading}>
-          <View>
+          <View style={styles.catalogHeadingText}>
             <Text style={styles.catalogEyebrow}>
-              CATÁLOGO COMPLETO
+              {showingSearchResults
+                ? "RESULTADOS DA BUSCA"
+                : "CATÁLOGO COMPLETO"}
             </Text>
             <Text style={styles.catalogTitle}>
-              Todos os hinos
+              {showingSearchResults
+                ? `“${activeSearch.query}”`
+                : "Todos os hinos"}
             </Text>
           </View>
 
           <View
             accessible
-            accessibilityLabel={`${hymns.length} hinos no catálogo`}
+            accessibilityLabel={
+              showingSearchResults
+                ? `${searchResults.length} resultados carregados`
+                : `${hymns.length} hinos no catálogo`
+            }
             style={styles.countBadge}
           >
             <Text style={styles.countBadgeText}>
-              {hymns.length}
+              {displayedHymns.length}
             </Text>
           </View>
         </View>
       </View>
 
-      <HymnalCatalogList
-        ref={catalogListRef}
-        hymns={hymns}
-        highlightedHymnNumber={
-          highlightedHymnNumber
-        }
-      />
+      {showingSearchResults &&
+      searchResults.length === 0 ? (
+        <View style={styles.emptySearchState}>
+          <Text style={styles.emptySearchTitle}>
+            Nenhum hino encontrado
+          </Text>
+          <Text style={styles.emptySearchText}>
+            Tente outra palavra ou frase, ou limpe a
+            busca para voltar ao catálogo completo.
+          </Text>
+        </View>
+      ) : (
+        <HymnalCatalogList
+          ref={catalogListRef}
+          hymns={displayedHymns}
+          highlightedHymnNumber={
+            highlightedHymnNumber
+          }
+        />
+      )}
     </View>
   );
 }
@@ -319,6 +659,11 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     marginTop: 20,
   },
+  catalogHeadingText: {
+    flex: 1,
+    minWidth: 0,
+    paddingRight: 12,
+  },
   catalogEyebrow: {
     color: colors.muted,
     fontSize: 11,
@@ -344,6 +689,26 @@ const styles = StyleSheet.create({
     color: colors.textStrong,
     fontSize: 14,
     fontWeight: "800",
+  },
+  emptySearchState: {
+    alignItems: "center",
+    flex: 1,
+    justifyContent: "center",
+    paddingBottom: 48,
+    paddingHorizontal: 28,
+  },
+  emptySearchTitle: {
+    color: colors.textStrong,
+    fontSize: 20,
+    fontWeight: "800",
+    textAlign: "center",
+  },
+  emptySearchText: {
+    color: colors.textMuted,
+    fontSize: 14,
+    lineHeight: 21,
+    marginTop: 8,
+    textAlign: "center",
   },
   centerState: {
     alignItems: "center",
