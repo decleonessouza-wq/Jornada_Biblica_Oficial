@@ -13,7 +13,7 @@ import { useAppShellChrome } from "./AppShellChromeContext";
 const BASE_BAR_HEIGHT = 46;
 const QUICK_ACTION_OVERHANG = 24;
 
-type RealTabRouteName = "HomeTab" | "BibleTab" | "PlanTab";
+type RealTabRouteName = "HomeTab" | "BibleTab" | "PlanTab" | "HymnalTab";
 
 export type CustomTabBarProps = BottomTabBarProps & {
   onQuickAction: () => void;
@@ -92,33 +92,6 @@ function RealTabButton({
           styles.tabLabel,
           isFocused ? styles.tabLabelActive : styles.tabLabelInactive,
         ]}
-      >
-        {label}
-      </Text>
-    </Pressable>
-  );
-}
-
-function DisabledTabButton({
-  label,
-  symbol,
-}: {
-  label: string;
-  symbol: string;
-}) {
-  return (
-    <Pressable
-      accessible
-      accessibilityRole="button"
-      accessibilityLabel={`${label}. Em breve.`}
-      accessibilityState={{ disabled: true }}
-      disabled
-      style={styles.tabItem}
-    >
-      <Text style={[styles.tabSymbol, styles.tabSymbolDisabled]}>{symbol}</Text>
-      <Text
-        numberOfLines={1}
-        style={[styles.tabLabel, styles.tabLabelDisabled]}
       >
         {label}
       </Text>
@@ -234,7 +207,14 @@ export default function CustomTabBar({
             navigation={navigation}
           />
 
-          <DisabledTabButton label={PRIMARY_HYMNAL_NAVIGATION.label} symbol="H" />
+          <RealTabButton
+            routeName="HymnalTab"
+            label={PRIMARY_HYMNAL_NAVIGATION.label}
+            symbol="H"
+            state={state}
+            descriptors={descriptors}
+            navigation={navigation}
+          />
           </View>
         </View>
       </Animated.View>
@@ -290,10 +270,6 @@ const styles = StyleSheet.create({
   tabSymbolInactive: {
     color: colors.textInverse,
   },
-  tabSymbolDisabled: {
-    color: colors.textInverse,
-    opacity: 0.35,
-  },
   tabLabel: {
     fontSize: 10.5,
     fontWeight: "600",
@@ -305,10 +281,6 @@ const styles = StyleSheet.create({
   },
   tabLabelInactive: {
     color: colors.textInverse,
-  },
-  tabLabelDisabled: {
-    color: colors.textInverse,
-    opacity: 0.35,
   },
   quickActionSlot: {
     alignItems: "center",

@@ -20,10 +20,15 @@ export type BibleStackParamList = {
   BibleReader: OfflineBibleReaderRouteParams;
 };
 
+export type HymnalStackParamList = {
+  HymnalLibrary: undefined;
+};
+
 export type MainTabParamList = {
   HomeTab: undefined;
   BibleTab: NavigatorScreenParams<BibleStackParamList> | undefined;
   PlanTab: undefined;
+  HymnalTab: NavigatorScreenParams<HymnalStackParamList> | undefined;
 };
 
 export type AppDrawerParamList = {
@@ -67,3 +72,7 @@ export type MainTabScreenProps<
 export type BibleStackScreenProps<
   RouteName extends keyof BibleStackParamList,
 > = NativeStackScreenProps<BibleStackParamList, RouteName>;
+
+export type HymnalStackScreenProps<
+  RouteName extends keyof HymnalStackParamList,
+> = NativeStackScreenProps<HymnalStackParamList, RouteName>;

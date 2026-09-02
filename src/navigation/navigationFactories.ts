@@ -5,6 +5,7 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import type {
   AppDrawerParamList,
   BibleStackParamList,
+  HymnalStackParamList,
   MainTabParamList,
   RootStackParamList,
 } from "./types";
@@ -16,3 +17,5 @@ export const AppDrawer = createDrawerNavigator<AppDrawerParamList>();
 export const MainTabs = createBottomTabNavigator<MainTabParamList>();
 
 export const BibleStack = createNativeStackNavigator<BibleStackParamList>();
+
+export const HymnalStack = createNativeStackNavigator<HymnalStackParamList>();

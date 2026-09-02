@@ -22,6 +22,7 @@ import {
 } from "./AppShellChromeContext";
 import BibleNavigator from "./BibleNavigator";
 import CustomTabBar from "./CustomTabBar";
+import HymnalNavigator from "./HymnalNavigator";
 import { MainTabs } from "./navigationFactories";
 
 const HEADER_ROW_HEIGHT = 56;
@@ -133,6 +134,14 @@ function MainTabsNavigatorContent({
         component={PlanScreen}
         options={{
           title: "Plano Anual",
+        }}
+      />
+
+      <MainTabs.Screen
+        name="HymnalTab"
+        component={HymnalNavigator}
+        options={{
+          title: "Harpa",
         }}
       />
     </MainTabs.Navigator>
