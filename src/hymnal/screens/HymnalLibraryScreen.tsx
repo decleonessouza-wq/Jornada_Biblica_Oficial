@@ -1,44 +1,279 @@
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
-  ScrollView,
+  ActivityIndicator,
   StyleSheet,
   Text,
   View,
 } from "react-native";
 
+import type {
+  HymnalEditionMetadata,
+} from "../../domain/hymnal/hymnalEdition";
 import { colors } from "../../theme/colors";
+import HymnalCatalogList, {
+  type HymnalCatalogListHandle,
+} from "../components/HymnalCatalogList";
+import HymnalNumberJump from "../components/HymnalNumberJump";
+import type {
+  HymnalHymnSummary,
+} from "../repositories/hymnalRepository";
+import {
+  createSQLiteHymnalRepository,
+} from "../repositories/sqliteHymnalRepository";
+import {
+  HymnalCatalogService,
+} from "../services/hymnalCatalogService";
+
+type CatalogStatus =
+  | "loading"
+  | "ready"
+  | "empty"
+  | "error";
+
+const LOAD_ERROR_MESSAGE =
+  "Não foi possível carregar a Harpa agora.";
 
 export default function HymnalLibraryScreen() {
-  return (
-    <ScrollView
-      style={styles.screen}
-      contentContainerStyle={styles.content}
-      contentInsetAdjustmentBehavior="automatic"
-    >
-      <View style={styles.hero}>
-        <Text style={styles.eyebrow}>HARPA CRISTÃ</Text>
-        <Text accessibilityRole="header" style={styles.title}>
-          Biblioteca de hinos
+  const catalogGenerationRef = useRef(0);
+  const catalogListRef =
+    useRef<HymnalCatalogListHandle | null>(null);
+
+  const [status, setStatus] =
+    useState<CatalogStatus>("loading");
+  const [edition, setEdition] =
+    useState<HymnalEditionMetadata | null>(null);
+  const [hymns, setHymns] =
+    useState<readonly HymnalHymnSummary[]>([]);
+  const [highlightedHymnNumber, setHighlightedHymnNumber] =
+    useState<number | null>(null);
+
+  const loadCatalog = useCallback(async () => {
+    const generation =
+      catalogGenerationRef.current + 1;
+    catalogGenerationRef.current = generation;
+
+    setStatus("loading");
+    setEdition(null);
+    setHymns([]);
+    setHighlightedHymnNumber(null);
+
+    try {
+      const repository =
+        await createSQLiteHymnalRepository();
+      const service =
+        new HymnalCatalogService(repository);
+      const editions =
+        await service.listEditions();
+
+      if (
+        catalogGenerationRef.current !== generation
+      ) {
+        return;
+      }
+
+      const availableEdition = editions[0] ?? null;
+
+      if (!availableEdition) {
+        setStatus("empty");
+        return;
+      }
+
+      const catalog =
+        await service.listHymns(
+          availableEdition.id,
+        );
+
+      if (
+        catalogGenerationRef.current !== generation
+      ) {
+        return;
+      }
+
+      if (
+        catalog.length !==
+        availableEdition.expectedHymnCount
+      ) {
+        throw new Error(
+          `HYMNAL_LIBRARY_EXPECTED_HYMN_COUNT_MISMATCH:EXPECTED=${availableEdition.expectedHymnCount}:ACTUAL=${catalog.length}`,
+        );
+      }
+
+      setEdition(availableEdition);
+      setHymns(catalog);
+      setStatus(
+        catalog.length > 0 ? "ready" : "empty",
+      );
+    } catch (error) {
+      if (
+        catalogGenerationRef.current !== generation
+      ) {
+        return;
+      }
+
+      console.warn(
+        "HYMNAL_LIBRARY_LOAD_FAILED",
+        error,
+      );
+      setEdition(null);
+      setHymns([]);
+      setHighlightedHymnNumber(null);
+      setStatus("error");
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadCatalog();
+
+    return () => {
+      catalogGenerationRef.current += 1;
+    };
+  }, [loadCatalog]);
+
+  const highestHymnNumber = useMemo(
+    () =>
+      hymns.length > 0
+        ? hymns[hymns.length - 1]?.number ?? 1
+        : 1,
+    [hymns],
+  );
+
+  const handleJumpToNumber = useCallback(
+    (hymnNumber: number): boolean => {
+      const targetIndex =
+        hymns.findIndex(
+          (hymn) => hymn.number === hymnNumber,
+        );
+
+      if (targetIndex < 0) {
+        return false;
+      }
+
+      setHighlightedHymnNumber(hymnNumber);
+      catalogListRef.current?.scrollToIndex(
+        targetIndex,
+      );
+
+      return true;
+    },
+    [hymns],
+  );
+
+  if (status === "loading") {
+    return (
+      <View style={styles.centerState}>
+        <ActivityIndicator
+          size="large"
+          color={colors.primary}
+        />
+        <Text
+          accessibilityRole="header"
+          style={styles.centerTitle}
+        >
+          Preparando a Harpa
         </Text>
-        <Text style={styles.description}>
-          A infraestrutura offline da Harpa está conectada ao Jornada Bíblica.
+        <Text style={styles.centerText}>
+          Carregando o catálogo offline de hinos.
         </Text>
       </View>
+    );
+  }
 
-      <View
-        accessible
-        accessibilityLabel="Status da biblioteca da Harpa"
-        style={styles.statusCard}
-      >
-        <View style={styles.statusRow}>
-          <View style={styles.statusDot} />
-          <Text style={styles.statusTitle}>Navegação ativada</Text>
+  if (status === "error") {
+    return (
+      <View style={styles.centerState}>
+        <Text
+          accessibilityRole="header"
+          style={styles.centerTitle}
+        >
+          Não foi possível abrir a Harpa
+        </Text>
+        <Text style={styles.centerText}>
+          {LOAD_ERROR_MESSAGE}
+        </Text>
+      </View>
+    );
+  }
+
+  if (
+    status === "empty" ||
+    !edition ||
+    hymns.length === 0
+  ) {
+    return (
+      <View style={styles.centerState}>
+        <Text
+          accessibilityRole="header"
+          style={styles.centerTitle}
+        >
+          Catálogo indisponível
+        </Text>
+        <Text style={styles.centerText}>
+          Nenhum hino habilitado foi encontrado.
+        </Text>
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.screen}>
+      <View style={styles.headerArea}>
+        <View style={styles.hero}>
+          <Text style={styles.eyebrow}>
+            HARPA CRISTÃ
+          </Text>
+          <Text
+            accessibilityRole="header"
+            style={styles.title}
+          >
+            Biblioteca de hinos
+          </Text>
+          <Text style={styles.description}>
+            {edition.displayName} · {hymns.length} hinos
+            disponíveis offline.
+          </Text>
         </View>
 
-        <Text style={styles.statusText}>
-          A lista de hinos, a busca e o leitor serão apresentados nesta área.
-        </Text>
+        <HymnalNumberJump
+          maxNumber={highestHymnNumber}
+          onSubmitNumber={handleJumpToNumber}
+        />
+
+        <View style={styles.catalogHeading}>
+          <View>
+            <Text style={styles.catalogEyebrow}>
+              CATÁLOGO COMPLETO
+            </Text>
+            <Text style={styles.catalogTitle}>
+              Todos os hinos
+            </Text>
+          </View>
+
+          <View
+            accessible
+            accessibilityLabel={`${hymns.length} hinos no catálogo`}
+            style={styles.countBadge}
+          >
+            <Text style={styles.countBadgeText}>
+              {hymns.length}
+            </Text>
+          </View>
+        </View>
       </View>
-    </ScrollView>
+
+      <HymnalCatalogList
+        ref={catalogListRef}
+        hymns={hymns}
+        highlightedHymnNumber={
+          highlightedHymnNumber
+        }
+      />
+    </View>
   );
 }
 
@@ -47,17 +282,15 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
-  content: {
-    flexGrow: 1,
+  headerArea: {
     paddingHorizontal: 20,
-    paddingTop: 24,
-    paddingBottom: 32,
+    paddingTop: 20,
   },
   hero: {
     backgroundColor: colors.primary,
     borderRadius: 24,
     paddingHorizontal: 22,
-    paddingVertical: 26,
+    paddingVertical: 24,
   },
   eyebrow: {
     color: colors.secondary,
@@ -79,34 +312,58 @@ const styles = StyleSheet.create({
     marginTop: 10,
     opacity: 0.86,
   },
-  statusCard: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: 18,
-    borderWidth: StyleSheet.hairlineWidth,
-    marginTop: 18,
-    padding: 18,
-  },
-  statusRow: {
+  catalogHeading: {
     alignItems: "center",
     flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 12,
+    marginTop: 20,
   },
-  statusDot: {
-    backgroundColor: colors.success,
-    borderRadius: 5,
-    height: 10,
-    marginRight: 9,
-    width: 10,
+  catalogEyebrow: {
+    color: colors.muted,
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 0.9,
   },
-  statusTitle: {
+  catalogTitle: {
     color: colors.textStrong,
-    fontSize: 16,
-    fontWeight: "700",
+    fontSize: 20,
+    fontWeight: "800",
+    marginTop: 3,
   },
-  statusText: {
-    color: colors.textMuted,
+  countBadge: {
+    alignItems: "center",
+    backgroundColor: colors.primarySoft,
+    borderRadius: 18,
+    justifyContent: "center",
+    minHeight: 36,
+    minWidth: 52,
+    paddingHorizontal: 12,
+  },
+  countBadgeText: {
+    color: colors.textStrong,
     fontSize: 14,
-    lineHeight: 21,
-    marginTop: 10,
+    fontWeight: "800",
+  },
+  centerState: {
+    alignItems: "center",
+    backgroundColor: colors.background,
+    flex: 1,
+    justifyContent: "center",
+    paddingHorizontal: 28,
+  },
+  centerTitle: {
+    color: colors.textStrong,
+    fontSize: 22,
+    fontWeight: "800",
+    marginTop: 14,
+    textAlign: "center",
+  },
+  centerText: {
+    color: colors.textMuted,
+    fontSize: 15,
+    lineHeight: 22,
+    marginTop: 8,
+    textAlign: "center",
   },
 });
