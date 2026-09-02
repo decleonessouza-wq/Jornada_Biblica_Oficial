@@ -38,28 +38,30 @@ EXTERNAL_AUTHORIZATION_DOCUMENT_SHA256=NOT_AVAILABLE
 
 NOT_AVAILABLE significa que o dado verificavel ainda nao esta disponivel no repositorio e nao pode ser inventado, reconstruido ou presumido.
 
-## Proveniencia da fonte real
+## Proveniencia tecnica atual comprovada
 
-REAL_SOURCE_ARTIFACT=NOT_AVAILABLE
-REAL_SOURCE_ARTIFACT_KIND=NOT_AVAILABLE
-REAL_SOURCE_ARTIFACT_ORIGIN=NOT_AVAILABLE
-REAL_SOURCE_REVISION=NOT_AVAILABLE
-REAL_SOURCE_SHA256=NOT_AVAILABLE
-NORMALIZED_SOURCE_SHA256=NOT_AVAILABLE
+A cadeia abaixo registra apenas o estado tecnico verificavel atualmente incorporado ao repositorio. Ela nao constitui, substitui ou amplia evidencia externa formal de autorizacao.
 
-Nao existe neste scaffold um lock concreto de fonte nem um corpus real incorporado.
+REAL_SOURCE_ARTIFACT=harpa_crista_640_hinos.json
+REAL_SOURCE_ARTIFACT_KIND=JSON
+REAL_SOURCE_PROVENANCE_STATUS=LOCKED_AND_VERIFIED
+REAL_SOURCE_PROVENANCE_AUTHORITY=src/hymnal/import/harpaSourceArtifactLocks.ts
 
-Quando um artefato-fonte real for aprovado para ingestao, sua proveniencia devera ser registrada pelos contratos tecnicos apropriados, incluindo, conforme aplicavel:
+NORMALIZED_SOURCE_ARTIFACT=src/hymnal/corpus/harpa-crista-jornada-v1.normalized.json
+NORMALIZED_SOURCE_RECORD_COUNT=636
+NORMALIZED_SOURCE_PROVENANCE_STATUS=LOCKED_AND_VERIFIED
+NORMALIZED_SOURCE_PROVENANCE_AUTHORITY=src/hymnal/import/harpaNormalizedArtifactLock.ts
 
-- sourceArtifact
-- sourceArtifactKind
-- sourceArtifactOrigin
-- sourceRevision
-- sourceSha256
-- sourceByteLength
-- lockedAt
-- normalizedSha256
-- importerVersion
+PRODUCTION_SEED_ARTIFACT=assets/hymnal/harpa-jornada-seed-v1.db
+PRODUCTION_SEED_HYMN_COUNT=636
+PRODUCTION_SEED_SECTION_COUNT=2707
+PRODUCTION_SEED_PACKAGED_SCHEMA_VERSION=1
+PRODUCTION_SEED_RUNTIME_SCHEMA_TARGET_VERSION=2
+PRODUCTION_SEED_STATUS=TECHNICALLY_AUDITED
+
+Os valores criptograficos, revisoes, byte lengths e demais detalhes de proveniencia permanecem nas autoridades tecnicas acima e nao sao duplicados neste manifesto juridico.
+
+A existencia dessa cadeia tecnica nao altera o estado IN_PROGRESS da formalizacao externa, nao cria RIGHTS_IDENTIFIER, nao representa evidencia externa e nao autoriza preencher dados juridicos ainda indisponiveis.
 
 ## Regras fail-closed
 
