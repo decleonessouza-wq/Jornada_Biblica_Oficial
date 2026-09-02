@@ -15,6 +15,9 @@ import {
 import type {
   HymnalEditionMetadata,
 } from "../../domain/hymnal/hymnalEdition";
+import type {
+  HymnalStackScreenProps,
+} from "../../navigation/types";
 import { colors } from "../../theme/colors";
 import HymnalCatalogList, {
   type HymnalCatalogListHandle,
@@ -56,7 +59,9 @@ const LOAD_ERROR_MESSAGE =
 const SEARCH_ERROR_MESSAGE =
   "Não foi possível buscar na Harpa agora.";
 
-export default function HymnalLibraryScreen() {
+export default function HymnalLibraryScreen({
+  navigation,
+}: HymnalStackScreenProps<"HymnalLibrary">) {
   const catalogGenerationRef = useRef(0);
   const searchGenerationRef = useRef(0);
   const catalogListRef =
@@ -233,6 +238,16 @@ export default function HymnalLibraryScreen() {
         ? searchResults
         : hymns,
     [activeSearch, hymns, searchResults],
+  );
+
+  const handleOpenHymn = useCallback(
+    (hymn: HymnalHymnSummary) => {
+      navigation.navigate("HymnalReader", {
+        editionId: hymn.editionId,
+        hymnId: hymn.id,
+      });
+    },
+    [navigation],
   );
 
   const handleJumpToNumber = useCallback(
@@ -611,6 +626,7 @@ export default function HymnalLibraryScreen() {
           highlightedHymnNumber={
             highlightedHymnNumber
           }
+          onPressHymn={handleOpenHymn}
         />
       )}
     </View>

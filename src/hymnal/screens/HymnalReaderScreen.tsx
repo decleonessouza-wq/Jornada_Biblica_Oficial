@@ -1,0 +1,327 @@
+import React, {
+  useEffect,
+  useState,
+} from "react";
+import {
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+
+import type {
+  Hymn,
+  HymnSection,
+} from "../../domain/hymnal/hymn";
+import type {
+  HymnalStackScreenProps,
+} from "../../navigation/types";
+import { colors } from "../../theme/colors";
+import {
+  createSQLiteHymnalRepository,
+} from "../repositories/sqliteHymnalRepository";
+
+type ReaderStatus =
+  | "loading"
+  | "ready"
+  | "notFound"
+  | "error";
+
+function getSectionDisplayLabel(
+  section: HymnSection,
+): string {
+  if (section.label) {
+    return section.label;
+  }
+
+  switch (section.kind) {
+    case "VERSE":
+      return `Estrofe ${section.order}`;
+    case "CHORUS":
+      return "Coro";
+    case "REFRAIN":
+      return "Refrão";
+    case "BRIDGE":
+      return "Ponte";
+    case "OTHER":
+      return `Seção ${section.order}`;
+  }
+}
+
+export default function HymnalReaderScreen({
+  navigation,
+  route,
+}: HymnalStackScreenProps<"HymnalReader">) {
+  const {
+    editionId,
+    hymnId,
+  } = route.params;
+
+  const [status, setStatus] =
+    useState<ReaderStatus>("loading");
+  const [hymn, setHymn] =
+    useState<Hymn | null>(null);
+
+  useEffect(() => {
+    let active = true;
+
+    setStatus("loading");
+    setHymn(null);
+
+    void (async () => {
+      try {
+        const repository =
+          await createSQLiteHymnalRepository();
+
+        const loadedHymn =
+          await repository.getHymnById(
+            editionId,
+            hymnId,
+          );
+
+        if (!active) {
+          return;
+        }
+
+        if (!loadedHymn) {
+          setStatus("notFound");
+          return;
+        }
+
+        setHymn(loadedHymn);
+        setStatus("ready");
+      } catch (error) {
+        if (!active) {
+          return;
+        }
+
+        console.warn(
+          "HYMNAL_READER_LOAD_FAILED",
+          error,
+        );
+        setHymn(null);
+        setStatus("error");
+      }
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, [editionId, hymnId]);
+
+  return (
+    <View style={styles.screen}>
+      <View style={styles.topBar}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Voltar para a biblioteca da Harpa"
+          onPress={() => navigation.goBack()}
+          style={({ pressed }) => [
+            styles.backButton,
+            pressed && styles.backButtonPressed,
+          ]}
+        >
+          <Text style={styles.backButtonText}>
+            ← Voltar
+          </Text>
+        </Pressable>
+      </View>
+
+      {status === "loading" && (
+        <View style={styles.centerState}>
+          <ActivityIndicator
+            size="large"
+            color={colors.primary}
+          />
+          <Text
+            accessibilityRole="header"
+            style={styles.stateTitle}
+          >
+            Carregando hino
+          </Text>
+          <Text style={styles.stateText}>
+            Abrindo a letra salva no dispositivo.
+          </Text>
+        </View>
+      )}
+
+      {status === "notFound" && (
+        <View style={styles.centerState}>
+          <Text
+            accessibilityRole="header"
+            style={styles.stateTitle}
+          >
+            Hino não encontrado
+          </Text>
+          <Text style={styles.stateText}>
+            Este hino não está disponível nesta edição.
+          </Text>
+        </View>
+      )}
+
+      {status === "error" && (
+        <View style={styles.centerState}>
+          <Text
+            accessibilityRole="header"
+            style={styles.stateTitle}
+          >
+            Não foi possível abrir o hino
+          </Text>
+          <Text style={styles.stateText}>
+            O conteúdo não pôde ser carregado agora.
+          </Text>
+        </View>
+      )}
+
+      {status === "ready" && hymn && (
+        <ScrollView
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.hero}>
+            <Text style={styles.hymnNumber}>
+              HINO {hymn.number}
+            </Text>
+            <Text
+              accessibilityRole="header"
+              style={styles.title}
+            >
+              {hymn.title}
+            </Text>
+
+            {hymn.firstLine && (
+              <Text style={styles.firstLine}>
+                {hymn.firstLine}
+              </Text>
+            )}
+          </View>
+
+          <View style={styles.sections}>
+            {hymn.sections.map((section) => (
+              <View
+                key={`${hymn.id}:${section.order}`}
+                style={styles.sectionCard}
+              >
+                <Text style={styles.sectionLabel}>
+                  {getSectionDisplayLabel(section)}
+                </Text>
+                <Text style={styles.sectionText}>
+                  {section.text}
+                </Text>
+              </View>
+            ))}
+          </View>
+        </ScrollView>
+      )}
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  screen: {
+    backgroundColor: colors.background,
+    flex: 1,
+  },
+  topBar: {
+    alignItems: "flex-start",
+    paddingHorizontal: 20,
+    paddingTop: 16,
+  },
+  backButton: {
+    alignItems: "center",
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: 14,
+    borderWidth: 1,
+    justifyContent: "center",
+    minHeight: 44,
+    paddingHorizontal: 16,
+  },
+  backButtonPressed: {
+    backgroundColor: colors.surfaceAlt,
+  },
+  backButtonText: {
+    color: colors.textStrong,
+    fontSize: 14,
+    fontWeight: "800",
+  },
+  centerState: {
+    alignItems: "center",
+    flex: 1,
+    justifyContent: "center",
+    paddingBottom: 56,
+    paddingHorizontal: 28,
+  },
+  stateTitle: {
+    color: colors.textStrong,
+    fontSize: 22,
+    fontWeight: "800",
+    marginTop: 14,
+    textAlign: "center",
+  },
+  stateText: {
+    color: colors.textMuted,
+    fontSize: 15,
+    lineHeight: 22,
+    marginTop: 8,
+    textAlign: "center",
+  },
+  content: {
+    paddingBottom: 36,
+    paddingHorizontal: 20,
+    paddingTop: 16,
+  },
+  hero: {
+    backgroundColor: colors.primary,
+    borderRadius: 24,
+    paddingHorizontal: 22,
+    paddingVertical: 24,
+  },
+  hymnNumber: {
+    color: colors.secondary,
+    fontSize: 12,
+    fontWeight: "800",
+    letterSpacing: 1.1,
+  },
+  title: {
+    color: colors.textInverse,
+    fontSize: 28,
+    fontWeight: "800",
+    lineHeight: 34,
+    marginTop: 8,
+  },
+  firstLine: {
+    color: colors.textInverse,
+    fontSize: 15,
+    lineHeight: 22,
+    marginTop: 10,
+    opacity: 0.86,
+  },
+  sections: {
+    marginTop: 18,
+  },
+  sectionCard: {
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: 18,
+    borderWidth: StyleSheet.hairlineWidth,
+    marginBottom: 12,
+    paddingHorizontal: 18,
+    paddingVertical: 18,
+  },
+  sectionLabel: {
+    color: colors.textStrong,
+    fontSize: 12,
+    fontWeight: "800",
+    letterSpacing: 0.7,
+    textTransform: "uppercase",
+  },
+  sectionText: {
+    color: colors.text,
+    fontSize: 18,
+    lineHeight: 29,
+    marginTop: 10,
+  },
+});

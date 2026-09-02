@@ -5,6 +5,7 @@ import React, {
 } from "react";
 import {
   FlatList,
+  Pressable,
   StyleSheet,
   Text,
   View,
@@ -23,6 +24,9 @@ const ITEM_STRIDE =
 type HymnalCatalogListProps = Readonly<{
   hymns: readonly HymnalHymnSummary[];
   highlightedHymnNumber: number | null;
+  onPressHymn: (
+    hymn: HymnalHymnSummary,
+  ) => void;
 }>;
 
 export type HymnalCatalogListHandle = Readonly<{
@@ -37,6 +41,7 @@ const HymnalCatalogList =
     {
       hymns,
       highlightedHymnNumber,
+      onPressHymn,
     },
     ref,
   ) {
@@ -80,19 +85,22 @@ const HymnalCatalogList =
             highlightedHymnNumber;
 
           return (
-            <View
-              accessible
+            <Pressable
+              accessibilityRole="button"
               accessibilityLabel={[
-                `Hino ${item.number}.`,
+                `Abrir hino ${item.number}.`,
                 item.title,
                 item.firstLine ?? "",
               ]
                 .filter(Boolean)
                 .join(" ")}
-              style={[
+              onPress={() => onPressHymn(item)}
+              style={({ pressed }) => [
                 styles.item,
                 highlighted &&
                   styles.itemHighlighted,
+                pressed &&
+                  styles.itemPressed,
               ]}
             >
               <View style={styles.numberBox}>
@@ -117,7 +125,7 @@ const HymnalCatalogList =
                     "Primeira linha não disponível"}
                 </Text>
               </View>
-            </View>
+            </Pressable>
           );
         }}
         ItemSeparatorComponent={() => (
@@ -159,6 +167,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceHighlight,
     borderColor: colors.secondary,
     borderWidth: 1,
+  },
+  itemPressed: {
+    opacity: 0.86,
   },
   numberBox: {
     alignItems: "center",
