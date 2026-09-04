@@ -615,7 +615,10 @@ export default function BibleReaderScreen({
   };
 
   return (
-    <View style={styles.screen}>
+    <View
+      testID="bible-reader-screen"
+      style={styles.screen}
+    >
       <Animated.View
         accessibilityElementsHidden={readerChromeHidden}
         importantForAccessibility={
@@ -688,6 +691,7 @@ function ReaderState({
 
   return (
     <View
+      testID="bible-reader-state"
       style={[
         styles.stateScreen,
         { paddingTop: 16 + insets.top },

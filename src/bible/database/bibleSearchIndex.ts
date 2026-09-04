@@ -23,14 +23,13 @@ import type { SQLiteDatabase } from "expo-sqlite";
 import { BIBLE_SEED_CONTRACT } from "./bibleDatabaseSeed";
 import {
   BIBLE_SEARCH_NORMALIZER_VERSION,
-  countBibleSearchTerms,
   normalizeBibleSearchText,
 } from "../search/bibleSearchNormalization";
 
 export const BIBLE_SEARCH_INDEX_VERSION = 1 as const;
 
-const BIBLE_SEARCH_BUILD_BATCH_SIZE = 250;
-const BIBLE_SEARCH_SQL_INSERT_CHUNK_SIZE = 400;
+const BIBLE_SEARCH_BUILD_BATCH_SIZE = 1000;
+const BIBLE_SEARCH_SQL_INSERT_CHUNK_SIZE = 1000;
 const BIBLE_SEARCH_FTS_TABLE = "bible_search_fts";
 
 const SEARCH_META_KEYS = {
@@ -273,10 +272,10 @@ async function isSearchIndexReady(
 
   if (
     documentCount !== BIBLE_SEED_CONTRACT.verseRows ||
-    dictionaryRowCount <= 0 ||
-    postingRowCount <= 0 ||
-    dictionaryRowCount !== metaDictionaryRows ||
-    postingRowCount !== metaPostingRows
+    dictionaryRowCount !== 0 ||
+    postingRowCount !== 0 ||
+    metaDictionaryRows !== 0 ||
+    metaPostingRows !== 0
   ) {
     return null;
   }
@@ -428,15 +427,10 @@ function assertVersionCounts(
 async function rebuildPortableSearchIndex(
   database: SQLiteDatabase,
 ): Promise<void> {
-  const termIds = new Map<string, number>();
-
   let processedVerses = 0;
-  let dictionaryRowCount = 0;
-  let postingRowCount = 0;
   let blivreVerses = 0;
   let alm1911Verses = 0;
   let nextDocumentId = 1;
-  let nextTermId = 1;
 
   await database.withTransactionAsync(async () => {
     await clearPortableSearchTables(database);
@@ -470,44 +464,18 @@ async function rebuildPortableSearchIndex(
       }
 
       const documentRows: SearchBindValue[][] = [];
-      const dictionaryRows: SearchBindValue[][] = [];
-      const postingRows: SearchBindValue[][] = [];
 
       for (const row of verses) {
-        const normalizedText = normalizeBibleSearchText(row.text);
-        const documentId = nextDocumentId;
-        nextDocumentId += 1;
-
         documentRows.push([
-          documentId,
+          nextDocumentId,
           row.version_id,
           row.book_id,
           row.chapter,
           row.verse,
-          normalizedText,
+          normalizeBibleSearchText(row.text),
         ]);
 
-        const termCounts = countBibleSearchTerms(row.text);
-
-        for (const [term, frequency] of termCounts) {
-          let termId = termIds.get(term);
-
-          if (termId === undefined) {
-            termId = nextTermId;
-            nextTermId += 1;
-            termIds.set(term, termId);
-            dictionaryRows.push([termId, term]);
-            dictionaryRowCount += 1;
-          }
-
-          postingRows.push([
-            termId,
-            documentId,
-            frequency,
-          ]);
-          postingRowCount += 1;
-        }
-
+        nextDocumentId += 1;
         processedVerses += 1;
 
         if (row.version_id === "BLIVRE") {
@@ -517,7 +485,6 @@ async function rebuildPortableSearchIndex(
         }
       }
 
-      // Foreign keys stay enabled: parents are persisted before postings.
       await insertRows(
         database,
         `INSERT INTO bible_search_documents(
@@ -530,27 +497,6 @@ async function rebuildPortableSearchIndex(
         )`,
         6,
         documentRows,
-      );
-
-      await insertRows(
-        database,
-        `INSERT INTO bible_search_dictionary(
-          term_id,
-          term
-        )`,
-        2,
-        dictionaryRows,
-      );
-
-      await insertRows(
-        database,
-        `INSERT INTO bible_search_postings(
-          term_id,
-          document_id,
-          term_frequency
-        )`,
-        3,
-        postingRows,
       );
 
       const lastVerse = verses[verses.length - 1];
@@ -568,24 +514,14 @@ async function rebuildPortableSearchIndex(
       alm1911Verses,
     );
 
-    if (
-      dictionaryRowCount <= 0 ||
-      postingRowCount <= 0 ||
-      termIds.size !== dictionaryRowCount
-    ) {
-      throw new Error(
-        `BIBLE_SEARCH_PORTABLE_INDEX_COUNTS_INVALID:DICTIONARY=${dictionaryRowCount}:POSTINGS=${postingRowCount}:MAP=${termIds.size}`,
-      );
-    }
-
     await writeReadyMeta(
       database,
       "PORTABLE_SQLITE",
       processedVerses,
       blivreVerses,
       alm1911Verses,
-      dictionaryRowCount,
-      postingRowCount,
+      0,
+      0,
     );
   });
 }

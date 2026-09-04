@@ -5,18 +5,18 @@ import {
 } from "../src/navigation/navigationSurfacePolicy";
 
 describe("Navigation surface policy", () => {
-  it("reserves the definitive primary slot for Harpa while runtime remains blocked", () => {
+  it("exposes the definitive primary Harpa slot with runtime ready", () => {
     expect(
       CURRENT_HARPA_RUNTIME_READY,
-    ).toBe(false);
+    ).toBe(true);
 
     expect(
       PRIMARY_HYMNAL_NAVIGATION,
     ).toEqual({
       label: "Harpa",
       location: "PRIMARY_TAB",
-      availability: "RUNTIME_BLOCKED",
-      runtimeReady: false,
+      availability: "AVAILABLE",
+      runtimeReady: true,
     });
 
     expect(

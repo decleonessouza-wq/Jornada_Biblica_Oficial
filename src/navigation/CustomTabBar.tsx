@@ -224,11 +224,11 @@ export default function CustomTabBar({
 
 const styles = StyleSheet.create({
   animatedShell: {
-    backgroundColor: colors.background,
+    backgroundColor: "transparent",
     overflow: "hidden",
   },
   safeArea: {
-    backgroundColor: colors.background,
+    backgroundColor: "transparent",
     position: "relative",
   },
   barSurface: {

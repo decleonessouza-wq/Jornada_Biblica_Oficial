@@ -67,7 +67,7 @@ export default function HymnalNumberJump({
     }
 
     setFeedback(
-      `Hino nº ${hymnNumber} localizado no catálogo.`,
+      `Hino nº ${hymnNumber} encontrado.`,
     );
     Keyboard.dismiss();
   }, [
@@ -82,11 +82,10 @@ export default function HymnalNumberJump({
         ACESSO DIRETO
       </Text>
       <Text style={styles.title}>
-        Ir para o hino nº
+        Abrir hino pelo número
       </Text>
       <Text style={styles.hint}>
-        Digite o número para localizar o hino
-        diretamente no catálogo.
+        Digite o número do hino para abrir mais rápido.
       </Text>
 
       <View style={styles.row}>

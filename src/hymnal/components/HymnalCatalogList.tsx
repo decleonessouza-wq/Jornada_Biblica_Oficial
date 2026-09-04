@@ -29,10 +29,14 @@ type HymnalCatalogListProps = Readonly<{
   onPressHymn: (
     hymn: HymnalHymnSummary,
   ) => void;
+  onScrolledAwayFromTopChange?: (
+    scrolledAway: boolean,
+  ) => void;
 }>;
 
 export type HymnalCatalogListHandle = Readonly<{
   scrollToIndex: (index: number) => void;
+  scrollToTop: () => void;
 }>;
 
 const HymnalCatalogList =
@@ -46,6 +50,7 @@ const HymnalCatalogList =
       hymns,
       highlightedHymnNumber,
       onPressHymn,
+      onScrolledAwayFromTopChange,
     },
     ref,
   ) {
@@ -54,10 +59,17 @@ const HymnalCatalogList =
         null,
       );
     const headerHeightRef = useRef(0);
+    const lastScrolledAwayRef = useRef(false);
 
     useImperativeHandle(
       ref,
       () => ({
+        scrollToTop() {
+          listRef.current?.scrollToOffset({
+            animated: true,
+            offset: 0,
+          });
+        },
         scrollToIndex(index: number) {
           if (
             !Number.isInteger(index) ||
@@ -111,6 +123,7 @@ const HymnalCatalogList =
 
           return (
             <Pressable
+              testID={`hymnal-catalog-item-${item.number}`}
               accessibilityRole="button"
               accessibilityLabel={[
                 `Abrir hino ${item.number}.`,
@@ -163,6 +176,22 @@ const HymnalCatalogList =
         windowSize={7}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
+        onScroll={(event) => {
+          const scrolledAway =
+            event.nativeEvent.contentOffset.y > 480;
+
+          if (
+            scrolledAway !==
+            lastScrolledAwayRef.current
+          ) {
+            lastScrolledAwayRef.current =
+              scrolledAway;
+            onScrolledAwayFromTopChange?.(
+              scrolledAway,
+            );
+          }
+        }}
+        scrollEventThrottle={100}
       />
     );
   });

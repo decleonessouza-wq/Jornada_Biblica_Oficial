@@ -196,7 +196,10 @@ export default function BibleNavigator() {
 
   if (bootstrapState.status === "loading") {
     return (
-      <View style={styles.loadingScreen}>
+      <View
+        testID="bible-navigator-bootstrap-loading"
+        style={styles.loadingScreen}
+      >
         <ActivityIndicator
           size="large"
           color={colors.primary}

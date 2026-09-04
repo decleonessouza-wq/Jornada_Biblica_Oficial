@@ -66,11 +66,10 @@ export default function HymnalSearchControls({
         BUSCA NA HARPA
       </Text>
       <Text style={styles.title}>
-        Encontre por palavra ou frase
+        Encontre um hino
       </Text>
       <Text style={styles.hint}>
-        A busca é feita offline no conteúdo dos hinos
-        desta edição.
+        Procure por uma palavra ou frase conhecida.
       </Text>
 
       <TextInput

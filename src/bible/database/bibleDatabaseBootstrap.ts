@@ -9,9 +9,9 @@
  * O schema do seed empacotado e o schema runtime são conceitos distintos:
  * o seed permanece v1 e a cópia instalada pode avançar por migrations.
  *
- * A infraestrutura de busca materializa o backend apropriado por plataforma:
- * FTS5 no nativo e índice compacto portátil no Web. Navegação/UI permanecem
- * fora deste módulo.
+ * O bootstrap principal prepara somente o banco necessário para leitura.
+ * A infraestrutura de busca é materializada sob demanda por um bootstrap
+ * específico, evitando bloquear a biblioteca com a construção do índice.
  */
 
 import type { SQLiteDatabase } from "expo-sqlite";
@@ -82,6 +82,7 @@ type BibleMetaRow = Readonly<{
 }>;
 
 let bootstrapPromise: Promise<SQLiteDatabase> | null = null;
+let searchBootstrapPromise: Promise<SQLiteDatabase> | null = null;
 
 async function getCount(
   database: SQLiteDatabase,
@@ -326,7 +327,6 @@ async function performBibleDatabaseBootstrap(): Promise<SQLiteDatabase> {
     await database.execAsync("PRAGMA foreign_keys = ON;");
 
     await runBibleDatabaseMigrations(database);
-    await ensureBibleSearchIndexReady(database);
     await validateBibleDatabase(database);
     confirmBibleSeedInstallationValidated();
 
@@ -355,6 +355,28 @@ export function bootstrapBibleDatabase(): Promise<SQLiteDatabase> {
   void currentBootstrap.catch(() => {
     if (bootstrapPromise === currentBootstrap) {
       bootstrapPromise = null;
+    }
+  });
+
+  return currentBootstrap;
+}
+async function performBibleSearchDatabaseBootstrap(): Promise<SQLiteDatabase> {
+  const database = await bootstrapBibleDatabase();
+  await ensureBibleSearchIndexReady(database);
+  return database;
+}
+
+export function bootstrapBibleSearchDatabase(): Promise<SQLiteDatabase> {
+  if (searchBootstrapPromise) {
+    return searchBootstrapPromise;
+  }
+
+  const currentBootstrap = performBibleSearchDatabaseBootstrap();
+  searchBootstrapPromise = currentBootstrap;
+
+  void currentBootstrap.catch(() => {
+    if (searchBootstrapPromise === currentBootstrap) {
+      searchBootstrapPromise = null;
     }
   });
 

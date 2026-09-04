@@ -65,6 +65,8 @@ export default function HymnalReaderScreen({
     useState<Hymn | null>(null);
   const [retryGeneration, setRetryGeneration] =
     useState(0);
+  const [hymnFontSize, setHymnFontSize] =
+    useState(18);
 
   useEffect(() => {
     let active = true;
@@ -117,6 +119,7 @@ export default function HymnalReaderScreen({
     <View style={styles.screen}>
       <View style={styles.topBar}>
         <Pressable
+          testID="hymnal-reader-back"
           accessibilityRole="button"
           accessibilityLabel="Voltar para a biblioteca da Harpa"
           onPress={() => navigation.goBack()}
@@ -129,6 +132,66 @@ export default function HymnalReaderScreen({
             ← Voltar
           </Text>
         </Pressable>
+
+        <View
+          accessibilityLabel="Tamanho da letra do hino"
+          style={styles.fontControls}
+        >
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Diminuir tamanho da letra"
+            accessibilityState={{
+              disabled: hymnFontSize <= 16,
+            }}
+            disabled={hymnFontSize <= 16}
+            onPress={() => {
+              setHymnFontSize((current) =>
+                Math.max(16, current - 2),
+              );
+            }}
+            style={({ pressed }) => [
+              styles.fontControlButton,
+              hymnFontSize <= 16 &&
+                styles.fontControlButtonDisabled,
+              pressed &&
+                hymnFontSize > 16 &&
+                styles.fontControlButtonPressed,
+            ]}
+            testID="hymnal-reader-font-decrease"
+          >
+            <Text style={styles.fontControlText}>
+              A-
+            </Text>
+          </Pressable>
+
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Aumentar tamanho da letra"
+            accessibilityState={{
+              disabled: hymnFontSize >= 26,
+            }}
+            disabled={hymnFontSize >= 26}
+            onPress={() => {
+              setHymnFontSize((current) =>
+                Math.min(26, current + 2),
+              );
+            }}
+            style={({ pressed }) => [
+              styles.fontControlButton,
+              styles.fontControlButtonSpacing,
+              hymnFontSize >= 26 &&
+                styles.fontControlButtonDisabled,
+              pressed &&
+                hymnFontSize < 26 &&
+                styles.fontControlButtonPressed,
+            ]}
+            testID="hymnal-reader-font-increase"
+          >
+            <Text style={styles.fontControlText}>
+              A+
+            </Text>
+          </Pressable>
+        </View>
       </View>
 
       {status === "loading" && (
@@ -144,7 +207,7 @@ export default function HymnalReaderScreen({
             Carregando hino
           </Text>
           <Text style={styles.stateText}>
-            Abrindo a letra salva no dispositivo.
+            Preparando a letra do hino.
           </Text>
         </View>
       )}
@@ -218,19 +281,53 @@ export default function HymnalReaderScreen({
           </View>
 
           <View style={styles.sections}>
-            {hymn.sections.map((section) => (
-              <View
-                key={`${hymn.id}:${section.order}`}
-                style={styles.sectionCard}
-              >
-                <Text style={styles.sectionLabel}>
-                  {getSectionDisplayLabel(section)}
-                </Text>
-                <Text style={styles.sectionText}>
-                  {section.text}
-                </Text>
-              </View>
-            ))}
+            {hymn.sections.map((section) => {
+              const isChorus =
+                section.kind === "CHORUS";
+
+              return (
+                <View
+                  key={`${hymn.id}:${section.order}`}
+                  testID={
+                    isChorus
+                      ? `hymnal-reader-chorus-card-${section.order}`
+                      : undefined
+                  }
+                  style={[
+                    styles.sectionCard,
+                    isChorus && styles.chorusCard,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.sectionLabel,
+                      isChorus && styles.chorusLabel,
+                    ]}
+                  >
+                    {getSectionDisplayLabel(section)}
+                  </Text>
+                  <Text
+                    testID={
+                      isChorus
+                        ? `hymnal-reader-chorus-text-${section.order}`
+                        : undefined
+                    }
+                    style={[
+                      styles.sectionText,
+                      {
+                        fontSize: hymnFontSize,
+                        lineHeight: Math.round(
+                          hymnFontSize * 1.6,
+                        ),
+                      },
+                      isChorus && styles.chorusText,
+                    ]}
+                  >
+                    {section.text}
+                  </Text>
+                </View>
+              );
+            })}
           </View>
         </ScrollView>
       )}
@@ -244,7 +341,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   topBar: {
-    alignItems: "flex-start",
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
     paddingHorizontal: 20,
     paddingTop: 16,
   },
@@ -264,6 +363,34 @@ const styles = StyleSheet.create({
   backButtonText: {
     color: colors.textStrong,
     fontSize: 14,
+    fontWeight: "800",
+  },
+  fontControls: {
+    flexDirection: "row",
+  },
+  fontControlButton: {
+    alignItems: "center",
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: 12,
+    borderWidth: 1,
+    justifyContent: "center",
+    minHeight: 44,
+    minWidth: 48,
+  },
+  fontControlButtonSpacing: {
+    marginLeft: 8,
+  },
+  fontControlButtonPressed: {
+    backgroundColor: colors.primarySoft,
+    borderColor: colors.primary,
+  },
+  fontControlButtonDisabled: {
+    opacity: 0.42,
+  },
+  fontControlText: {
+    color: colors.textStrong,
+    fontSize: 15,
     fontWeight: "800",
   },
   centerState: {
@@ -347,6 +474,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     paddingVertical: 18,
   },
+  chorusCard: {
+    backgroundColor: colors.surfaceHighlight,
+    borderColor: colors.secondary,
+    borderWidth: 1,
+  },
   sectionLabel: {
     color: colors.textStrong,
     fontSize: 12,
@@ -359,5 +491,12 @@ const styles = StyleSheet.create({
     fontSize: 18,
     lineHeight: 29,
     marginTop: 10,
+  },
+  chorusLabel: {
+    color: colors.warning,
+  },
+  chorusText: {
+    color: colors.textStrong,
+    fontWeight: "700",
   },
 });

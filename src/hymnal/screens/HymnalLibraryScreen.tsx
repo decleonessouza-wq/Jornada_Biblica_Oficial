@@ -7,6 +7,7 @@ import React, {
 } from "react";
 import {
   ActivityIndicator,
+  ImageBackground,
   Pressable,
   StyleSheet,
   Text,
@@ -80,6 +81,8 @@ export default function HymnalLibraryScreen({
     useState<readonly HymnalHymnSummary[]>([]);
   const [highlightedHymnNumber, setHighlightedHymnNumber] =
     useState<number | null>(null);
+  const [showBackToTop, setShowBackToTop] =
+    useState(false);
 
   const [searchQuery, setSearchQuery] =
     useState("");
@@ -490,7 +493,7 @@ export default function HymnalLibraryScreen({
           Preparando a Harpa
         </Text>
         <Text style={styles.centerText}>
-          Carregando o catálogo offline de hinos.
+          Organizando os hinos para você.
         </Text>
       </View>
     );
@@ -541,7 +544,7 @@ export default function HymnalLibraryScreen({
           Catálogo indisponível
         </Text>
         <Text style={styles.centerText}>
-          Nenhum hino habilitado foi encontrado.
+          Nenhum hino foi encontrado.
         </Text>
       </View>
     );
@@ -552,21 +555,29 @@ export default function HymnalLibraryScreen({
 
   const catalogHeader = (
     <View style={styles.headerArea}>
-      <View style={styles.hero}>
-        <Text style={styles.eyebrow}>
-          HARPA CRISTÃ
-        </Text>
-        <Text
-          accessibilityRole="header"
-          style={styles.title}
-        >
-          Biblioteca de hinos
-        </Text>
-        <Text style={styles.description}>
-          {edition.displayName} · {hymns.length} hinos
-          disponíveis offline.
-        </Text>
-      </View>
+      <ImageBackground
+        testID="hymnal-library-hero"
+        source={require("../../../assets/module-heroes/harpa-hero.png")}
+        style={styles.hero}
+        imageStyle={styles.heroImage}
+        resizeMode="cover"
+        accessibilityIgnoresInvertColors
+      >
+        <View style={styles.heroOverlay}>
+          <Text style={styles.eyebrow}>
+            HARPA CRISTÃ
+          </Text>
+          <Text
+            accessibilityRole="header"
+            style={styles.title}
+          >
+            Biblioteca de hinos
+          </Text>
+          <Text style={styles.description}>
+            Hinos para louvor, adoração e edificação.
+          </Text>
+        </View>
+      </ImageBackground>
 
       <HymnalSearchControls
         query={searchQuery}
@@ -658,7 +669,27 @@ export default function HymnalLibraryScreen({
           highlightedHymnNumber
         }
         onPressHymn={handleOpenHymn}
+        onScrolledAwayFromTopChange={setShowBackToTop}
       />
+
+      {showBackToTop && (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Voltar ao início da biblioteca"
+          onPress={() => {
+            catalogListRef.current?.scrollToTop();
+          }}
+          style={({ pressed }) => [
+            styles.backToTopButton,
+            pressed && styles.backToTopButtonPressed,
+          ]}
+          testID="hymnal-library-back-to-top"
+        >
+          <Text style={styles.backToTopText}>
+            ↑ Início
+          </Text>
+        </Pressable>
+      )}
     </View>
   );
 }
@@ -668,12 +699,49 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
+  backToTopButton: {
+    alignItems: "center",
+    backgroundColor: colors.primary,
+    borderRadius: 999,
+    bottom: 18,
+    minHeight: 46,
+    justifyContent: "center",
+    paddingHorizontal: 18,
+    position: "absolute",
+    right: 18,
+    shadowColor: colors.black,
+    shadowOffset: {
+      width: 0,
+      height: 3,
+    },
+    shadowOpacity: 0.18,
+    shadowRadius: 6,
+    elevation: 5,
+  },
+  backToTopButtonPressed: {
+    backgroundColor: colors.primaryPressed,
+  },
+  backToTopText: {
+    color: colors.textInverse,
+    fontSize: 14,
+    fontWeight: "800",
+  },
   headerArea: {
     paddingTop: 20,
   },
   hero: {
-    backgroundColor: colors.primary,
     borderRadius: 24,
+    minHeight: 240,
+    overflow: "hidden",
+  },
+  heroImage: {
+    borderRadius: 24,
+  },
+  heroOverlay: {
+    backgroundColor: "rgba(13, 43, 69, 0.62)",
+    flex: 1,
+    justifyContent: "flex-end",
+    minHeight: 240,
     paddingHorizontal: 22,
     paddingVertical: 24,
   },
