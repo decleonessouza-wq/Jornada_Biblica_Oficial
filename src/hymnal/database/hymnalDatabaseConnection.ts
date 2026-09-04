@@ -13,6 +13,7 @@ import {
   type SQLiteDatabase,
 } from "expo-sqlite";
 
+import { runWebSQLiteBootstrapCriticalSection } from "../../services/webSQLiteBootstrapCriticalSection";
 import {
   HYMNAL_DATABASE_NAME,
 } from "./hymnalDatabaseConstants";
@@ -33,13 +34,15 @@ export async function openHymnalDatabaseConnection(): Promise<SQLiteDatabase> {
   }
 
   if (!connectionPromise) {
-    const currentConnection = (async () => {
-      await ensureHymnalSeedInstalled();
+    const currentConnection = runWebSQLiteBootstrapCriticalSection(
+      async () => {
+        await ensureHymnalSeedInstalled();
 
-      return openDatabaseAsync(
-        HYMNAL_DATABASE_NAME,
-      );
-    })();
+        return openDatabaseAsync(
+          HYMNAL_DATABASE_NAME,
+        );
+      },
+    );
 
     connectionPromise = currentConnection.catch(
       (error) => {

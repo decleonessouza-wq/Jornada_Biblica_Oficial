@@ -7,6 +7,8 @@ import type { DrawerScreenProps } from "@react-navigation/drawer";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 
 import type { OfflineBibleReaderRouteParams } from "../bible/reader/bibleReaderContracts";
+import type { HymnId } from "../domain/hymnal/hymn";
+import type { HymnalEditionId } from "../domain/hymnal/hymnalEdition";
 
 export type ReadingRouteParams = {
   date: string;
@@ -20,10 +22,19 @@ export type BibleStackParamList = {
   BibleReader: OfflineBibleReaderRouteParams;
 };
 
+export type HymnalStackParamList = {
+  HymnalLibrary: undefined;
+  HymnalReader: {
+    editionId: HymnalEditionId;
+    hymnId: HymnId;
+  };
+};
+
 export type MainTabParamList = {
   HomeTab: undefined;
   BibleTab: NavigatorScreenParams<BibleStackParamList> | undefined;
   PlanTab: undefined;
+  HymnalTab: NavigatorScreenParams<HymnalStackParamList> | undefined;
 };
 
 export type AppDrawerParamList = {
@@ -67,3 +78,7 @@ export type MainTabScreenProps<
 export type BibleStackScreenProps<
   RouteName extends keyof BibleStackParamList,
 > = NativeStackScreenProps<BibleStackParamList, RouteName>;
+
+export type HymnalStackScreenProps<
+  RouteName extends keyof HymnalStackParamList,
+> = NativeStackScreenProps<HymnalStackParamList, RouteName>;

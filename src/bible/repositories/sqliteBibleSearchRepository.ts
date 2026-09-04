@@ -3,7 +3,7 @@
  *
  * Arquitetura congelada:
  * - Android/iOS: FTS5 nativo;
- * - Web: índice invertido portátil em SQLite;
+ * - Web: cache portátil de texto normalizado em SQLite;
  * - bible_verses é a fonte autoritativa do texto retornado;
  * - paginação e ordenação são executadas em SQL;
  * - nenhuma consulta varre ou ordena o corpus em JavaScript.
@@ -20,7 +20,7 @@ import {
   isBibleVersionId,
   type BibleVersionId,
 } from "../../domain/bible/bibleVersion";
-import { bootstrapBibleDatabase } from "../database/bibleDatabaseBootstrap";
+import { bootstrapBibleSearchDatabase } from "../database/bibleDatabaseBootstrap";
 import {
   normalizeBibleSearchText,
   tokenizeBibleSearchText,
@@ -207,73 +207,7 @@ async function searchPortableWord(
        v.chapter,
        v.verse,
        v.text
-     FROM bible_search_dictionary AS d
-     JOIN bible_search_postings AS p
-       ON p.term_id = d.term_id
-     JOIN bible_search_documents AS sd
-       ON sd.document_id = p.document_id
-     JOIN bible_verses AS v
-       ON v.version_id = sd.version_id
-      AND v.book_id = sd.book_id
-      AND v.chapter = sd.chapter
-      AND v.verse = sd.verse
-     JOIN bible_books AS b
-       ON b.id = v.book_id
-    WHERE d.term = ?
-      AND sd.version_id = ?
-    ORDER BY
-      b.canonical_order,
-      v.chapter,
-      v.verse
-    LIMIT ? OFFSET ?;`,
-    [
-      term,
-      request.versionId,
-      fetchLimit,
-      request.offset,
-    ],
-  );
-
-  return toSearchPage(rows, request);
-}
-
-async function searchPortablePhrase(
-  database: SQLiteDatabase,
-  request: BibleSearchTextRequest,
-  prepared: PreparedBibleSearchQuery,
-): Promise<BibleSearchPage> {
-  const fetchLimit = request.limit + 1;
-  const distinctTerms = [...new Set(prepared.tokens)];
-
-  if (distinctTerms.length === 0) {
-    throw new Error(
-      "BIBLE_SEARCH_PORTABLE_PHRASE_HAS_NO_TERMS",
-    );
-  }
-
-  const termPlaceholders = distinctTerms
-    .map(() => "?")
-    .join(", ");
-
-  const rows = await database.getAllAsync<BibleSearchRow>(
-    `WITH candidate_documents AS (
-       SELECT p.document_id
-         FROM bible_search_dictionary AS d
-         JOIN bible_search_postings AS p
-           ON p.term_id = d.term_id
-        WHERE d.term IN (${termPlaceholders})
-        GROUP BY p.document_id
-       HAVING COUNT(DISTINCT d.term) = ?
-     )
-     SELECT
-       v.version_id,
-       v.book_id,
-       v.chapter,
-       v.verse,
-       v.text
-     FROM candidate_documents AS c
-     JOIN bible_search_documents AS sd
-       ON sd.document_id = c.document_id
+     FROM bible_search_documents AS sd
      JOIN bible_verses AS v
        ON v.version_id = sd.version_id
       AND v.book_id = sd.book_id
@@ -292,8 +226,49 @@ async function searchPortablePhrase(
       v.verse
     LIMIT ? OFFSET ?;`,
     [
-      ...distinctTerms,
-      distinctTerms.length,
+      request.versionId,
+      term,
+      fetchLimit,
+      request.offset,
+    ],
+  );
+
+  return toSearchPage(rows, request);
+}
+
+async function searchPortablePhrase(
+  database: SQLiteDatabase,
+  request: BibleSearchTextRequest,
+  prepared: PreparedBibleSearchQuery,
+): Promise<BibleSearchPage> {
+  const fetchLimit = request.limit + 1;
+
+  const rows = await database.getAllAsync<BibleSearchRow>(
+    `SELECT
+       v.version_id,
+       v.book_id,
+       v.chapter,
+       v.verse,
+       v.text
+     FROM bible_search_documents AS sd
+     JOIN bible_verses AS v
+       ON v.version_id = sd.version_id
+      AND v.book_id = sd.book_id
+      AND v.chapter = sd.chapter
+      AND v.verse = sd.verse
+     JOIN bible_books AS b
+       ON b.id = v.book_id
+    WHERE sd.version_id = ?
+      AND instr(
+        ' ' || sd.normalized_text || ' ',
+        ' ' || ? || ' '
+      ) > 0
+    ORDER BY
+      b.canonical_order,
+      v.chapter,
+      v.verse
+    LIMIT ? OFFSET ?;`,
+    [
       request.versionId,
       prepared.normalizedQuery,
       fetchLimit,
@@ -353,7 +328,7 @@ export class SQLiteBibleSearchRepository
 }
 
 export async function createSQLiteBibleSearchRepository(): Promise<SQLiteBibleSearchRepository> {
-  const database = await bootstrapBibleDatabase();
+  const database = await bootstrapBibleSearchDatabase();
 
   return new SQLiteBibleSearchRepository(database);
 }

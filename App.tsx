@@ -5,6 +5,7 @@ import {
 } from "react-native";
 
 import { bootstrapBibleDatabase } from "./src/bible/database/bibleDatabaseBootstrap";
+import { bootstrapHymnalDatabase } from "./src/hymnal/database/hymnalDatabaseBootstrap";
 import RootNavigator from "./src/navigation/RootNavigator";
 import { initNotifications } from "./src/services/notifications";
 import { runAutoBackup } from "./src/utils/autoBackup";
@@ -18,6 +19,12 @@ export default function App() {
   useEffect(() => {
     void bootstrapBibleDatabase().catch((error: unknown) => {
       console.error("[BibleDatabase] bootstrap failed", error);
+    });
+  }, []);
+
+  useEffect(() => {
+    void bootstrapHymnalDatabase().catch((error: unknown) => {
+      console.error("[HymnalDatabase] bootstrap failed", error);
     });
   }, []);
 

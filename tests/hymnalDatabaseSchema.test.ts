@@ -9,6 +9,7 @@ import {
   HYMNAL_DATABASE_SCHEMA_SQL,
   HYMNAL_DATABASE_SCHEMA_V1_SQL,
   HYMNAL_DATABASE_SCHEMA_VERSION,
+  HYMNAL_DATABASE_SEARCH_SCHEMA_V2_SQL,
 } from "../src/hymnal/database/hymnalDatabaseSchema";
 
 import {
@@ -91,7 +92,7 @@ function createFakeDatabase(
   };
 }
 
-describe("Hymnal database schema v1", () => {
+describe("Hymnal database schema v2", () => {
   it("uses isolated Harpa database artifact names", () => {
     expect(
       HYMNAL_DATABASE_NAME,
@@ -104,21 +105,33 @@ describe("Hymnal database schema v1", () => {
     );
   });
 
-  it("locks the structural schema at version 1", () => {
+  it("locks the runtime structural schema at version 2", () => {
     expect(
       HYMNAL_DATABASE_SCHEMA_VERSION,
-    ).toBe(1);
-
-    expect(
-      HYMNAL_DATABASE_SCHEMA_SQL,
-    ).toBe(
-      HYMNAL_DATABASE_SCHEMA_V1_SQL,
-    );
+    ).toBe(2);
 
     expect(
       HYMNAL_DATABASE_SCHEMA_V1_SQL,
     ).toMatch(
       /PRAGMA\s+user_version\s*=\s*1\s*;/,
+    );
+
+    expect(
+      HYMNAL_DATABASE_SCHEMA_SQL,
+    ).toContain(
+      HYMNAL_DATABASE_SCHEMA_V1_SQL,
+    );
+
+    expect(
+      HYMNAL_DATABASE_SCHEMA_SQL,
+    ).toContain(
+      HYMNAL_DATABASE_SEARCH_SCHEMA_V2_SQL,
+    );
+
+    expect(
+      HYMNAL_DATABASE_SCHEMA_SQL,
+    ).toMatch(
+      /PRAGMA\s+user_version\s*=\s*2\s*;/,
     );
   });
 
@@ -221,7 +234,7 @@ describe("Hymnal database schema v1", () => {
     }
   });
 
-  it("migrates a fresh logical database from v0 to v1", async () => {
+  it("migrates a fresh logical database sequentially from v0 to v2", async () => {
     const fake =
       createFakeDatabase(0);
 
@@ -231,11 +244,11 @@ describe("Hymnal database schema v1", () => {
 
     expect(
       fake.withTransactionAsync,
-    ).toHaveBeenCalledTimes(1);
+    ).toHaveBeenCalledTimes(2);
 
     expect(
       fake.getUserVersion(),
-    ).toBe(1);
+    ).toBe(2);
 
     expect(
       fake.execAsync,
@@ -248,11 +261,52 @@ describe("Hymnal database schema v1", () => {
     ).toHaveBeenCalledWith(
       "PRAGMA user_version = 1;",
     );
+
+    expect(
+      fake.execAsync,
+    ).toHaveBeenCalledWith(
+      HYMNAL_DATABASE_SEARCH_SCHEMA_V2_SQL,
+    );
+
+    expect(
+      fake.execAsync,
+    ).toHaveBeenCalledWith(
+      "PRAGMA user_version = 2;",
+    );
   });
 
-  it("is a no-op when the database is already at v1", async () => {
+  it("migrates an installed v1 database to v2", async () => {
     const fake =
       createFakeDatabase(1);
+
+    await runHymnalDatabaseMigrations(
+      fake.database,
+    );
+
+    expect(
+      fake.withTransactionAsync,
+    ).toHaveBeenCalledTimes(1);
+
+    expect(
+      fake.execAsync,
+    ).toHaveBeenCalledWith(
+      HYMNAL_DATABASE_SEARCH_SCHEMA_V2_SQL,
+    );
+
+    expect(
+      fake.execAsync,
+    ).toHaveBeenCalledWith(
+      "PRAGMA user_version = 2;",
+    );
+
+    expect(
+      fake.getUserVersion(),
+    ).toBe(2);
+  });
+
+  it("is a no-op when the database is already at v2", async () => {
+    const fake =
+      createFakeDatabase(2);
 
     await runHymnalDatabaseMigrations(
       fake.database,
@@ -268,12 +322,12 @@ describe("Hymnal database schema v1", () => {
 
     expect(
       fake.getUserVersion(),
-    ).toBe(1);
+    ).toBe(2);
   });
 
   it("fails closed when the database is newer than supported", async () => {
     const fake =
-      createFakeDatabase(2);
+      createFakeDatabase(3);
 
     await expect(
       runHymnalDatabaseMigrations(

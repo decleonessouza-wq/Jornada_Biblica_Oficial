@@ -14,8 +14,9 @@
  * Web:
  * - usa o importador oficial do expo-sqlite/wa-sqlite;
  * - o banco persiste no VFS Web;
- * - marcador localStorage só é confirmado DEPOIS de migrations, índices,
- *   integridade, proveniência e contagens passarem no bootstrap;
+ * - marcador localStorage só é confirmado DEPOIS de migrations,
+ *   integridade, proveniência e contagens do corpus passarem no bootstrap;
+ * - o índice de busca é preparado separadamente, sob demanda da busca;
  * - marcador ausente/desatualizado força reimportação segura do seed.
  */
 

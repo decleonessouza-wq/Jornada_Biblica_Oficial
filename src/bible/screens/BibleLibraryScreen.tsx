@@ -8,6 +8,7 @@ import React, {
 import { useFocusEffect } from "@react-navigation/native";
 import {
   ActivityIndicator,
+  ImageBackground,
   Modal,
   Pressable,
   ScrollView,
@@ -301,7 +302,10 @@ export default function BibleLibraryScreen({
 
   if (status === "loading") {
     return (
-      <View style={styles.centerState}>
+      <View
+        testID="bible-library-loading"
+        style={styles.centerState}
+      >
         <ActivityIndicator size="large" color={colors.primary} />
         <Text style={styles.centerTitle}>Preparando sua Bíblia</Text>
         <Text style={styles.centerText}>
@@ -313,7 +317,10 @@ export default function BibleLibraryScreen({
 
   if (status === "error") {
     return (
-      <View style={styles.centerState}>
+      <View
+        testID="bible-library-error"
+        style={styles.centerState}
+      >
         <Text style={styles.centerTitle}>Não foi possível abrir a Bíblia</Text>
         <Text style={styles.centerText}>
           {errorMessage ?? LOAD_ERROR_MESSAGE}
@@ -334,7 +341,10 @@ export default function BibleLibraryScreen({
   }
 
   return (
-    <View style={styles.screen}>
+    <View
+      testID="bible-library-screen"
+      style={styles.screen}
+    >
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.content}
@@ -343,20 +353,35 @@ export default function BibleLibraryScreen({
         onScroll={handleScroll}
         scrollEventThrottle={16}
       >
-        <View style={styles.header}>
-          <View style={styles.headerTopLine}>
-            <Text style={styles.eyebrow}>BÍBLIA SAGRADA</Text>
-            <View style={styles.offlineBadge}>
-              <Text style={styles.offlineBadgeText}>SEMPRE COM VOCÊ</Text>
+        <ImageBackground
+          testID="bible-library-hero"
+          source={require("../../../assets/module-heroes/bible-hero.png")}
+          style={styles.headerHero}
+          imageStyle={styles.headerHeroImage}
+          resizeMode="cover"
+          accessibilityIgnoresInvertColors
+        >
+          <View style={styles.headerHeroOverlay}>
+            <View style={styles.heroHeaderTopLine}>
+              <Text style={styles.heroEyebrow}>
+                BÍBLIA SAGRADA
+              </Text>
+              <View style={styles.heroBadge}>
+                <Text style={styles.heroBadgeText}>
+                  SEMPRE COM VOCÊ
+                </Text>
+              </View>
             </View>
-          </View>
 
-          <Text style={styles.title}>Uma Bíblia completa e prática para sua edificação</Text>
-          <Text style={styles.subtitle}>
-            Leia, medite e aprofunde-se na Palavra de Deus com acesso
-            simples e rápido a livros, capítulos e versões.
-          </Text>
-        </View>
+            <Text style={styles.heroTitle}>
+              Uma Bíblia completa e prática para sua edificação
+            </Text>
+            <Text style={styles.heroSubtitle}>
+              Leia, medite e aprofunde-se na Palavra de Deus com acesso
+              simples e rápido a livros, capítulos e versões.
+            </Text>
+          </View>
+        </ImageBackground>
 
         <Pressable
           accessibilityRole="button"
@@ -532,9 +557,57 @@ const styles = StyleSheet.create({
     paddingBottom: 36,
     gap: 14,
   },
-  header: {
-    gap: 7,
-    paddingBottom: 2,
+  headerHero: {
+    borderRadius: 24,
+    minHeight: 240,
+    overflow: "hidden",
+  },
+  headerHeroImage: {
+    borderRadius: 24,
+  },
+  headerHeroOverlay: {
+    backgroundColor: "rgba(13, 43, 69, 0.56)",
+    flex: 1,
+    gap: 9,
+    justifyContent: "flex-end",
+    minHeight: 240,
+    paddingHorizontal: 22,
+    paddingVertical: 22,
+  },
+  heroHeaderTopLine: {
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  heroEyebrow: {
+    color: colors.secondary,
+    fontSize: 12,
+    fontWeight: "800",
+    letterSpacing: 1.1,
+  },
+  heroBadge: {
+    backgroundColor: "rgba(255, 255, 255, 0.92)",
+    borderRadius: 999,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+  },
+  heroBadgeText: {
+    color: colors.primary,
+    fontSize: 9,
+    fontWeight: "800",
+    letterSpacing: 0.6,
+  },
+  heroTitle: {
+    color: colors.textInverse,
+    fontSize: 27,
+    fontWeight: "800",
+    lineHeight: 33,
+  },
+  heroSubtitle: {
+    color: colors.textInverse,
+    fontSize: 14,
+    lineHeight: 20,
+    opacity: 0.92,
   },
   headerTopLine: {
     flexDirection: "row",

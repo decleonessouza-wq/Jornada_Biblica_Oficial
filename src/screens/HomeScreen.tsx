@@ -189,16 +189,19 @@ function QuickAccessCard({
   title,
   subtitle,
   disabled = false,
+  testID,
   onPress,
 }: {
   iconSource: any;
   title: string;
   subtitle: string;
   disabled?: boolean;
+  testID?: string;
   onPress?: () => void;
 }) {
   return (
     <TouchableOpacity
+      testID={testID}
       style={[styles.quickCard, disabled && styles.quickCardDisabled]}
       onPress={onPress}
       disabled={disabled}
@@ -1085,10 +1088,11 @@ export default function HomeScreen() {
             />
 
             <QuickAccessCard
-              iconSource={require("../../assets/home/icons/progresso_icone.png")}
-              title="Progresso"
-              subtitle="Acompanhe sua evolução"
-              onPress={() => navigation.navigate("Progress")}
+              testID="home-quick-hymnal"
+              iconSource={require("../../assets/home/icons/harpa_icone.png")}
+              title="Harpa"
+              subtitle="Cante e acompanhe os hinos"
+              onPress={() => navigation.navigate("HymnalTab")}
             />
           </View>
 
