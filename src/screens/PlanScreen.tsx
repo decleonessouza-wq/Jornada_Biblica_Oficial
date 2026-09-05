@@ -11,15 +11,30 @@ import {
 } from "react-native";
 import { useCallback, useMemo, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useFocusEffect } from "@react-navigation/native";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
+import type { CompositeNavigationProp } from "@react-navigation/native";
+import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
+import type { DrawerNavigationProp } from "@react-navigation/drawer";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
 import { colors } from "../theme/colors";
-import { phases, Phase } from "../data/phases";
+import type { Phase } from "../data/phases";
 import { readingPlan } from "../data/readingPlan";
+import { buildPlanPhaseProjection } from "../domain/plan/planPhaseProjection";
 
 // ✅ plano atemporal
-import { getPlanStartDate } from "../services/progressStore";
+import {
+  ensurePlanStartDate,
+  getEffectiveReferenceForDate,
+  getPlanStartDate,
+  getTodayIsoLocal,
+} from "../services/progressStore";
 import { useAppShellChrome } from "../navigation/AppShellChromeContext";
+import type {
+  AppDrawerParamList,
+  MainTabParamList,
+  RootStackParamList,
+} from "../navigation/types";
 
 /* ==========================
    HELPERS
@@ -106,36 +121,6 @@ function shadowCard() {
   }) as any;
 }
 
-/**
- * Mapeia as fases "legadas" (por datas 2026) para offsets do readingPlan atual.
- * Assim, cada fase vira um intervalo fixo do PLANO (offsets), e a data real depende do planStartDate.
- */
-function buildPhaseOffsetMap() {
-  const dateToOffset = new Map<string, number>();
-  for (let i = 0; i < readingPlan.length; i++) {
-    const d = readingPlan[i]?.date;
-    if (isIsoDateString(d) && !dateToOffset.has(d)) dateToOffset.set(d, i);
-  }
-
-  function getOffsetOrFallback(iso: string, fallback: number) {
-    const hit = dateToOffset.get(iso);
-    return typeof hit === "number" ? hit : fallback;
-  }
-
-  return phases.map((p) => {
-    const startOffset = getOffsetOrFallback(p.startDate, 0);
-    const endOffset = getOffsetOrFallback(p.endDate, readingPlan.length - 1);
-
-    const safeStart = Math.max(0, Math.min(startOffset, readingPlan.length - 1));
-    const safeEnd = Math.max(0, Math.min(endOffset, readingPlan.length - 1));
-
-    return {
-      phase: p,
-      startOffset: Math.min(safeStart, safeEnd),
-      endOffset: Math.max(safeStart, safeEnd),
-    };
-  });
-}
 
 /* ==========================
    UI (LOCAL)
@@ -233,7 +218,16 @@ function Pill({
    SCREEN
 ========================== */
 
+type NavigationProp = CompositeNavigationProp<
+  BottomTabNavigationProp<MainTabParamList, "PlanTab">,
+  CompositeNavigationProp<
+    DrawerNavigationProp<AppDrawerParamList>,
+    NativeStackNavigationProp<RootStackParamList>
+  >
+>;
+
 export default function PlanScreen() {
+  const navigation = useNavigation<NavigationProp>();
   const { width } = useWindowDimensions();
   const maxWidth = clamp(width, 360, 820);
   const { handleScroll, resetChrome } = useAppShellChrome();
@@ -295,7 +289,7 @@ export default function PlanScreen() {
 
   const totalGratitudes = useMemo(() => Object.keys(gratitudeByDate).length, [gratitudeByDate]);
 
-  const phaseOffsetMap = useMemo(() => buildPhaseOffsetMap(), []);
+  const phaseOffsetMap = useMemo(() => buildPlanPhaseProjection(), []);
 
   const totalUsefulDays = useMemo(() => readingPlan.filter((d) => !d.isSunday).length, []);
   const completedUsefulDays = useMemo(() => completedDays.length, [completedDays]);
@@ -359,6 +353,27 @@ export default function PlanScreen() {
     return "Plano atemporal • inicia quando você marcar a primeira leitura";
   }, [planStartDate]);
 
+  async function openCurrentJourney() {
+    const today = getTodayIsoLocal();
+
+    try {
+      if (!planStartDate) {
+        const start = await ensurePlanStartDate(today);
+        setPlanStartDateState(start);
+      }
+
+      const effective = await getEffectiveReferenceForDate(today);
+
+      navigation.navigate("Reading", {
+        date: today,
+        reference: effective.reference,
+        isSunday: effective.isSunday,
+      });
+    } catch (error) {
+      console.warn("PLAN_CURRENT_JOURNEY_OPEN_FAILED", error);
+    }
+  }
+
   // ===== RENDER =====
   return (
     <View style={styles.container}>
@@ -385,6 +400,21 @@ export default function PlanScreen() {
               <Pill label={`📖 ${totalUsefulDays} dias úteis`} tone="neutral" />
               <Pill label={`🙏 ${totalGratitudes} gratidões`} tone="warn" />
             </View>
+
+            <Pressable
+              testID="plan-current-journey-cta"
+              accessibilityRole="button"
+              accessibilityLabel={planStartDate ? "Continuar Jornada" : "Iniciar Jornada"}
+              onPress={openCurrentJourney}
+              style={({ pressed }) => [
+                styles.journeyCta,
+                pressed && styles.journeyCtaPressed,
+              ]}
+            >
+              <Text style={styles.journeyCtaText}>
+                {planStartDate ? "📖 Continuar Jornada" : "📖 Iniciar Jornada"}
+              </Text>
+            </Pressable>
           </View>
 
           {/* STATS GRID */}
@@ -574,6 +604,26 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 8,
+  },
+  journeyCta: {
+    marginTop: 16,
+    minHeight: 52,
+    borderRadius: 16,
+    backgroundColor: colors.primary,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 18,
+    paddingVertical: 14,
+  },
+  journeyCtaPressed: {
+    opacity: 0.9,
+  },
+  journeyCtaText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    lineHeight: 22,
+    fontWeight: "800",
+    textAlign: "center",
   },
 
   pill: {

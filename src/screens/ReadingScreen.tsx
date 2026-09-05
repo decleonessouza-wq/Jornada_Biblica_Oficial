@@ -20,14 +20,24 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
 import { colors } from "../theme/colors";
 import { readingPlan } from "../data/readingPlan";
-import { phases } from "../data/phases";
+import type { Phase } from "../data/phases";
+import { getPlanPhaseForOffset } from "../domain/plan/planPhaseProjection";
 import type { RootStackParamList } from "../navigation/types";
 import { addCompletedDay } from "../services/progressStore";
 import { projectCanonicalStructuredPlan } from "../domain/plan/canonicalStructuredPlanV2";
 import { buildBibleReadingProviderTarget } from "../services/bibleReadingProviderAdapter";
+import { loadPreferredOfflineBibleVersion } from "../bible/state/bibleReaderPreferencesStore";
+import {
+  getJourneyBibleReaderRouteForReference,
+  getJourneyBibleReaderRouteForText,
+} from "../services/journeyBibleReaderAdapter";
 
 // ✅ plano atemporal
-import { getPlanStartDate, PLAN_START_DATE_KEY } from "../services/progressStore";
+import {
+  getPlanOffsetForDate,
+  getPlanStartDate,
+  PLAN_START_DATE_KEY,
+} from "../services/progressStore";
 
 type Props = {
   route: {
@@ -682,9 +692,32 @@ export default function ReadingScreen({ route }: Props) {
 
   const [selectedPassageIndex, setSelectedPassageIndex] = useState(0);
 
-  const currentPhase = useMemo(() => {
-    if (!date) return null;
-    return phases.find((p) => date >= p.startDate && date <= p.endDate) ?? null;
+  const [currentPhase, setCurrentPhase] = useState<Phase | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+
+    (async () => {
+      if (!date) {
+        if (mounted) setCurrentPhase(null);
+        return;
+      }
+
+      try {
+        const offset = await getPlanOffsetForDate(date);
+        const phase =
+          offset === null ? null : getPlanPhaseForOffset(offset);
+
+        if (mounted) setCurrentPhase(phase);
+      } catch (error) {
+        console.warn("PLAN_PHASE_RESOLUTION_FAILED", error);
+        if (mounted) setCurrentPhase(null);
+      }
+    })();
+
+    return () => {
+      mounted = false;
+    };
   }, [date]);
 
   const spiritual = useMemo(() => {
@@ -959,8 +992,20 @@ export default function ReadingScreen({ route }: Props) {
     );
   }, [structuredReadingDay, selectedPassageIndex]);
 
+  const usesLocalBibleReader =
+    !isSunday &&
+    !isNatal &&
+    (structuredReadingDay !== null || !isMultiPassage(reference));
+
   const structuredProviderTarget = useMemo(() => {
-    if (!structuredSelectedPassage || isSunday || isNatal) return null;
+    if (
+      usesLocalBibleReader ||
+      !structuredSelectedPassage ||
+      isSunday ||
+      isNatal
+    ) {
+      return null;
+    }
 
     try {
       return buildBibleReadingProviderTarget(structuredSelectedPassage, version);
@@ -968,14 +1013,78 @@ export default function ReadingScreen({ route }: Props) {
       console.warn("structuredProviderTarget fallback para provider legado:", error);
       return null;
     }
-  }, [structuredSelectedPassage, isSunday, isNatal, version]);
+  }, [
+    usesLocalBibleReader,
+    structuredSelectedPassage,
+    isSunday,
+    isNatal,
+    version,
+  ]);
 
   const readingUrl = useMemo(() => {
+    if (usesLocalBibleReader) return "";
+
     return (
       structuredProviderTarget?.url ??
       buildReadingUrl(selectedReferenceForUrl, isSunday, version)
     );
-  }, [structuredProviderTarget, selectedReferenceForUrl, isSunday, version]);
+  }, [
+    usesLocalBibleReader,
+    structuredProviderTarget,
+    selectedReferenceForUrl,
+    isSunday,
+    version,
+  ]);
+
+  async function openInLocalBibleReader() {
+    if (!usesLocalBibleReader) {
+      Alert.alert(
+        "Não foi possível abrir",
+        "Esta leitura ainda não está disponível no leitor bíblico local.",
+      );
+      return;
+    }
+
+    try {
+      const versionId = await loadPreferredOfflineBibleVersion();
+
+      const routeResult =
+        structuredReadingDay !== null
+          ? getJourneyBibleReaderRouteForReference({
+              reference: structuredReadingDay.readingUnit.bibleReference,
+              versionId,
+              passageIndex: selectedPassageIndex,
+            })
+          : getJourneyBibleReaderRouteForText({
+              referenceText: reference,
+              versionId,
+              passageIndex: 0,
+            });
+
+      if (!routeResult.ok) {
+        console.warn(
+          "JOURNEY_LOCAL_READER_ROUTE_FAILED",
+          routeResult.error,
+        );
+        Alert.alert(
+          "Não foi possível abrir",
+          "Não foi possível preparar esta leitura na Bíblia agora.",
+        );
+        return;
+      }
+
+      navigation.navigate(
+        "JourneyBibleReader",
+        routeResult.routeParams,
+      );
+    } catch (error) {
+      console.warn("JOURNEY_LOCAL_READER_OPEN_FAILED", error);
+      Alert.alert(
+        "Não foi possível abrir",
+        "Não foi possível abrir esta leitura na Bíblia agora.",
+      );
+    }
+  }
 
   async function openInBrowser() {
     try {
@@ -1131,11 +1240,16 @@ export default function ReadingScreen({ route }: Props) {
                   ? "Use este dia para orar, meditar e revisar atrasos."
                   : isNatal
                   ? "Toque em abrir para ver sugestões de leitura sobre o nascimento de Jesus."
+                  : usesLocalBibleReader
+                  ? `Parte selecionada: ${selectedReferenceRaw}.`
                   : `Parte selecionada: ${selectedReferenceRaw} • Versão: ${versionLabel[version]}.`}
               </Text>
             )}
 
-            {!isSunday && !isNatal && selectedReferenceForUrl !== selectedReferenceRaw && (
+            {!usesLocalBibleReader &&
+              !isSunday &&
+              !isNatal &&
+              selectedReferenceForUrl !== selectedReferenceRaw && (
               <Text style={styles.miniHelp}>Ajuste automático: abrindo como “{selectedReferenceForUrl}”</Text>
             )}
 
@@ -1145,15 +1259,29 @@ export default function ReadingScreen({ route }: Props) {
               title={
                 isSunday
                   ? "Abrir meditação"
+                  : usesLocalBibleReader
+                  ? "Abrir na Bíblia"
                   : openMode === "IN_APP"
                   ? `Abrir no app (${versionLabel[version]})`
                   : `Abrir no navegador (${versionLabel[version]})`
               }
-              icon={isSunday ? "🙏" : openMode === "IN_APP" ? "📖" : "🌐"}
-              onPress={openAccordingToMode}
+              icon={
+                isSunday
+                  ? "🙏"
+                  : usesLocalBibleReader
+                  ? "📖"
+                  : openMode === "IN_APP"
+                  ? "📖"
+                  : "🌐"
+              }
+              onPress={
+                usesLocalBibleReader
+                  ? openInLocalBibleReader
+                  : openAccordingToMode
+              }
             />
 
-            {!isSunday && (
+            {!isSunday && !usesLocalBibleReader && (
               <>
                 <View style={{ height: 10 }} />
                 <SecondaryButton
@@ -1293,7 +1421,7 @@ export default function ReadingScreen({ route }: Props) {
           )}
 
           {/* PREFERÊNCIAS */}
-          {!isSunday && (
+          {!isSunday && !usesLocalBibleReader && (
             <Card>
               <SectionTitle icon="⚙️" title="Preferências" />
 
