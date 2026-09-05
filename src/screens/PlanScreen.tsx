@@ -4,6 +4,7 @@ import {
   ScrollView,
   Modal,
   Pressable,
+  ImageBackground,
   StyleSheet,
   StatusBar,
   Platform,
@@ -150,43 +151,6 @@ function SectionTitle({
   );
 }
 
-function StatTile({
-  icon,
-  label,
-  value,
-  helper,
-  tone = "primary",
-}: {
-  icon: string;
-  label: string;
-  value: string;
-  helper?: string;
-  tone?: "primary" | "secondary" | "neutral";
-}) {
-  const bg =
-    tone === "primary"
-      ? "rgba(4,206,146,0.10)"
-      : tone === "secondary"
-      ? "rgba(218,165,32,0.14)"
-      : "rgba(0,0,0,0.05)";
-
-  const fg =
-    tone === "primary"
-      ? colors.primary
-      : tone === "secondary"
-      ? colors.secondary
-      : colors.text;
-
-  return (
-    <View style={[styles.statTile, { backgroundColor: bg }]}>
-      <Text style={styles.statIcon}>{icon}</Text>
-      <Text style={styles.statLabel}>{label}</Text>
-      <Text style={[styles.statValue, { color: fg }]}>{value}</Text>
-      {!!helper && <Text style={styles.statHelper}>{helper}</Text>}
-    </View>
-  );
-}
-
 function Pill({
   label,
   tone = "neutral",
@@ -196,16 +160,16 @@ function Pill({
 }) {
   const bg =
     tone === "info"
-      ? "rgba(4,206,146,0.12)"
+      ? "rgba(255,255,255,0.78)"
       : tone === "warn"
-      ? "rgba(218,165,32,0.18)"
-      : "rgba(0,0,0,0.06)";
+      ? "rgba(255,249,235,0.74)"
+      : "rgba(255,255,255,0.72)";
   const fg =
     tone === "info"
       ? colors.primary
       : tone === "warn"
-      ? colors.secondary
-      : colors.muted;
+      ? colors.warning
+      : colors.textStrong;
 
   return (
     <View style={[styles.pill, { backgroundColor: bg }]}>
@@ -348,9 +312,9 @@ export default function PlanScreen() {
 
   const heroSubtitle = useMemo(() => {
     if (planStartDate) {
-      return `Plano anual • início: ${formatDdMm(planStartDate)} (atemp.)`;
+      return `Plano Anual de Leitura - Início em ${formatDdMm(planStartDate)}`;
     }
-    return "Plano atemporal • inicia quando você marcar a primeira leitura";
+    return "Plano Anual de Leitura";
   }, [planStartDate]);
 
   async function openCurrentJourney() {
@@ -387,61 +351,53 @@ export default function PlanScreen() {
       >
         <View style={[styles.contentWrap, { maxWidth, alignSelf: "center" }]}>
           {/* HERO */}
-          <View style={styles.hero}>
-            <Text style={styles.heroTitle}>Plano</Text>
-            <Text style={styles.heroSubtitle}>{heroSubtitle}</Text>
+          <ImageBackground
+            testID="plan-hero"
+            source={require("../../assets/module-heroes/plan-hero.png")}
+            style={styles.hero}
+            imageStyle={styles.heroImage}
+            resizeMode="cover"
+            accessibilityIgnoresInvertColors
+          >
+            <View style={styles.heroOverlay}>
+              <Text style={styles.heroTitle}>Plano</Text>
+              <Text style={styles.heroSubtitle}>{heroSubtitle}</Text>
 
-            <View style={styles.heroPillsRow}>
-              {planStartDate ? (
-                <Pill label={`📈 ${totalProgressPercent}% do plano`} tone="info" />
-              ) : (
-                <Pill label="ℹ️ ainda não iniciado" tone="neutral" />
-              )}
-              <Pill label={`📖 ${totalUsefulDays} dias úteis`} tone="neutral" />
-              <Pill label={`🙏 ${totalGratitudes} gratidões`} tone="warn" />
+              <View style={styles.heroPillsRow}>
+                {planStartDate ? (
+                  <Pill label={`📈 ${totalProgressPercent}% concluído`} tone="info" />
+                ) : (
+                  <Pill label="✨ Pronto para começar" tone="neutral" />
+                )}
+                <Pill
+                  label={`🙏 ${totalGratitudes} ${totalGratitudes === 1 ? "gratidão" : "gratidões"}`}
+                  tone="warn"
+                />
+              </View>
+
+              <Pressable
+                testID="plan-current-journey-cta"
+                accessibilityRole="button"
+                accessibilityLabel={planStartDate ? "Continuar Jornada" : "Iniciar Jornada"}
+                onPress={openCurrentJourney}
+                style={({ pressed }) => [
+                  styles.journeyCta,
+                  pressed && styles.journeyCtaPressed,
+                ]}
+              >
+                <Text style={styles.journeyCtaText}>
+                  {planStartDate ? "Continuar Jornada" : "Iniciar Jornada"}
+                </Text>
+              </Pressable>
             </View>
-
-            <Pressable
-              testID="plan-current-journey-cta"
-              accessibilityRole="button"
-              accessibilityLabel={planStartDate ? "Continuar Jornada" : "Iniciar Jornada"}
-              onPress={openCurrentJourney}
-              style={({ pressed }) => [
-                styles.journeyCta,
-                pressed && styles.journeyCtaPressed,
-              ]}
-            >
-              <Text style={styles.journeyCtaText}>
-                {planStartDate ? "📖 Continuar Jornada" : "📖 Iniciar Jornada"}
-              </Text>
-            </Pressable>
-          </View>
-
-          {/* STATS GRID */}
-          <View style={styles.statsGrid}>
-            <StatTile
-              icon="📈"
-              label="Progresso geral"
-              value={`${totalProgressPercent}%`}
-              helper={planStartDate ? `${completedUsefulDays} de ${totalUsefulDays}` : "inicie para contar"}
-              tone="primary"
-            />
-            <StatTile icon="🙏" label="Gratidão" value={`${totalGratitudes}`} helper="registros" tone="secondary" />
-            <StatTile
-              icon="🗂️"
-              label="Fases"
-              value={`${phaseOffsetMap.length}`}
-              helper="no plano"
-              tone="neutral"
-            />
-          </View>
+          </ImageBackground>
 
           {/* LISTA DE FASES */}
           <Card>
             <SectionTitle icon="🧩" title="Fases do plano" subtitle="Toque em uma fase para ver resumo e conexão com Cristo" />
 
             <View style={{ gap: 12 }}>
-              {phaseOffsetMap.map(({ phase, startOffset, endOffset }) => {
+              {phaseOffsetMap.map(({ phase, startOffset, endOffset }, phaseIndex) => {
                 const progress = planStartDate ? calculatePhaseProgressAtemporal(planStartDate, startOffset, endOffset) : 0;
 
                 const gCount = planStartDate
@@ -449,6 +405,10 @@ export default function PlanScreen() {
                   : 0;
 
                 const isComplete = progress === 100;
+                const isSecondaryTone = phaseIndex % 2 === 1;
+                const phaseToneStyle = isSecondaryTone
+                  ? styles.phaseCardSecondary
+                  : styles.phaseCardPrimary;
 
                 return (
                   <Pressable
@@ -456,7 +416,8 @@ export default function PlanScreen() {
                     onPress={() => setSelectedPhase(phase)}
                     style={({ pressed }) => [
                       styles.phaseCard,
-                      pressed && { opacity: 0.96, transform: [{ scale: 0.995 }] },
+                      phaseToneStyle,
+                      pressed && { opacity: 0.94, transform: [{ scale: 0.995 }] },
                     ]}
                   >
                     <View style={styles.phaseHeaderRow}>
@@ -480,15 +441,16 @@ export default function PlanScreen() {
                       <View
                         style={[
                           styles.progressBarFill,
+                          isSecondaryTone && styles.progressBarFillSecondary,
                           { width: `${progress}%` },
-                          isComplete && { backgroundColor: "green" },
+                          isComplete && { backgroundColor: colors.success },
                         ]}
                       />
                     </View>
 
                     <View style={styles.phaseFooterRow}>
                       <Text style={styles.phaseMetaLeft}>🙏 {gCount} gratidões</Text>
-                      <Text style={styles.phaseMetaRight}>Ver detalhes ➝</Text>
+                      <Text style={[styles.phaseMetaRight, isSecondaryTone && styles.phaseMetaRightSecondary]}>Ver detalhes →</Text>
                     </View>
                   </Pressable>
                 );
@@ -583,97 +545,93 @@ const styles = StyleSheet.create({
   },
 
   hero: {
-    backgroundColor: "#fff",
-    borderRadius: 18,
-    padding: 16,
+    borderRadius: 24,
+    minHeight: 260,
+    overflow: "hidden",
     ...shadowCard(),
   },
+  heroImage: {
+    borderRadius: 24,
+  },
+  heroOverlay: {
+    flex: 1,
+    minHeight: 260,
+    justifyContent: "flex-start",
+    backgroundColor: "rgba(13, 43, 69, 0.18)",
+    paddingHorizontal: 22,
+    paddingTop: 18,
+    paddingBottom: 22,
+  },
   heroTitle: {
-    fontSize: 28,
+    fontSize: 32,
     fontWeight: "900",
-    color: colors.primary,
+    color: colors.textInverse,
     marginBottom: 6,
+    textShadowColor: "rgba(0,0,0,0.62)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
   },
   heroSubtitle: {
     fontSize: 14,
-    color: colors.muted,
-    lineHeight: 19,
+    fontWeight: "600",
+    color: colors.textInverse,
+    lineHeight: 20,
+    textShadowColor: "rgba(0,0,0,0.62)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
   },
   heroPillsRow: {
-    marginTop: 12,
+    marginTop: "auto",
+    width: "84%",
+    alignSelf: "center",
+    justifyContent: "center",
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 8,
   },
   journeyCta: {
-    marginTop: 16,
-    minHeight: 52,
+    marginTop: 14,
+    minHeight: 48,
     borderRadius: 16,
-    backgroundColor: colors.primary,
+    alignSelf: "center",
+    width: "84%",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.36)",
+    backgroundColor: "rgba(255,255,255,0.74)",
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 18,
-    paddingVertical: 14,
+    paddingVertical: 12,
   },
   journeyCtaPressed: {
-    opacity: 0.9,
+    opacity: 0.78,
   },
   journeyCtaText: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    lineHeight: 22,
+    color: colors.primary,
+    fontSize: 15,
+    lineHeight: 21,
     fontWeight: "800",
     textAlign: "center",
   },
 
   pill: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingHorizontal: 11,
+    paddingVertical: 7,
     borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.42)",
   },
   pillText: {
     fontSize: 12,
-    fontWeight: "800",
-  },
-
-  statsGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 10,
-  },
-  statTile: {
-    flexGrow: 1,
-    flexBasis: "31%",
-    minWidth: 120,
-    borderRadius: 18,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.06)",
-  },
-  statIcon: {
-    fontSize: 18,
-    marginBottom: 6,
-  },
-  statLabel: {
-    fontSize: 12,
-    color: colors.muted,
-    fontWeight: "800",
-  },
-  statValue: {
-    marginTop: 6,
-    fontSize: 22,
     fontWeight: "900",
-  },
-  statHelper: {
-    marginTop: 4,
-    fontSize: 12,
-    color: colors.muted,
   },
 
   card: {
-    backgroundColor: "#fff",
-    borderRadius: 18,
-    padding: 16,
+    backgroundColor: colors.surfaceAlt,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 14,
   },
 
   sectionTitleRow: {
@@ -697,11 +655,18 @@ const styles = StyleSheet.create({
   },
 
   phaseCard: {
-    backgroundColor: "#fff",
-    borderRadius: 16,
+    borderRadius: 18,
     padding: 14,
     borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.06)",
+    ...shadowCard(),
+  },
+  phaseCardPrimary: {
+    backgroundColor: colors.primarySoft,
+    borderColor: colors.primary,
+  },
+  phaseCardSecondary: {
+    backgroundColor: "#FFF9EC",
+    borderColor: colors.secondary,
   },
   phaseHeaderRow: {
     flexDirection: "row",
@@ -740,36 +705,42 @@ const styles = StyleSheet.create({
   },
 
   progressBarBackground: {
-    height: 10,
-    backgroundColor: "rgba(0,0,0,0.06)",
+    height: 8,
+    backgroundColor: "rgba(255,255,255,0.72)",
     borderRadius: 999,
     overflow: "hidden",
-    marginTop: 12,
+    marginTop: 10,
   },
   progressBarFill: {
     height: "100%",
     backgroundColor: colors.primary,
     borderRadius: 999,
   },
+  progressBarFillSecondary: {
+    backgroundColor: colors.secondaryPressed,
+  },
 
   phaseFooterRow: {
-    marginTop: 12,
+    marginTop: 10,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingTop: 12,
+    paddingTop: 10,
     borderTopWidth: 1,
-    borderTopColor: "rgba(0,0,0,0.06)",
+    borderTopColor: "rgba(13,43,69,0.10)",
   },
   phaseMetaLeft: {
     fontSize: 12,
     fontWeight: "800",
-    color: colors.secondary,
+    color: colors.warning,
   },
   phaseMetaRight: {
     fontSize: 13,
     fontWeight: "900",
     color: colors.primary,
+  },
+  phaseMetaRightSecondary: {
+    color: colors.warning,
   },
 
   // Modal
