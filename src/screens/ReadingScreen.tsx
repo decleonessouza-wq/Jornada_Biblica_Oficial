@@ -11,6 +11,7 @@ import {
   SafeAreaView,
   Platform,
   useWindowDimensions,
+  ImageBackground,
 } from "react-native";
 import { useEffect, useMemo, useState, useCallback } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -22,6 +23,8 @@ import { colors } from "../theme/colors";
 import { readingPlan } from "../data/readingPlan";
 import type { Phase } from "../data/phases";
 import { getPlanPhaseForOffset } from "../domain/plan/planPhaseProjection";
+import { projectPlanCivilDate } from "../domain/plan/planCivilSchedule";
+import { resolvePlanCivilDayPolicy } from "../domain/plan/planSpecialDayPolicy";
 import type { RootStackParamList } from "../navigation/types";
 import { addCompletedDay } from "../services/progressStore";
 import { projectCanonicalStructuredPlan } from "../domain/plan/canonicalStructuredPlanV2";
@@ -36,7 +39,6 @@ import {
 import {
   getPlanOffsetForDate,
   getPlanStartDate,
-  PLAN_START_DATE_KEY,
 } from "../services/progressStore";
 
 type Props = {
@@ -110,24 +112,6 @@ function addDaysIso(iso: string, days: number): string {
 function isSundayIso(iso: string): boolean {
   const d = isoToLocalNoon(iso);
   return d.getDay() === 0;
-}
-
-/**
- * Conta quantos dias NÃO-domingo existem entre start e target (inclusive),
- * retornando um índice 0-based para o array de leituras úteis.
- */
-function workdayIndexSinceStart(startIso: string, targetIso: string): number {
-  if (targetIso < startIso) return -1;
-
-  let idx = -1;
-  let cur = startIso;
-
-  while (cur <= targetIso) {
-    if (!isSundayIso(cur)) idx++;
-    cur = addDaysIso(cur, 1);
-  }
-
-  return idx;
 }
 
 /* ==========================
@@ -351,15 +335,7 @@ function buildBibliaOnlineUrl(reference: string, versionPath: "acf" | "bkj") {
   return `https://www.bibliaonline.com.br/${versionPath}/${abbr}/${parsed.chapter}`;
 }
 
-function buildReadingUrl(reference: string, isSunday: boolean, version: BibleVersion) {
-  if (isSunday) return buildGoogleSearchUrl("meditação e oração bíblica");
-
-  if (/natal/i.test(reference.trim())) {
-    return buildGoogleSearchUrl(
-      "Evangelhos nascimento de Jesus Lucas 2 Mateus 1 profecias do Messias Isaías 9"
-    );
-  }
-
+function buildReadingUrl(reference: string, version: BibleVersion) {
   if (version === "ARC") return buildBibleGatewayUrl(reference, "ARC");
   if (version === "NVI") return buildBibleGatewayUrl(reference, "NVI");
 
@@ -442,21 +418,21 @@ const PHASE_SPIRITUAL: Record<number, { prayer: string; reflection: string }> = 
 function getSpiritualContent(params: { phaseId?: number | null; isSunday: boolean; isNatal: boolean }) {
   const { phaseId, isSunday, isNatal } = params;
 
-  if (isSunday) {
-    return {
-      prayer:
-        "Senhor, hoje eu desacelero diante de ti. Silencia minha alma, renova minha alegria e firma meus passos na tua vontade. Amém.",
-      reflection:
-        "Revise sua semana: o que Deus te ensinou? O que você precisa confessar, agradecer e ajustar? Escreva uma frase de gratidão.",
-    };
-  }
-
   if (isNatal) {
     return {
       prayer:
         "Senhor Jesus, obrigado porque vieste ao mundo para nos salvar. Que teu nascimento renove minha fé e minha esperança hoje. Amém.",
       reflection:
         "Leia como quem recebe um presente: observe as promessas cumpridas, a humildade de Cristo e o convite para adorá-lo com todo o coração.",
+    };
+  }
+
+  if (isSunday) {
+    return {
+      prayer:
+        "Senhor, hoje eu desacelero diante de ti. Silencia minha alma, renova minha alegria e firma meus passos na tua vontade. Amém.",
+      reflection:
+        "Revise sua semana: o que Deus te ensinou? O que você precisa confessar, agradecer e ajustar? Escreva uma frase de gratidão.",
     };
   }
 
@@ -486,27 +462,63 @@ function getNonSundaySequence(): string[] {
 
 async function resolvePlanForDate(dateIso: string, fallbackReference: string): Promise<PlanResolved> {
   const start = await getPlanStartDate();
+
   if (start && isIsoDateString(start)) {
-    const sunday = isSundayIso(dateIso);
-    if (sunday) {
-      return { mode: "ATEMPORAL", planStartDate: start, isSunday: true, reference: "Meditar" };
+    const projection = projectPlanCivilDate(start, dateIso);
+
+    if (!projection.policy.consumesReadingUnit) {
+      return {
+        mode: "ATEMPORAL",
+        planStartDate: start,
+        isSunday: projection.policy.isSunday,
+        reference: projection.policy.displayReference,
+      };
     }
 
     const seq = getNonSundaySequence();
-    const idx = workdayIndexSinceStart(start, dateIso);
+    const idx = projection.readingUnitIndex;
 
-    if (idx < 0) {
-      return { mode: "ATEMPORAL", planStartDate: start, isSunday: sunday, reference: fallbackReference };
+    if (projection.isBeforeStart || idx === null) {
+      return {
+        mode: "ATEMPORAL",
+        planStartDate: start,
+        isSunday: false,
+        reference: fallbackReference,
+      };
     }
 
     if (idx >= seq.length) {
-      return { mode: "ATEMPORAL", planStartDate: start, isSunday: sunday, reference: "✅ Plano concluído — revisar" };
+      return {
+        mode: "ATEMPORAL",
+        planStartDate: start,
+        isSunday: false,
+        reference: "✅ Plano concluído — revisar",
+      };
     }
 
-    return { mode: "ATEMPORAL", planStartDate: start, isSunday: false, reference: seq[idx] };
+    return {
+      mode: "ATEMPORAL",
+      planStartDate: start,
+      isSunday: false,
+      reference: seq[idx],
+    };
   }
 
-  return { mode: "LEGACY", isSunday: !!isSundayIso(dateIso), reference: fallbackReference };
+  const policy = resolvePlanCivilDayPolicy(dateIso);
+
+  if (!policy.consumesReadingUnit) {
+    return {
+      mode: "LEGACY",
+      isSunday: policy.isSunday,
+      reference: policy.displayReference,
+    };
+  }
+
+  return {
+    mode: "LEGACY",
+    isSunday: false,
+    reference: fallbackReference,
+  };
 }
 
 /* ==========================
@@ -598,11 +610,14 @@ function SecondaryButton({
 function Pill({ label, tone = "neutral" }: { label: string; tone?: "neutral" | "info" | "warn" }) {
   const bg =
     tone === "info"
-      ? "rgba(4,206,146,0.12)"
+      ? "rgba(231,237,242,0.94)"
       : tone === "warn"
-      ? "rgba(218,165,32,0.18)"
-      : "rgba(0,0,0,0.06)";
-  const fg = tone === "info" ? colors.primary : tone === "warn" ? colors.secondary : colors.muted;
+      ? "rgba(255,243,207,0.95)"
+      : "rgba(255,255,255,0.90)";
+  const fg =
+    tone === "warn"
+      ? colors.warning
+      : colors.primary;
 
   return (
     <View style={[styles.pill, { backgroundColor: bg }]}>
@@ -611,15 +626,46 @@ function Pill({ label, tone = "neutral" }: { label: string; tone?: "neutral" | "
   );
 }
 
-function Card({ children }: { children: React.ReactNode }) {
-  return <View style={[styles.card, shadowCard()]}>{children}</View>;
+function Card({
+  children,
+  tone = "default",
+}: {
+  children: React.ReactNode;
+  tone?: "default" | "accent" | "spiritual" | "warm";
+}) {
+  return (
+    <View
+      style={[
+        styles.card,
+        tone === "accent" && styles.cardAccent,
+        tone === "spiritual" && styles.cardSpiritual,
+        tone === "warm" && styles.cardWarm,
+        shadowCard(),
+      ]}
+    >
+      {children}
+    </View>
+  );
 }
 
-function SectionTitle({ icon, title }: { icon: string; title: string }) {
+function SectionTitle({
+  icon,
+  title,
+  subtitle,
+}: {
+  icon: string;
+  title: string;
+  subtitle?: string;
+}) {
   return (
-    <View style={styles.sectionTitleRow}>
-      <Text style={styles.sectionTitleIcon}>{icon}</Text>
-      <Text style={styles.sectionTitleText}>{title}</Text>
+    <View style={styles.sectionHeader}>
+      <View style={styles.sectionTitleRow}>
+        <View style={styles.sectionIconBadge}>
+          <Text style={styles.sectionTitleIcon}>{icon}</Text>
+        </View>
+        <Text style={styles.sectionTitleText}>{title}</Text>
+      </View>
+      {subtitle ? <Text style={styles.sectionSubtitle}>{subtitle}</Text> : null}
     </View>
   );
 }
@@ -670,9 +716,17 @@ export default function ReadingScreen({ route }: Props) {
 
   const date = routeDate;
   const reference = resolved.reference;
-  const isSunday = resolved.isSunday;
 
-  const isNatal = useMemo(() => /natal/i.test(reference.trim()), [reference]);
+  const civilDayPolicy = useMemo(() => {
+    if (!date || !isIsoDateString(date)) return null;
+    return resolvePlanCivilDayPolicy(date);
+  }, [date]);
+
+  const isSunday = civilDayPolicy?.isSunday ?? resolved.isSunday;
+  const isNatal =
+    civilDayPolicy?.kind === "CHRISTMAS" ||
+    /natal/i.test(reference.trim());
+
   const parsed = useMemo(() => parseReference(reference), [reference]);
 
   const [version, setVersion] = useState<BibleVersion>("ARC");
@@ -685,8 +739,9 @@ export default function ReadingScreen({ route }: Props) {
   const [savedGratitude, setSavedGratitude] = useState<string | null>(null);
 
   const passages = useMemo(() => {
+    if (isNatal) return ["Natal"];
     if (isSunday) return ["Meditar"];
-    if (!isMultiPassage(reference) && !isNatal) return [reference];
+    if (!isMultiPassage(reference)) return [reference];
     return splitPassages(reference);
   }, [reference, isSunday, isNatal]);
 
@@ -729,11 +784,9 @@ export default function ReadingScreen({ route }: Props) {
   }, [currentPhase, isSunday, isNatal]);
 
   const canMarkRead = useMemo(() => {
-    if (!date) return false;
-    if (isSunday) return false;
-    if (/meditar/i.test(reference)) return false;
-    return true;
-  }, [date, isSunday, reference]);
+    if (!date || !civilDayPolicy) return false;
+    return civilDayPolicy.canMarkRead;
+  }, [date, civilDayPolicy]);
 
   const isReadToday = useMemo(() => {
     if (!date) return false;
@@ -1022,17 +1075,18 @@ export default function ReadingScreen({ route }: Props) {
   ]);
 
   const readingUrl = useMemo(() => {
-    if (usesLocalBibleReader) return "";
+    if (usesLocalBibleReader || isSunday || isNatal) return "";
 
     return (
       structuredProviderTarget?.url ??
-      buildReadingUrl(selectedReferenceForUrl, isSunday, version)
+      buildReadingUrl(selectedReferenceForUrl, version)
     );
   }, [
     usesLocalBibleReader,
     structuredProviderTarget,
     selectedReferenceForUrl,
     isSunday,
+    isNatal,
     version,
   ]);
 
@@ -1087,6 +1141,8 @@ export default function ReadingScreen({ route }: Props) {
   }
 
   async function openInBrowser() {
+    if (isSunday || isNatal) return;
+
     try {
       const can = await Linking.canOpenURL(readingUrl);
       if (!can) throw new Error("cannot-open");
@@ -1097,6 +1153,8 @@ export default function ReadingScreen({ route }: Props) {
   }
 
   function openAccordingToMode() {
+    if (isSunday || isNatal) return;
+
     if (openMode === "BROWSER") {
       openInBrowser();
       return;
@@ -1114,7 +1172,7 @@ export default function ReadingScreen({ route }: Props) {
   // ========
   // WebView
   // ========
-  if (showWebView) {
+  if (showWebView && !isSunday && !isNatal) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
         <View style={styles.webTopBar}>
@@ -1174,42 +1232,69 @@ export default function ReadingScreen({ route }: Props) {
       >
         <View style={[styles.container, { width: "100%", maxWidth, alignSelf: "center" }]}>
           {/* HEADER / HERO */}
-          <View style={styles.hero}>
-            <View style={styles.heroRow}>
-              <Pill label={date ? `📅 ${formatDateBr(date)}` : "📅"} tone="neutral" />
-              {isSunday ? (
-                <Pill label="Domingo livre" tone="info" />
-              ) : isNatal ? (
+          <ImageBackground
+            testID="reading-hero"
+            source={require("../../assets/module-heroes/reading-hero.png")}
+            style={styles.hero}
+            imageStyle={styles.heroImage}
+            resizeMode="cover"
+            accessibilityIgnoresInvertColors
+          >
+            <View style={styles.heroOverlay}>
+              <View style={styles.heroRow}>
+                <Pill label={date ? `📅 ${formatDateBr(date)}` : "📅"} tone="neutral" />
+                {isNatal ? (
                 <Pill label="Natal" tone="warn" />
+              ) : isSunday ? (
+                <Pill label="Domingo livre" tone="info" />
               ) : null}
             </View>
 
-            <Text style={styles.heroTitle}>{reference}</Text>
+              <View style={styles.heroContent}>
+                <Text style={styles.heroEyebrow}>
+                  {isNatal ? "CELEBRAÇÃO" : isSunday ? "PAUSA E MEDITAÇÃO" : "LEITURA DO DIA"}
+                </Text>
+                <Text style={styles.heroTitle}>{reference}</Text>
 
-            {isSunday ? (
-              <Text style={styles.heroSub}>📖 Domingo de meditação e oração</Text>
-            ) : isNatal ? (
-              <Text style={styles.heroSub}>🎄 Leituras sobre o nascimento de Jesus</Text>
-            ) : (
-              <Text style={styles.heroSub}>
-                {parsed.book}
-                {parsed.chapter ? ` • ${parsed.chapter}` : ""}
-              </Text>
-            )}
-
-            {!!date && !isSunday && (
-              <View style={styles.heroMetaRow}>
-                <Text style={styles.heroMetaText}>{isReadToday ? "✅ Concluído" : "⏳ Pendente"}</Text>
-                {currentPhase && !isNatal && (
-                  <Text style={styles.heroMetaText}>• Fase: {(currentPhase as any)?.title ?? "—"}</Text>
+                {isNatal ? (
+                  <Text style={styles.heroSub}>Celebre o nascimento de Jesus com fé e gratidão.</Text>
+                ) : isSunday ? (
+                  <Text style={styles.heroSub}>Um dia para desacelerar, orar e ouvir a Palavra.</Text>
+                ) : (
+                  <Text style={styles.heroSub}>
+                    {parsed.book}
+                    {parsed.chapter ? ` • ${parsed.chapter}` : ""}
+                  </Text>
                 )}
               </View>
-            )}
-          </View>
+
+              {!!date && !isSunday && !isNatal && (
+                <View style={styles.heroStatusRow}>
+                  <Pill
+                    label={isReadToday ? "✓ Concluído" : "Leitura pendente"}
+                    tone={isReadToday ? "info" : "neutral"}
+                  />
+                  {currentPhase && !isNatal && (
+                    <Text style={styles.heroPhaseText}>{(currentPhase as any)?.title ?? ""}</Text>
+                  )}
+                </View>
+              )}
+            </View>
+          </ImageBackground>
 
           {/* AÇÃO PRINCIPAL */}
-          <Card>
-            <SectionTitle icon="📖" title="Leitura" />
+          <Card tone="accent">
+            <SectionTitle
+              icon={isNatal ? "🎄" : isSunday ? "🙏" : "📖"}
+              title={isNatal ? "Natal" : isSunday ? "Meditação" : "Sua leitura"}
+              subtitle={
+                isNatal
+                  ? "Celebre o nascimento de Cristo com calma e propósito."
+                  : isSunday
+                  ? "Reserve este momento para oração, revisão e gratidão."
+                  : "Abra a passagem no leitor bíblico local e siga sua jornada."
+              }
+            />
 
             {!isSunday && !isNatal && passages.length > 1 ? (
               <>
@@ -1236,10 +1321,10 @@ export default function ReadingScreen({ route }: Props) {
               </>
             ) : (
               <Text style={styles.helper}>
-                {isSunday
-                  ? "Use este dia para orar, meditar e revisar atrasos."
-                  : isNatal
-                  ? "Toque em abrir para ver sugestões de leitura sobre o nascimento de Jesus."
+                {isNatal
+                  ? "Celebre o nascimento de Jesus com a oração e a reflexão guiada deste dia."
+                  : isSunday
+                  ? "Use este dia para orar, meditar e revisar sua caminhada."
                   : usesLocalBibleReader
                   ? `Parte selecionada: ${selectedReferenceRaw}.`
                   : `Parte selecionada: ${selectedReferenceRaw} • Versão: ${versionLabel[version]}.`}
@@ -1255,33 +1340,34 @@ export default function ReadingScreen({ route }: Props) {
 
             <View style={{ height: 12 }} />
 
-            <PrimaryButton
-              title={
-                isSunday
-                  ? "Abrir meditação"
-                  : usesLocalBibleReader
-                  ? "Abrir na Bíblia"
-                  : openMode === "IN_APP"
-                  ? `Abrir no app (${versionLabel[version]})`
-                  : `Abrir no navegador (${versionLabel[version]})`
-              }
-              icon={
-                isSunday
-                  ? "🙏"
-                  : usesLocalBibleReader
-                  ? "📖"
-                  : openMode === "IN_APP"
-                  ? "📖"
-                  : "🌐"
-              }
-              onPress={
-                usesLocalBibleReader
-                  ? openInLocalBibleReader
-                  : openAccordingToMode
-              }
-            />
+            {isSunday || isNatal ? (
+              <View style={styles.localOnlyBox}>
+                <Text style={styles.localOnlyLabel}>EXPERIÊNCIA LOCAL</Text>
+                <Text style={styles.localOnlyText}>
+                  Toda a experiência deste dia acontece aqui no Jornada, sem abrir sites externos.
+                </Text>
+              </View>
+            ) : usesLocalBibleReader ? (
+              <PrimaryButton
+                title="Abrir na Bíblia"
+                icon="📖"
+                onPress={openInLocalBibleReader}
+              />
+            ) : (
+              <PrimaryButton
+                title={
+                  openMode === "IN_APP"
+                    ? `Abrir no app (${versionLabel[version]})`
+                    : `Abrir no navegador (${versionLabel[version]})`
+                }
+                icon={openMode === "IN_APP" ? "📖" : "🌐"}
+                onPress={openAccordingToMode}
+              />
+            )}
 
-            {!isSunday && !usesLocalBibleReader && (
+            {!isSunday &&
+              !isNatal &&
+              !usesLocalBibleReader && (
               <>
                 <View style={{ height: 10 }} />
                 <SecondaryButton
@@ -1311,32 +1397,39 @@ export default function ReadingScreen({ route }: Props) {
               </>
             )}
 
-            {/* debug discreto (mantido) */}
-            {resolved.mode === "ATEMPORAL" && resolved.planStartDate && (
-              <Text style={styles.debug}>
-                Plano atemporal • início: {resolved.planStartDate} (chave {PLAN_START_DATE_KEY})
-              </Text>
-            )}
+            {/* informações internas do plano não são exibidas em produção */}
           </Card>
 
           {/* ORAÇÃO */}
-          <Card>
-            <SectionTitle icon="🙏" title="Oração inicial" />
+          <Card tone="spiritual">
+            <SectionTitle
+              icon="🙏"
+              title="Oração inicial"
+              subtitle="Prepare o coração antes de continuar."
+            />
             <Text style={styles.paragraph}>{spiritual.prayer}</Text>
           </Card>
 
           {/* REFLEXÃO */}
-          <Card>
-            <SectionTitle icon="🧭" title="Reflexão guiada" />
+          <Card tone="spiritual">
+            <SectionTitle
+              icon="🧭"
+              title="Reflexão guiada"
+              subtitle="Leve a Palavra da leitura para a vida."
+            />
             <Text style={styles.paragraph}>{spiritual.reflection}</Text>
           </Card>
 
           {/* GRATIDÃO */}
           {!!date && (
-            <Card>
-              <SectionTitle icon="✍️" title="Gratidão (1 frase)" />
+            <Card tone="warm">
+              <SectionTitle
+                icon="✍️"
+                title="Gratidão"
+                subtitle="Registre em uma frase o que marcou seu coração hoje."
+              />
               <Text style={styles.helper}>
-                Uma frase curta (até 140 caracteres). Fica salva apenas no seu celular.
+                Até 140 caracteres • salvo somente neste dispositivo.
               </Text>
 
               <TextInput
@@ -1351,27 +1444,23 @@ export default function ReadingScreen({ route }: Props) {
 
               <View style={{ height: 10 }} />
 
-              <View style={styles.row}>
-                <View style={{ flex: 1, marginRight: 8 }}>
-                  <PrimaryButton title="Salvar gratidão" icon="💾" onPress={saveGratitude} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <SecondaryButton
-                    title="Remover"
-                    icon="🗑️"
-                    onPress={() => {
-                      if (!savedGratitude) {
-                        Alert.alert("Nada para remover", "Você ainda não salvou gratidão hoje.");
-                        return;
-                      }
-                      Alert.alert("Remover gratidão?", "Deseja remover a gratidão deste dia?", [
-                        { text: "Cancelar", style: "cancel" },
-                        { text: "Remover", style: "destructive", onPress: deleteGratitude },
-                      ]);
-                    }}
-                  />
-                </View>
-              </View>
+              <PrimaryButton title="Salvar gratidão" icon="💾" onPress={saveGratitude} />
+
+              <Pressable
+                onPress={() => {
+                  if (!savedGratitude) {
+                    Alert.alert("Nada para remover", "Você ainda não salvou gratidão hoje.");
+                    return;
+                  }
+                  Alert.alert("Remover gratidão?", "Deseja remover a gratidão deste dia?", [
+                    { text: "Cancelar", style: "cancel" },
+                    { text: "Remover", style: "destructive", onPress: deleteGratitude },
+                  ]);
+                }}
+                style={styles.removeGratitudeBtn}
+              >
+                <Text style={styles.removeGratitudeText}>Remover gratidão salva</Text>
+              </Pressable>
 
               {savedGratitude && (
                 <View style={styles.savedBox}>
@@ -1384,7 +1473,11 @@ export default function ReadingScreen({ route }: Props) {
           {/* NAVEGAÇÃO */}
           {(prevDate || nextDate) && (
             <Card>
-              <SectionTitle icon="🧭" title="Navegação rápida" />
+              <SectionTitle
+                icon="↔"
+                title="Navegação rápida"
+                subtitle="Consulte o dia anterior ou avance para o próximo."
+              />
               <View style={styles.row}>
                 <View style={{ flex: 1, marginRight: 8 }}>
                   <SecondaryButton
@@ -1421,9 +1514,13 @@ export default function ReadingScreen({ route }: Props) {
           )}
 
           {/* PREFERÊNCIAS */}
-          {!isSunday && !usesLocalBibleReader && (
+          {!isSunday && !isNatal && !usesLocalBibleReader && (
             <Card>
-              <SectionTitle icon="⚙️" title="Preferências" />
+              <SectionTitle
+                icon="⚙️"
+                title="Preferências"
+                subtitle="Usadas apenas quando esta passagem precisar de provedor externo."
+              />
 
               <Text style={styles.helper}>Versão bíblica (padrão: ARC)</Text>
               <View style={styles.chipsWrap}>
@@ -1463,97 +1560,183 @@ export default function ReadingScreen({ route }: Props) {
 
 const styles = StyleSheet.create({
   page: {
-    paddingTop: 12,
-    paddingBottom: 20,
+    paddingTop: 10,
+    paddingBottom: 24,
   },
   container: {
     gap: 12,
   },
 
   hero: {
-    backgroundColor: "#fff",
-    borderRadius: 18,
-    padding: 16,
+    borderRadius: 24,
+    minHeight: 250,
+    overflow: "hidden",
     ...shadowCard(),
+  },
+  heroImage: {
+    borderRadius: 24,
+  },
+  heroOverlay: {
+    flex: 1,
+    minHeight: 250,
+    paddingHorizontal: 20,
+    paddingVertical: 18,
+    justifyContent: "space-between",
+    backgroundColor: "rgba(13,43,69,0.46)",
   },
   heroRow: {
     flexDirection: "row",
-    gap: 8,
+    alignItems: "center",
+    justifyContent: "space-between",
     flexWrap: "wrap",
-    marginBottom: 8,
+    gap: 8,
+  },
+  heroEyebrow: {
+    flex: 1,
+    color: colors.secondary,
+    fontSize: 11,
+    lineHeight: 15,
+    fontWeight: "900",
+    letterSpacing: 1.2,
+  },
+  heroContent: {
+    paddingVertical: 18,
   },
   heroTitle: {
-    fontSize: 26,
-    fontWeight: "800",
-    color: colors.primary,
-    textAlign: "center",
-    marginTop: 4,
+    fontSize: 31,
+    lineHeight: 37,
+    fontWeight: "900",
+    color: colors.textInverse,
+    textShadowColor: "rgba(0,0,0,0.55)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 5,
   },
   heroSub: {
+    marginTop: 7,
+    maxWidth: "88%",
     fontSize: 14,
-    color: colors.muted,
-    textAlign: "center",
-    marginTop: 6,
+    lineHeight: 20,
+    fontWeight: "600",
+    color: colors.textInverse,
+    textShadowColor: "rgba(0,0,0,0.52)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
   },
-  heroMetaRow: {
-    marginTop: 10,
+  heroStatusRow: {
     flexDirection: "row",
-    justifyContent: "center",
+    alignItems: "center",
     flexWrap: "wrap",
-    gap: 6,
+    gap: 8,
   },
-  heroMetaText: {
+  heroPhaseText: {
     fontSize: 12,
-    color: colors.muted,
+    lineHeight: 16,
+    fontWeight: "700",
+    color: "rgba(255,255,255,0.92)",
   },
 
   pill: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingHorizontal: 11,
+    paddingVertical: 7,
     borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.42)",
   },
   pillText: {
     fontSize: 12,
-    fontWeight: "700",
+    fontWeight: "900",
   },
 
   card: {
-    backgroundColor: "#fff",
-    borderRadius: 18,
+    backgroundColor: colors.surface,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.border,
     padding: 16,
   },
+  cardAccent: {
+    backgroundColor: colors.surfaceAlt,
+    borderColor: "rgba(13,43,69,0.24)",
+  },
+  cardSpiritual: {
+    borderLeftWidth: 4,
+    borderLeftColor: colors.primary,
+  },
+  cardWarm: {
+    backgroundColor: colors.surfaceHighlight,
+    borderColor: "rgba(240,180,41,0.34)",
+  },
 
+  sectionHeader: {
+    marginBottom: 10,
+  },
   sectionTitleRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 8,
-    gap: 8,
+    gap: 10,
+  },
+  sectionIconBadge: {
+    width: 34,
+    height: 34,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: colors.primarySoft,
   },
   sectionTitleIcon: {
     fontSize: 16,
   },
   sectionTitleText: {
-    fontSize: 16,
-    fontWeight: "800",
-    color: colors.text,
+    flex: 1,
+    fontSize: 17,
+    lineHeight: 22,
+    fontWeight: "900",
+    color: colors.textStrong,
+  },
+  sectionSubtitle: {
+    marginTop: 6,
+    marginLeft: 44,
+    fontSize: 12,
+    lineHeight: 17,
+    color: colors.muted,
   },
 
   helper: {
     fontSize: 13,
     color: colors.muted,
-    lineHeight: 18,
+    lineHeight: 19,
   },
   miniHelp: {
     marginTop: 8,
     fontSize: 12,
     color: colors.muted,
-    lineHeight: 16,
+    lineHeight: 17,
   },
   paragraph: {
-    marginTop: 6,
     color: colors.text,
-    lineHeight: 20,
-    fontSize: 14,
+    lineHeight: 23,
+    fontSize: 15,
+  },
+
+  localOnlyBox: {
+    borderRadius: 14,
+    padding: 12,
+    backgroundColor: colors.primarySoft,
+    borderWidth: 1,
+    borderColor: "rgba(13,43,69,0.14)",
+  },
+  localOnlyLabel: {
+    fontSize: 10,
+    lineHeight: 14,
+    letterSpacing: 0.9,
+    fontWeight: "900",
+    color: colors.primary,
+  },
+  localOnlyText: {
+    marginTop: 4,
+    fontSize: 13,
+    lineHeight: 19,
+    color: colors.text,
   },
 
   chipsWrap: {
@@ -1576,91 +1759,106 @@ const styles = StyleSheet.create({
 
   textArea: {
     marginTop: 10,
-    minHeight: 70,
-    backgroundColor: "#f6f7f8",
+    minHeight: 84,
+    backgroundColor: colors.surface,
     borderRadius: 14,
     padding: 12,
     color: colors.text,
     borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.06)",
+    borderColor: colors.border,
     textAlignVertical: "top",
+    fontSize: 14,
+    lineHeight: 20,
   },
 
   savedBox: {
-    marginTop: 10,
-    padding: 10,
-    borderRadius: 12,
-    backgroundColor: "rgba(4,206,146,0.10)",
+    marginTop: 12,
+    padding: 12,
+    borderRadius: 14,
+    backgroundColor: "rgba(22,130,93,0.10)",
+    borderWidth: 1,
+    borderColor: "rgba(22,130,93,0.18)",
   },
   savedText: {
     fontSize: 12,
-    color: colors.primary,
+    lineHeight: 17,
+    color: colors.success,
+    fontWeight: "800",
+  },
+  removeGratitudeBtn: {
+    alignSelf: "center",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginTop: 4,
+  },
+  removeGratitudeText: {
+    fontSize: 12,
     fontWeight: "700",
+    color: colors.muted,
+    textDecorationLine: "underline",
   },
 
   btnPrimary: {
+    minHeight: 48,
     backgroundColor: colors.primary,
-    paddingVertical: 14,
+    paddingVertical: 13,
+    paddingHorizontal: 16,
     borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
   },
   btnPrimaryText: {
-    color: "#fff",
+    color: colors.textInverse,
     fontSize: 14,
-    fontWeight: "800",
+    fontWeight: "900",
     letterSpacing: 0.2,
   },
 
   btnSecondary: {
-    backgroundColor: "#fff",
-    paddingVertical: 14,
+    minHeight: 46,
+    backgroundColor: colors.surface,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
     borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.10)",
+    borderColor: colors.border,
   },
   btnSecondaryText: {
     color: colors.text,
     fontSize: 14,
     fontWeight: "800",
-    letterSpacing: 0.2,
+    letterSpacing: 0.1,
   },
 
   btnPressed: {
     transform: [{ scale: 0.99 }],
-    opacity: 0.95,
+    opacity: 0.94,
   },
   btnDisabled: {
-    opacity: 0.55,
+    opacity: 0.52,
   },
 
   linkBtn: {
     alignSelf: "center",
-    paddingVertical: 10,
-    marginTop: 4,
+    paddingVertical: 9,
+    marginTop: 3,
   },
   linkBtnText: {
     fontSize: 12,
+    fontWeight: "600",
     color: colors.muted,
     textDecorationLine: "underline",
-  },
-
-  debug: {
-    marginTop: 10,
-    fontSize: 11,
-    color: colors.muted,
-    textAlign: "center",
   },
 
   // WebView
   webTopBar: {
     paddingHorizontal: 12,
     paddingVertical: 10,
-    backgroundColor: "#fff",
+    backgroundColor: colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(0,0,0,0.06)",
+    borderBottomColor: colors.divider,
     flexDirection: "row",
     gap: 10,
     alignItems: "center",
@@ -1678,7 +1876,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     borderRadius: 12,
-    backgroundColor: "rgba(0,0,0,0.06)",
+    backgroundColor: colors.surfaceAlt,
   },
   webBackText: {
     fontWeight: "800",
