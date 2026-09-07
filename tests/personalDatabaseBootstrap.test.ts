@@ -20,8 +20,11 @@ type MockDatabase = {
 
 function createMockDatabase(foreignKeys = 1): MockDatabase {
   return {
-    execAsync: jest.fn(async () => undefined),
-    getFirstAsync: jest.fn(async () => ({ foreign_keys: foreignKeys })),
+    execAsync: jest.fn<Promise<void>, [string]>(async () => undefined),
+    getFirstAsync: jest.fn<
+      Promise<{ foreign_keys: number } | null>,
+      [string]
+    >(async () => ({ foreign_keys: foreignKeys })),
     closeAsync: jest.fn(async () => undefined),
   };
 }

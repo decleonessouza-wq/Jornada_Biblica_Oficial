@@ -1,13 +1,14 @@
 /**
- * Bootstrap inicial, idempotente e sem schema do Personal SQLite.
+ * Bootstrap inicial e idempotente do Personal SQLite.
  *
- * O P1 prepara apenas a infraestrutura física do banco mutável:
+ * A F14 prepara a infraestrutura física e estrutural do banco mutável:
  * - abre a conexão compartilhada;
  * - habilita WAL;
  * - habilita foreign keys;
+ * - executa as migrations estruturais suportadas;
  * - valida o estado mínimo da conexão.
  *
- * Criação de tabelas e migrations pertence ao F14-P2.
+ * Tabelas e dados de features pertencem às respectivas fases proprietárias.
  */
 
 import type { SQLiteDatabase } from "expo-sqlite";
@@ -16,6 +17,7 @@ import {
   closePersonalDatabaseConnection,
   openPersonalDatabaseConnection,
 } from "./personalDatabaseConnection";
+import { runPersonalDatabaseMigrations } from "./personalDatabaseMigrations";
 
 type PersonalForeignKeysPragmaRow = Readonly<{
   foreign_keys: number;
@@ -43,6 +45,7 @@ async function performPersonalDatabaseBootstrap(): Promise<SQLiteDatabase> {
     await database.execAsync("PRAGMA journal_mode = WAL;");
     await database.execAsync("PRAGMA foreign_keys = ON;");
 
+    await runPersonalDatabaseMigrations(database);
     await validatePersonalDatabaseConnection(database);
 
     return database;
