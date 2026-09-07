@@ -52,6 +52,7 @@ export type RootStackParamList = {
   Dedication: undefined;
   AppShell: NavigatorScreenParams<AppDrawerParamList> | undefined;
   Reading: ReadingRouteParams;
+  JourneyBibleReader: OfflineBibleReaderRouteParams;
 };
 
 export type RootStackScreenProps<

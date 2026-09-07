@@ -9,6 +9,7 @@ import {
   projectPlanCalendar,
   type ReadingUnit,
 } from "../src/domain/plan/planEngineV2";
+import { resolvePlanCivilDayPolicy } from "../src/domain/plan/planSpecialDayPolicy";
 
 function makeReadingUnits(): ReadingUnit[] {
   return Array.from(
@@ -131,7 +132,7 @@ describe("PlanEngineV2 critical contracts", () => {
     });
   });
 
-  it("schedules exactly 309 readings and never schedules one on Sunday", () => {
+  it("schedules exactly 309 readings only on civil reading days", () => {
     const projection =
       projectPlanCalendar({
         activationDate: "2026-08-30",
@@ -154,7 +155,9 @@ describe("PlanEngineV2 critical contracts", () => {
 
     expect(
       readingDays.every(
-        (day) => !isRealSunday(day.date),
+        (day) =>
+          resolvePlanCivilDayPolicy(day.date)
+            .consumesReadingUnit,
       ),
     ).toBe(true);
 
@@ -164,9 +167,90 @@ describe("PlanEngineV2 critical contracts", () => {
 
     expect(
       restDays.every(
-        (day) => isRealSunday(day.date),
+        (day) =>
+          !resolvePlanCivilDayPolicy(day.date)
+            .consumesReadingUnit,
       ),
     ).toBe(true);
+  });
+
+  it("skips Christmas without advancing the canonical reading order", () => {
+    const projection =
+      projectPlanCalendar({
+        activationDate: "2026-12-24",
+        readingUnits: makeReadingUnits(),
+      });
+
+    expect(
+      projection.calendarDays.slice(0, 5),
+    ).toEqual([
+      {
+        kind: "READING",
+        date: "2026-12-24",
+        readingOrder: 1,
+        readingUnit: {
+          id: "unit-1",
+          order: 1,
+          reference: "Gn 1",
+        },
+      },
+      {
+        kind: "REST",
+        date: "2026-12-25",
+        reason: "CHRISTMAS",
+        readingOrder: null,
+        readingUnit: null,
+      },
+      {
+        kind: "READING",
+        date: "2026-12-26",
+        readingOrder: 2,
+        readingUnit: {
+          id: "unit-2",
+          order: 2,
+          reference: "Gn 1",
+        },
+      },
+      {
+        kind: "REST",
+        date: "2026-12-27",
+        reason: "SUNDAY",
+        readingOrder: null,
+        readingUnit: null,
+      },
+      {
+        kind: "READING",
+        date: "2026-12-28",
+        readingOrder: 3,
+        readingUnit: {
+          id: "unit-3",
+          order: 3,
+          reference: "Gn 1",
+        },
+      },
+    ]);
+  });
+
+  it("gives Christmas precedence when December 25 is also Sunday", () => {
+    const projection =
+      projectPlanCalendar({
+        activationDate: "2033-12-25",
+        readingUnits: makeReadingUnits(),
+      });
+
+    expect(
+      projection.calendarDays[0],
+    ).toEqual({
+      kind: "REST",
+      date: "2033-12-25",
+      reason: "CHRISTMAS",
+      readingOrder: null,
+      readingUnit: null,
+    });
+
+    expect(
+      projection.firstReadingDate,
+    ).toBe("2033-12-26");
   });
 
   it("retrieves projected readings by canonical order", () => {

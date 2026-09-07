@@ -26,7 +26,11 @@ import { readingPlan } from "../data/readingPlan";
 import type { AppDrawerParamList, MainTabParamList, RootStackParamList } from "../navigation/types";
 import { runAutoBackup } from "../utils/autoBackup";
 import { useAppShellChrome } from "../navigation/AppShellChromeContext";
-import { VERSES_OF_DAY, pickVerseForToday, type VerseItem } from "../data/versesOfDay";
+import {
+  loadDailyContent720ForDate,
+  type ResolvedDailyContent720,
+} from "../services/dailyContent720Runtime";
+import { getJourneyBibleReaderRouteForReference } from "../services/journeyBibleReaderAdapter";
 import {
   loadHomeDashboardV2Snapshot,
   type HomeDashboardV2Snapshot,
@@ -281,7 +285,7 @@ export default function HomeScreen() {
 
   // ✅ Versículo do dia (modal)
   const [showVerseModal, setShowVerseModal] = useState(false);
-  const [verseOfDay, setVerseOfDay] = useState<VerseItem | null>(null);
+  const [verseOfDay, setVerseOfDay] = useState<ResolvedDailyContent720 | null>(null);
 
   // ✅ Migração/ajuste do início do plano
   const [showStartAdjust, setShowStartAdjust] = useState(false);
@@ -471,25 +475,45 @@ export default function HomeScreen() {
 
   const loadVerseOfDayIfNeeded = useCallback(async () => {
     try {
-      if (!Array.isArray(VERSES_OF_DAY) || VERSES_OF_DAY.length === 0) return;
-
       const hidden = await AsyncStorage.getItem(VERSE_HIDE_KEY);
       if (hidden === today) return;
 
       const lastShown = await AsyncStorage.getItem(VERSE_LAST_SHOWN_KEY);
       if (lastShown === today) return;
 
-      const verse = pickVerseForToday(new Date());
-      if (!verse) return;
+      const resolved = await loadDailyContent720ForDate(
+        isoToLocalNoon(today),
+      );
 
-      setVerseOfDay(verse);
+      setVerseOfDay(resolved);
       setShowVerseModal(true);
 
       await AsyncStorage.setItem(VERSE_LAST_SHOWN_KEY, today);
     } catch (err) {
       console.log("Erro ao carregar versículo do dia", err);
+      setVerseOfDay(null);
+      setShowVerseModal(false);
     }
   }, [today]);
+
+  function openVerseOfDayInBible() {
+    if (!verseOfDay) return;
+
+    const route = getJourneyBibleReaderRouteForReference({
+      reference: verseOfDay.content.bibleReference,
+      versionId: verseOfDay.versionId,
+      passageIndex: 0,
+    });
+
+    if (!route.ok) {
+      console.log("Erro ao abrir versículo do dia no leitor local", route.error);
+      notify("Erro", "Não foi possível abrir este versículo na Bíblia.");
+      return;
+    }
+
+    setShowVerseModal(false);
+    navigation.navigate("JourneyBibleReader", route.routeParams);
+  }
 
   useEffect(() => {
     (async () => {
@@ -1225,16 +1249,26 @@ export default function HomeScreen() {
             <View style={styles.verseModal} accessible>
               <Text style={styles.verseTitle}>📖 Versículo do Dia</Text>
 
-              {!!verseOfDay.theme && <Text style={styles.verseTheme}>{verseOfDay.theme}</Text>}
+              {!!verseOfDay.content.verse.theme && (
+                <Text style={styles.verseTheme}>
+                  {verseOfDay.content.verse.theme}
+                </Text>
+              )}
 
-              <Text style={styles.verseText}>“{verseOfDay.text}”</Text>
+              <Text style={styles.verseText}>“{verseOfDay.verseText}”</Text>
 
-              <Text style={styles.verseRef}>{verseOfDay.reference}</Text>
+              <Text style={styles.verseRef}>{verseOfDay.content.verse.reference}</Text>
 
               <View style={{ height: 16 }} />
 
-              <TouchableOpacity style={styles.primaryBtn} onPress={() => setShowVerseModal(false)}>
-                <Text style={styles.btnText}>Fechar</Text>
+              <TouchableOpacity style={styles.primaryBtn} onPress={openVerseOfDayInBible}>
+                <Text style={styles.btnText}>Abrir na Bíblia</Text>
+              </TouchableOpacity>
+
+              <View style={{ height: 8 }} />
+
+              <TouchableOpacity style={styles.secondaryBtn} onPress={() => setShowVerseModal(false)}>
+                <Text style={[styles.btnText, { color: colors.primary }]}>Fechar</Text>
               </TouchableOpacity>
 
               <View style={{ height: 8 }} />
@@ -1246,7 +1280,7 @@ export default function HomeScreen() {
                   setShowVerseModal(false);
                 }}
               >
-                <Text style={styles.btnText}>Não mostrar novamente hoje</Text>
+                <Text style={[styles.btnText, { color: colors.primary }]}>Não mostrar novamente hoje</Text>
               </TouchableOpacity>
             </View>
           </View>

@@ -1,6 +1,11 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { restoreFromAutoBackup } from "./backupRestore";
 import { readingPlan } from "../data/readingPlan";
+import {
+  getCivilDateForPlanReadingUnitIndex,
+  projectPlanCivilDate,
+} from "../domain/plan/planCivilSchedule";
+import { resolvePlanCivilDayPolicy } from "../domain/plan/planSpecialDayPolicy";
 
 export const COMPLETED_DAYS_KEY = "completedDays";
 export const AUTO_BACKUP_KEY = "autoBackupData";
@@ -81,10 +86,6 @@ function addDaysIso(iso: string, days: number): string {
   const d = isoToLocalNoon(iso);
   d.setDate(d.getDate() + days);
   return dateToIsoLocal(d);
-}
-
-function isSundayIso(iso: string): boolean {
-  return isoToLocalNoon(iso).getDay() === 0;
 }
 
 export function getTodayIsoLocal(): string {
@@ -199,8 +200,9 @@ export function getPlanItemByOffset(offset: number) {
 ========================== */
 
 /**
- * ✅ Detecta atrasos por OFFSET (baseado no readingPlan)
- * Atrasado = dia do plano já passado (<= ontem) que NÃO está em completedDays e NÃO é domingo do plano.
+ * ✅ Detecta atrasos por OFFSET CIVIL desde o início do plano.
+ * Atrasado = dia civil de leitura já passado (<= ontem) que NÃO está em completedDays.
+ * Domingo e Natal não consomem unidade e nunca entram como atraso.
  */
 export async function getOverdueOffsets(params?: {
   todayIso?: string; // default hoje local
@@ -215,17 +217,24 @@ export async function getOverdueOffsets(params?: {
   const done = new Set(completed);
 
   const endIso = includeToday ? today : addDaysIso(today, -1);
-  const endOffset = diffDaysIso(start, endIso);
+  if (endIso < start) return [];
+
+  const seq = getNonSundaySequence();
+  if (seq.length === 0) return [];
+
+  const planEndDate = getCivilDateForPlanReadingUnitIndex(start, seq.length - 1);
+  const boundedEndIso = endIso < planEndDate ? endIso : planEndDate;
+  const endOffset = diffDaysIso(start, boundedEndIso);
 
   if (endOffset < 0) return [];
 
-  const maxOffset = Math.min(endOffset, readingPlan.length - 1);
   const overdue: number[] = [];
 
-  for (let off = 0; off <= maxOffset; off++) {
-    const item = readingPlan[off];
-    if (item?.isSunday) continue; // domingo do plano é livre
+  for (let off = 0; off <= endOffset; off++) {
     const dateIso = addDaysIso(start, off);
+    const policy = resolvePlanCivilDayPolicy(dateIso);
+
+    if (!policy.consumesReadingUnit) continue;
     if (!done.has(dateIso)) overdue.push(off);
   }
 
@@ -388,42 +397,12 @@ export async function clearAllOverrides(): Promise<void> {
 
 /* ==========================
    ✅ Resolver referência base (consistente com seu ReadingScreen)
-   - domingos reais são livres
-   - sequência canônica = readingPlan sem isSunday
+   - dias especiais são resolvidos pela política civil explícita
+   - sequência canônica = readingPlan sem sentinelas isSunday legadas
 ========================== */
 
 function getNonSundaySequence(): string[] {
   return readingPlan.filter((d) => !d.isSunday).map((d) => d.reference);
-}
-
-/**
- * Conta quantos dias NÃO-domingo existem entre start e target (inclusive),
- * retornando um índice 0-based para o array de leituras úteis.
- */
-function workdayIndexSinceStart(startIso: string, targetIso: string): number {
-  if (targetIso < startIso) return -1;
-
-  let idx = -1;
-  let cur = startIso;
-
-  while (cur <= targetIso) {
-    if (!isSundayIso(cur)) idx++;
-    cur = addDaysIso(cur, 1);
-  }
-
-  return idx;
-}
-
-function dateForWorkdayIndex(startIso: string, targetIdx: number): string {
-  // targetIdx 0 = primeira data útil do plano
-  let cur = startIso;
-  let idx = -1;
-
-  while (true) {
-    if (!isSundayIso(cur)) idx++;
-    if (idx === targetIdx) return cur;
-    cur = addDaysIso(cur, 1);
-  }
 }
 
 /**
@@ -436,30 +415,47 @@ export async function getBaseReferenceForDate(dateIso: string): Promise<{
 }> {
   const start = await ensurePlanStartDate();
   const seq = getNonSundaySequence();
+  const policy = resolvePlanCivilDayPolicy(dateIso);
 
-  const sunday = isSundayIso(dateIso);
-  if (sunday) {
-    return { isSunday: true, reference: "Meditar", finished: false };
+  if (!policy.consumesReadingUnit) {
+    return {
+      isSunday: policy.isSunday,
+      reference: policy.displayReference,
+      finished: false,
+    };
   }
 
-  const idx = workdayIndexSinceStart(start, dateIso);
+  const projection = projectPlanCivilDate(start, dateIso);
+  const idx = projection.readingUnitIndex;
 
-  if (idx < 0) {
-    return { isSunday: false, reference: seq[0] ?? "Leitura do dia", finished: false };
+  if (projection.isBeforeStart || idx === null) {
+    return {
+      isSunday: false,
+      reference: seq[0] ?? "Leitura do dia",
+      finished: false,
+    };
   }
 
   if (idx >= seq.length) {
-    return { isSunday: false, reference: "✅ Plano concluído — revisar", finished: true };
+    return {
+      isSunday: false,
+      reference: "✅ Plano concluído — revisar",
+      finished: true,
+    };
   }
 
-  return { isSunday: false, reference: seq[idx], finished: false };
+  return {
+    isSunday: false,
+    reference: seq[idx],
+    finished: false,
+  };
 }
 
 /**
  * ✅ Referência efetiva do dia:
- * - se tiver override, usa
- * - senão usa base
- * - domingo real sempre é "Meditar"
+ * - domingo e Natal são sempre BASE local e não aceitam override
+ * - dias de leitura podem usar override
+ * - nenhuma referência bíblica é fabricada para dia especial
  */
 export async function getEffectiveReferenceForDate(dateIso: string): Promise<{
   isSunday: boolean;
@@ -467,13 +463,25 @@ export async function getEffectiveReferenceForDate(dateIso: string): Promise<{
   finished: boolean;
   source: "OVERRIDE" | "BASE";
 }> {
-  if (isSundayIso(dateIso)) {
-    return { isSunday: true, reference: "Meditar", finished: false, source: "BASE" };
+  const policy = resolvePlanCivilDayPolicy(dateIso);
+
+  if (!policy.consumesReadingUnit) {
+    return {
+      isSunday: policy.isSunday,
+      reference: policy.displayReference,
+      finished: false,
+      source: "BASE",
+    };
   }
 
   const ov = await getOverrideForDate(dateIso);
   if (ov) {
-    return { isSunday: false, reference: ov, finished: false, source: "OVERRIDE" };
+    return {
+      isSunday: false,
+      reference: ov,
+      finished: false,
+      source: "OVERRIDE",
+    };
   }
 
   const base = await getBaseReferenceForDate(dateIso);
@@ -520,11 +528,10 @@ export async function redistributeOverdueReadings(params?: {
     };
   }
 
-  // 2) transformar cada atraso em referência (base, respeitando domingo real)
+  // 2) transformar cada atraso em referência de dia de leitura
   const backlog: string[] = [];
   for (const d of overdueDates) {
-    // se for domingo real, ignora (domingo é livre)
-    if (isSundayIso(d)) continue;
+    if (!resolvePlanCivilDayPolicy(d).consumesReadingUnit) continue;
     const base = await getBaseReferenceForDate(d);
     // se por algum motivo está "concluído", ignora
     if (base.finished) continue;
@@ -545,7 +552,7 @@ export async function redistributeOverdueReadings(params?: {
   // 3) calcular a data final do plano (pela sequência útil)
   const seq = getNonSundaySequence();
   const lastIdx = Math.max(0, seq.length - 1);
-  const planEndDate = dateForWorkdayIndex(start, lastIdx);
+  const planEndDate = getCivilDateForPlanReadingUnitIndex(start, lastIdx);
 
   // 4) listar dias alvo (próximos dias em aberto)
   const completed = await getCompletedDays();
@@ -556,9 +563,12 @@ export async function redistributeOverdueReadings(params?: {
 
   let cur = targetStart;
   while (cur <= planEndDate) {
-    if (!isSundayIso(cur) && !done.has(cur)) {
+    const policy = resolvePlanCivilDayPolicy(cur);
+
+    if (policy.consumesReadingUnit && !done.has(cur)) {
       targets.push(cur);
     }
+
     cur = addDaysIso(cur, 1);
   }
 
@@ -590,9 +600,11 @@ export async function redistributeOverdueReadings(params?: {
   for (let i = 0; i < targets.length; i++) {
     const dateIso = targets[i];
 
+    const policy = resolvePlanCivilDayPolicy(dateIso);
+    if (!policy.consumesReadingUnit) continue;
+
     const base = await getBaseReferenceForDate(dateIso);
     if (base.finished) break; // segurança
-    if (base.isSunday) continue;
 
     const take = q + (i < r ? 1 : 0);
     if (take <= 0) continue;
@@ -632,6 +644,11 @@ export async function addCompletedDay(dateIso: string): Promise<{
   days: string[];
 }> {
   if (!isValidDateString(dateIso)) return { added: false, days: await getCompletedDays() };
+
+  const policy = resolvePlanCivilDayPolicy(dateIso);
+  if (!policy.canMarkRead) {
+    return { added: false, days: await getCompletedDays() };
+  }
 
   // ✅ garante start (migração)
   await ensurePlanStartDate();
@@ -713,9 +730,9 @@ export function calculateStreak(days: string[], nowDate = new Date()): number {
 
   while (true) {
     const iso = dateToIsoLocal(current);
-    const dow = current.getDay(); // 0 domingo
+    const policy = resolvePlanCivilDayPolicy(iso);
 
-    if (dow !== 0) {
+    if (policy.consumesReadingUnit) {
       if (!set.has(iso)) break;
       count++;
     }

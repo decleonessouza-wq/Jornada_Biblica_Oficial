@@ -14,6 +14,7 @@ import WelcomeScreen from "../screens/WelcomeScreen";
 import { colors } from "../theme/colors";
 
 import AppDrawerNavigator from "./AppDrawerNavigator";
+import JourneyBibleReaderRoute from "./JourneyBibleReaderRoute";
 import { RootStack } from "./navigationFactories";
 
 const HAS_ONBOARDED_KEY = "hasOnboarded";
@@ -86,6 +87,12 @@ export default function RootNavigator() {
           name="Reading"
           component={ReadingScreen}
           options={{ title: "Leitura" }}
+        />
+
+        <RootStack.Screen
+          name="JourneyBibleReader"
+          component={JourneyBibleReaderRoute}
+          options={{ headerShown: false }}
         />
       </RootStack.Navigator>
     </NavigationContainer>

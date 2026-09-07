@@ -6,9 +6,11 @@
  * Regras congeladas nesta fase:
  * - a fonte de verdade é uma sequência ordenada de 309 unidades de leitura;
  * - datas históricas do plano de 2026 não participam do calendário em runtime;
- * - domingos reais do calendário são sempre dias livres/meditação;
+ * - domingos e dias especiais explícitos não consomem unidade de leitura;
  * - nenhuma persistência, navegação ou regra de UI pertence a este módulo.
  */
+
+import { resolvePlanCivilDayPolicy } from "./planSpecialDayPolicy";
 
 export const PLAN_ENGINE_V2_VERSION = 2 as const;
 export const REQUIRED_READING_UNIT_COUNT = 309 as const;
@@ -31,7 +33,7 @@ export type ProjectedReadingDay = Readonly<{
 export type ProjectedRestDay = Readonly<{
   kind: "REST";
   date: IsoDate;
-  reason: "SUNDAY";
+  reason: "SUNDAY" | "CHRISTMAS";
   readingOrder: null;
   readingUnit: null;
 }>;
@@ -217,11 +219,16 @@ export function projectPlanCalendar(params: {
       );
     }
 
-    if (isRealSunday(date)) {
+    const civilPolicy = resolvePlanCivilDayPolicy(date);
+
+    if (!civilPolicy.consumesReadingUnit) {
       calendarDays.push({
         kind: "REST",
         date,
-        reason: "SUNDAY",
+        reason:
+          civilPolicy.kind === "CHRISTMAS"
+            ? "CHRISTMAS"
+            : "SUNDAY",
         readingOrder: null,
         readingUnit: null,
       });
