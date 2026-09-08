@@ -28,6 +28,22 @@ const PERSONAL_DATABASE_MIGRATIONS: readonly PersonalDatabaseMigration[] = [
     version: 1,
     up: () => Promise.resolve(),
   },
+  {
+    version: 2,
+    up: async (database) => {
+      await database.execAsync(`
+CREATE TABLE personal_favorites (
+  id TEXT PRIMARY KEY NOT NULL,
+  target_kind TEXT NOT NULL,
+  target_key TEXT NOT NULL,
+  created_at_utc TEXT NOT NULL,
+  UNIQUE (target_kind, target_key)
+);
+CREATE INDEX idx_personal_favorites_created_at_utc_id
+ON personal_favorites (created_at_utc DESC, id DESC);
+`);
+    },
+  },
 ] as const;
 
 export async function getPersonalDatabaseUserVersion(

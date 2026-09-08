@@ -70,53 +70,107 @@ function loadMigrationsWithSchemaVersion(
   return require("../src/data/personal/personalDatabaseMigrations");
 }
 
+function getFavoritesMigrationDdl(execAsync: jest.Mock): string {
+  const ddlCalls = execAsync.mock.calls
+    .map(([sql]) => sql as string)
+    .filter((sql) => !/^PRAGMA\s+user_version\s*=/i.test(sql.trim()));
+
+  expect(ddlCalls).toHaveLength(1);
+
+  return ddlCalls[0];
+}
+
 describe("Personal database migrations", () => {
   afterEach(() => {
     jest.dontMock("../src/data/personal/personalDatabaseSchema");
     jest.resetModules();
   });
 
-  it("locks the Personal SQLite schema at version 1", () => {
-    expect(PERSONAL_DATABASE_SCHEMA_VERSION).toBe(1);
+  it("locks the Personal SQLite schema at version 2", () => {
+    expect(PERSONAL_DATABASE_SCHEMA_VERSION).toBe(2);
   });
 
-  it("migrates a fresh logical database from v0 to v1 in one transaction", async () => {
+  it("migrates a fresh logical database from v0 through v1 to v2", async () => {
     const fake = createFakeDatabase(0);
-    const migrations = loadMigrationsWithSchemaVersion(1);
+    const migrations = loadMigrationsWithSchemaVersion(2);
 
     await migrations.runPersonalDatabaseMigrations(fake.database);
 
-    expect(fake.withTransactionAsync).toHaveBeenCalledTimes(1);
-    expect(fake.execAsync).toHaveBeenCalledTimes(1);
+    expect(fake.withTransactionAsync).toHaveBeenCalledTimes(2);
+    expect(fake.execAsync).toHaveBeenCalledTimes(3);
     expect(fake.execAsync).toHaveBeenCalledWith(
       "PRAGMA user_version = 1;",
     );
-    expect(fake.getFirstAsync).toHaveBeenCalledTimes(3);
-    expect(fake.getUserVersion()).toBe(1);
+    expect(fake.execAsync).toHaveBeenCalledWith(
+      "PRAGMA user_version = 2;",
+    );
+    expect(fake.getFirstAsync).toHaveBeenCalledTimes(4);
+    expect(fake.getUserVersion()).toBe(2);
   });
 
-  it("verifies the persisted version inside the transaction and again after the sequence", async () => {
+  it("verifies each persisted version inside its transaction and again after the sequence", async () => {
     const fake = createFakeDatabase(0, {
       readSequence: [
         { user_version: 0 },
         { user_version: 1 },
-        { user_version: 1 },
+        { user_version: 2 },
+        { user_version: 2 },
       ],
     });
-    const migrations = loadMigrationsWithSchemaVersion(1);
+    const migrations = loadMigrationsWithSchemaVersion(2);
+
+    await migrations.runPersonalDatabaseMigrations(fake.database);
+
+    expect(fake.withTransactionAsync).toHaveBeenCalledTimes(2);
+    expect(fake.getFirstAsync).toHaveBeenCalledTimes(4);
+    expect(fake.execAsync).toHaveBeenCalledWith(
+      "PRAGMA user_version = 1;",
+    );
+    expect(fake.execAsync).toHaveBeenCalledWith(
+      "PRAGMA user_version = 2;",
+    );
+  });
+
+  it("migrates an existing v1 database to v2 in one transaction", async () => {
+    const fake = createFakeDatabase(1);
+    const migrations = loadMigrationsWithSchemaVersion(2);
 
     await migrations.runPersonalDatabaseMigrations(fake.database);
 
     expect(fake.withTransactionAsync).toHaveBeenCalledTimes(1);
-    expect(fake.getFirstAsync).toHaveBeenCalledTimes(3);
+    expect(fake.execAsync).toHaveBeenCalledTimes(2);
     expect(fake.execAsync).toHaveBeenCalledWith(
-      "PRAGMA user_version = 1;",
+      "PRAGMA user_version = 2;",
     );
+    expect(fake.getFirstAsync).toHaveBeenCalledTimes(3);
+    expect(fake.getUserVersion()).toBe(2);
   });
 
-  it("is idempotent when the database is already at v1", async () => {
+  it("creates the favorites table and deterministic newest-first index in migration v2", async () => {
     const fake = createFakeDatabase(1);
-    const migrations = loadMigrationsWithSchemaVersion(1);
+    const migrations = loadMigrationsWithSchemaVersion(2);
+
+    await migrations.runPersonalDatabaseMigrations(fake.database);
+
+    const ddlSql = getFavoritesMigrationDdl(fake.execAsync);
+
+    expect(ddlSql).toMatch(/CREATE TABLE personal_favorites\s*\(/);
+    expect(ddlSql).toMatch(/id TEXT PRIMARY KEY NOT NULL/);
+    expect(ddlSql).toMatch(/target_kind TEXT NOT NULL/);
+    expect(ddlSql).toMatch(/target_key TEXT NOT NULL/);
+    expect(ddlSql).toMatch(/created_at_utc TEXT NOT NULL/);
+    expect(ddlSql).toMatch(/UNIQUE \(target_kind, target_key\)/);
+    expect(ddlSql).toMatch(
+      /CREATE INDEX idx_personal_favorites_created_at_utc_id\s+ON personal_favorites \(created_at_utc DESC, id DESC\);/,
+    );
+    expect(ddlSql).not.toMatch(/\bFOREIGN\s+KEY\b/i);
+    expect(ddlSql).not.toMatch(/\bCHECK\s*\(/i);
+    expect(ddlSql).not.toMatch(/IF\s+NOT\s+EXISTS/i);
+  });
+
+  it("is idempotent when the database is already at v2", async () => {
+    const fake = createFakeDatabase(2);
+    const migrations = loadMigrationsWithSchemaVersion(2);
 
     await migrations.runPersonalDatabaseMigrations(fake.database);
 
@@ -126,8 +180,8 @@ describe("Personal database migrations", () => {
   });
 
   it("fails closed when the database is newer than supported", async () => {
-    const fake = createFakeDatabase(2);
-    const migrations = loadMigrationsWithSchemaVersion(1);
+    const fake = createFakeDatabase(3);
+    const migrations = loadMigrationsWithSchemaVersion(2);
 
     await expect(
       migrations.runPersonalDatabaseMigrations(fake.database),
@@ -145,7 +199,7 @@ describe("Personal database migrations", () => {
     const fake = createFakeDatabase(0, {
       readSequence: [row],
     });
-    const migrations = loadMigrationsWithSchemaVersion(1);
+    const migrations = loadMigrationsWithSchemaVersion(2);
 
     await expect(
       migrations.getPersonalDatabaseUserVersion(fake.database),
@@ -155,11 +209,11 @@ describe("Personal database migrations", () => {
     expect(fake.execAsync).not.toHaveBeenCalled();
   });
 
-  it("fails closed when the migration version write is not persisted", async () => {
+  it("fails closed when a migration version write is not persisted", async () => {
     const fake = createFakeDatabase(0, {
       persistVersionWrites: false,
     });
-    const migrations = loadMigrationsWithSchemaVersion(1);
+    const migrations = loadMigrationsWithSchemaVersion(2);
 
     await expect(
       migrations.runPersonalDatabaseMigrations(fake.database),
@@ -168,20 +222,22 @@ describe("Personal database migrations", () => {
     );
 
     expect(fake.withTransactionAsync).toHaveBeenCalledTimes(1);
+    expect(fake.execAsync).toHaveBeenCalledTimes(1);
     expect(fake.execAsync).toHaveBeenCalledWith(
       "PRAGMA user_version = 1;",
     );
   });
 
-  it("fails closed when the final version readback does not match the supported version", async () => {
+  it("fails closed when the final version readback does not match v2", async () => {
     const fake = createFakeDatabase(0, {
       readSequence: [
         { user_version: 0 },
         { user_version: 1 },
-        { user_version: 0 },
+        { user_version: 2 },
+        { user_version: 1 },
       ],
     });
-    const migrations = loadMigrationsWithSchemaVersion(1);
+    const migrations = loadMigrationsWithSchemaVersion(2);
 
     await expect(
       migrations.runPersonalDatabaseMigrations(fake.database),
@@ -189,22 +245,27 @@ describe("Personal database migrations", () => {
       "PERSONAL_DATABASE_MIGRATION_FINAL_VERSION_MISMATCH",
     );
 
-    expect(fake.withTransactionAsync).toHaveBeenCalledTimes(1);
-    expect(fake.getFirstAsync).toHaveBeenCalledTimes(3);
+    expect(fake.withTransactionAsync).toHaveBeenCalledTimes(2);
+    expect(fake.getFirstAsync).toHaveBeenCalledTimes(4);
+    expect(fake.getUserVersion()).toBe(2);
   });
 
   it("fails closed when a required sequential migration step is missing", async () => {
     const fake = createFakeDatabase(0);
-    const migrations = loadMigrationsWithSchemaVersion(2);
+    const migrations = loadMigrationsWithSchemaVersion(3);
 
     await expect(
       migrations.runPersonalDatabaseMigrations(fake.database),
-    ).rejects.toThrow("PERSONAL_DATABASE_MIGRATION_MISSING:2");
+    ).rejects.toThrow("PERSONAL_DATABASE_MIGRATION_MISSING:3");
 
-    expect(fake.withTransactionAsync).toHaveBeenCalledTimes(1);
+    expect(fake.withTransactionAsync).toHaveBeenCalledTimes(2);
+    expect(fake.execAsync).toHaveBeenCalledTimes(3);
     expect(fake.execAsync).toHaveBeenCalledWith(
       "PRAGMA user_version = 1;",
     );
-    expect(fake.getUserVersion()).toBe(1);
+    expect(fake.execAsync).toHaveBeenCalledWith(
+      "PRAGMA user_version = 2;",
+    );
+    expect(fake.getUserVersion()).toBe(2);
   });
 });
