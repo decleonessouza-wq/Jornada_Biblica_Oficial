@@ -1,3 +1,4 @@
+import { SQLiteFavoritesRepository } from "../data/personal/favorites/sqliteFavoritesRepository";
 import { PersonalDatabase } from "../data/personal/personalDatabase";
 import type { PersonalCanonicalIdFactory } from "../domain/personal/personalIdentity";
 import type { PersonalLogger } from "../domain/personal/personalLogging";
@@ -15,6 +16,7 @@ import {
   SystemPersonalClock,
   SystemPersonalDatePolicy,
 } from "./personalPlatformDefaults";
+import { FavoritesService } from "./favorites/favoritesService";
 
 export interface PersonalPlatformHub {
   readonly database: PersonalDatabase;
@@ -23,6 +25,7 @@ export interface PersonalPlatformHub {
   readonly datePolicy: PersonalDatePolicy;
   readonly logger: PersonalLogger;
   readonly privacyPolicy: PersonalPrivacyPolicy;
+  readonly favoritesService: FavoritesService;
 }
 
 export interface PersonalPlatformHubOverrides {
@@ -36,15 +39,34 @@ export interface PersonalPlatformHubOverrides {
 export function createPersonalPlatformHub(
   overrides: PersonalPlatformHubOverrides = {},
 ): PersonalPlatformHub {
+  const database =
+    overrides.database ?? new PersonalDatabase();
+  const canonicalIdFactory =
+    overrides.canonicalIdFactory ??
+    new ExpoCryptoPersonalCanonicalIdFactory();
+  const clock =
+    overrides.clock ?? new SystemPersonalClock();
+  const datePolicy =
+    overrides.datePolicy ?? new SystemPersonalDatePolicy();
+  const logger =
+    overrides.logger ?? new NoopPersonalLogger();
+  const favoritesRepository =
+    new SQLiteFavoritesRepository(database);
+  const favoritesService = new FavoritesService(
+    favoritesRepository,
+    canonicalIdFactory,
+    clock,
+    datePolicy,
+  );
+
   const hub: PersonalPlatformHub = {
-    database: overrides.database ?? new PersonalDatabase(),
-    canonicalIdFactory:
-      overrides.canonicalIdFactory ??
-      new ExpoCryptoPersonalCanonicalIdFactory(),
-    clock: overrides.clock ?? new SystemPersonalClock(),
-    datePolicy: overrides.datePolicy ?? new SystemPersonalDatePolicy(),
-    logger: overrides.logger ?? new NoopPersonalLogger(),
+    database,
+    canonicalIdFactory,
+    clock,
+    datePolicy,
+    logger,
     privacyPolicy: PERSONAL_PRIVACY_POLICY,
+    favoritesService,
   };
 
   return Object.freeze(hub);
