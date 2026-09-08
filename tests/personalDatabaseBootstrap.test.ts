@@ -2,6 +2,10 @@ const mockOpenDatabaseAsync = jest.fn();
 const mockRunWebSQLiteBootstrapCriticalSection = jest.fn(
   (operation: () => Promise<unknown>) => operation(),
 );
+const mockRunPersonalDatabaseMigrations = jest.fn(
+  async (): Promise<void> => undefined,
+);
+const bootstrapTrace: string[] = [];
 
 jest.mock("expo-sqlite", () => ({
   openDatabaseAsync: mockOpenDatabaseAsync,
@@ -12,6 +16,10 @@ jest.mock("../src/services/webSQLiteBootstrapCriticalSection", () => ({
     mockRunWebSQLiteBootstrapCriticalSection,
 }));
 
+jest.mock("../src/data/personal/personalDatabaseMigrations", () => ({
+  runPersonalDatabaseMigrations: mockRunPersonalDatabaseMigrations,
+}));
+
 type MockDatabase = {
   execAsync: jest.Mock<Promise<void>, [string]>;
   getFirstAsync: jest.Mock<Promise<{ foreign_keys: number } | null>, [string]>;
@@ -20,11 +28,23 @@ type MockDatabase = {
 
 function createMockDatabase(foreignKeys = 1): MockDatabase {
   return {
-    execAsync: jest.fn<Promise<void>, [string]>(async () => undefined),
+    execAsync: jest.fn<Promise<void>, [string]>(async (sql) => {
+      if (sql === "PRAGMA journal_mode = WAL;") {
+        bootstrapTrace.push("wal");
+      }
+
+      if (sql === "PRAGMA foreign_keys = ON;") {
+        bootstrapTrace.push("foreign_keys_on");
+      }
+    }),
     getFirstAsync: jest.fn<
       Promise<{ foreign_keys: number } | null>,
       [string]
-    >(async () => ({ foreign_keys: foreignKeys })),
+    >(async () => {
+      bootstrapTrace.push("foreign_keys_validation");
+
+      return { foreign_keys: foreignKeys };
+    }),
     closeAsync: jest.fn(async () => undefined),
   };
 }
@@ -40,11 +60,17 @@ function loadBootstrapModule(): typeof import("../src/data/personal/personalData
 describe("Personal SQLite bootstrap runtime contract", () => {
   beforeEach(() => {
     jest.resetModules();
+    bootstrapTrace.length = 0;
     mockOpenDatabaseAsync.mockReset();
     mockRunWebSQLiteBootstrapCriticalSection.mockReset();
+    mockRunPersonalDatabaseMigrations.mockReset();
+
     mockRunWebSQLiteBootstrapCriticalSection.mockImplementation(
       (operation: () => Promise<unknown>) => operation(),
     );
+    mockRunPersonalDatabaseMigrations.mockImplementation(async () => {
+      bootstrapTrace.push("migrations");
+    });
   });
 
   it("T1 opens only the personal database through the shared Web critical section once", async () => {
@@ -93,7 +119,7 @@ describe("Personal SQLite bootstrap runtime contract", () => {
     expect(mockRunWebSQLiteBootstrapCriticalSection).toHaveBeenCalledTimes(2);
   });
 
-  it("T3 applies only WAL and foreign keys pragmas and validates foreign keys", async () => {
+  it("T3 applies pragmas, migrations, and foreign key validation in order", async () => {
     const database = createMockDatabase(1);
     mockOpenDatabaseAsync.mockResolvedValue(database);
 
@@ -106,10 +132,18 @@ describe("Personal SQLite bootstrap runtime contract", () => {
       ["PRAGMA journal_mode = WAL;"],
       ["PRAGMA foreign_keys = ON;"],
     ]);
+    expect(mockRunPersonalDatabaseMigrations).toHaveBeenCalledTimes(1);
+    expect(mockRunPersonalDatabaseMigrations).toHaveBeenCalledWith(database);
     expect(database.getFirstAsync).toHaveBeenCalledTimes(1);
     expect(database.getFirstAsync).toHaveBeenCalledWith(
       "PRAGMA foreign_keys;",
     );
+    expect(bootstrapTrace).toEqual([
+      "wal",
+      "foreign_keys_on",
+      "migrations",
+      "foreign_keys_validation",
+    ]);
     expect(database.closeAsync).not.toHaveBeenCalled();
   });
 
@@ -127,6 +161,7 @@ describe("Personal SQLite bootstrap runtime contract", () => {
     await expect(firstPromise).resolves.toBe(database);
     expect(mockOpenDatabaseAsync).toHaveBeenCalledTimes(1);
     expect(database.execAsync).toHaveBeenCalledTimes(2);
+    expect(mockRunPersonalDatabaseMigrations).toHaveBeenCalledTimes(1);
     expect(database.getFirstAsync).toHaveBeenCalledTimes(1);
   });
 
@@ -144,6 +179,7 @@ describe("Personal SQLite bootstrap runtime contract", () => {
       ["PRAGMA journal_mode = WAL;"],
       ["PRAGMA foreign_keys = ON;"],
     ]);
+    expect(mockRunPersonalDatabaseMigrations).toHaveBeenCalledWith(database);
     expect(database.getFirstAsync).toHaveBeenCalledWith(
       "PRAGMA foreign_keys;",
     );
@@ -171,6 +207,7 @@ describe("Personal SQLite bootstrap runtime contract", () => {
     expect(failingDatabase.closeAsync).toHaveBeenCalledTimes(1);
     expect(mockOpenDatabaseAsync).toHaveBeenCalledTimes(2);
     expect(mockRunWebSQLiteBootstrapCriticalSection).toHaveBeenCalledTimes(2);
+    expect(mockRunPersonalDatabaseMigrations).toHaveBeenCalledTimes(2);
     expect(healthyDatabase.execAsync.mock.calls).toEqual([
       ["PRAGMA journal_mode = WAL;"],
       ["PRAGMA foreign_keys = ON;"],
@@ -178,5 +215,36 @@ describe("Personal SQLite bootstrap runtime contract", () => {
     expect(healthyDatabase.getFirstAsync).toHaveBeenCalledWith(
       "PRAGMA foreign_keys;",
     );
+  });
+
+  it("closes and retries cleanly when the migration runner fails", async () => {
+    const failingDatabase = createMockDatabase(1);
+    const healthyDatabase = createMockDatabase(1);
+
+    mockOpenDatabaseAsync
+      .mockResolvedValueOnce(failingDatabase)
+      .mockResolvedValueOnce(healthyDatabase);
+
+    mockRunPersonalDatabaseMigrations
+      .mockRejectedValueOnce(new Error("PERSONAL_DATABASE_MIGRATION_TEST_FAILURE"))
+      .mockImplementation(async () => {
+        bootstrapTrace.push("migrations");
+      });
+
+    const bootstrap = loadBootstrapModule();
+
+    await expect(bootstrap.bootstrapPersonalDatabase()).rejects.toThrow(
+      "PERSONAL_DATABASE_MIGRATION_TEST_FAILURE",
+    );
+
+    expect(failingDatabase.closeAsync).toHaveBeenCalledTimes(1);
+
+    await expect(bootstrap.bootstrapPersonalDatabase()).resolves.toBe(
+      healthyDatabase,
+    );
+
+    expect(mockOpenDatabaseAsync).toHaveBeenCalledTimes(2);
+    expect(mockRunPersonalDatabaseMigrations).toHaveBeenCalledTimes(2);
+    expect(healthyDatabase.closeAsync).not.toHaveBeenCalled();
   });
 });
