@@ -44,6 +44,27 @@ ON personal_favorites (created_at_utc DESC, id DESC);
 `);
     },
   },
+  {
+    version: 3,
+    up: async (database) => {
+      await database.execAsync(`
+CREATE TABLE personal_journal_entries (
+  id TEXT PRIMARY KEY NOT NULL,
+  entry_date TEXT NOT NULL UNIQUE,
+  reflection_text TEXT NULL,
+  gratitude_text TEXT NULL,
+  created_at_utc TEXT NOT NULL,
+  updated_at_utc TEXT NOT NULL,
+  CHECK (
+    length(trim(coalesce(reflection_text, ''))) > 0
+    OR length(trim(coalesce(gratitude_text, ''))) > 0
+  )
+);
+CREATE INDEX idx_personal_journal_entries_entry_date_id
+ON personal_journal_entries (entry_date DESC, id DESC);
+`);
+    },
+  },
 ] as const;
 
 export async function getPersonalDatabaseUserVersion(

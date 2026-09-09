@@ -70,7 +70,7 @@ function loadMigrationsWithSchemaVersion(
   return require("../src/data/personal/personalDatabaseMigrations");
 }
 
-function getFavoritesMigrationDdl(execAsync: jest.Mock): string {
+function getSingleMigrationDdl(execAsync: jest.Mock): string {
   const ddlCalls = execAsync.mock.calls
     .map(([sql]) => sql as string)
     .filter((sql) => !/^PRAGMA\s+user_version\s*=/i.test(sql.trim()));
@@ -86,52 +86,59 @@ describe("Personal database migrations", () => {
     jest.resetModules();
   });
 
-  it("locks the Personal SQLite schema at version 2", () => {
-    expect(PERSONAL_DATABASE_SCHEMA_VERSION).toBe(2);
+  it("locks the Personal SQLite schema at version 3", () => {
+    expect(PERSONAL_DATABASE_SCHEMA_VERSION).toBe(3);
   });
 
-  it("migrates a fresh logical database from v0 through v1 to v2", async () => {
+  it("migrates a fresh logical database from v0 through v1, v2 and v3", async () => {
     const fake = createFakeDatabase(0);
-    const migrations = loadMigrationsWithSchemaVersion(2);
+    const migrations = loadMigrationsWithSchemaVersion(3);
 
     await migrations.runPersonalDatabaseMigrations(fake.database);
 
-    expect(fake.withTransactionAsync).toHaveBeenCalledTimes(2);
-    expect(fake.execAsync).toHaveBeenCalledTimes(3);
+    expect(fake.withTransactionAsync).toHaveBeenCalledTimes(3);
+    expect(fake.execAsync).toHaveBeenCalledTimes(5);
     expect(fake.execAsync).toHaveBeenCalledWith(
       "PRAGMA user_version = 1;",
     );
     expect(fake.execAsync).toHaveBeenCalledWith(
       "PRAGMA user_version = 2;",
     );
-    expect(fake.getFirstAsync).toHaveBeenCalledTimes(4);
-    expect(fake.getUserVersion()).toBe(2);
+    expect(fake.execAsync).toHaveBeenCalledWith(
+      "PRAGMA user_version = 3;",
+    );
+    expect(fake.getFirstAsync).toHaveBeenCalledTimes(5);
+    expect(fake.getUserVersion()).toBe(3);
   });
 
-  it("verifies each persisted version inside its transaction and again after the sequence", async () => {
+  it("verifies each persisted version inside its transaction and again after the v3 sequence", async () => {
     const fake = createFakeDatabase(0, {
       readSequence: [
         { user_version: 0 },
         { user_version: 1 },
         { user_version: 2 },
-        { user_version: 2 },
+        { user_version: 3 },
+        { user_version: 3 },
       ],
     });
-    const migrations = loadMigrationsWithSchemaVersion(2);
+    const migrations = loadMigrationsWithSchemaVersion(3);
 
     await migrations.runPersonalDatabaseMigrations(fake.database);
 
-    expect(fake.withTransactionAsync).toHaveBeenCalledTimes(2);
-    expect(fake.getFirstAsync).toHaveBeenCalledTimes(4);
+    expect(fake.withTransactionAsync).toHaveBeenCalledTimes(3);
+    expect(fake.getFirstAsync).toHaveBeenCalledTimes(5);
     expect(fake.execAsync).toHaveBeenCalledWith(
       "PRAGMA user_version = 1;",
     );
     expect(fake.execAsync).toHaveBeenCalledWith(
       "PRAGMA user_version = 2;",
     );
+    expect(fake.execAsync).toHaveBeenCalledWith(
+      "PRAGMA user_version = 3;",
+    );
   });
 
-  it("migrates an existing v1 database to v2 in one transaction", async () => {
+  it("preserves the v1 to v2 migration regression in one transaction", async () => {
     const fake = createFakeDatabase(1);
     const migrations = loadMigrationsWithSchemaVersion(2);
 
@@ -146,13 +153,13 @@ describe("Personal database migrations", () => {
     expect(fake.getUserVersion()).toBe(2);
   });
 
-  it("creates the favorites table and deterministic newest-first index in migration v2", async () => {
+  it("preserves the favorites table and deterministic newest-first index in migration v2", async () => {
     const fake = createFakeDatabase(1);
     const migrations = loadMigrationsWithSchemaVersion(2);
 
     await migrations.runPersonalDatabaseMigrations(fake.database);
 
-    const ddlSql = getFavoritesMigrationDdl(fake.execAsync);
+    const ddlSql = getSingleMigrationDdl(fake.execAsync);
 
     expect(ddlSql).toMatch(/CREATE TABLE personal_favorites\s*\(/);
     expect(ddlSql).toMatch(/id TEXT PRIMARY KEY NOT NULL/);
@@ -168,9 +175,49 @@ describe("Personal database migrations", () => {
     expect(ddlSql).not.toMatch(/IF\s+NOT\s+EXISTS/i);
   });
 
-  it("is idempotent when the database is already at v2", async () => {
+  it("migrates an existing v2 database to v3 in one transaction", async () => {
     const fake = createFakeDatabase(2);
-    const migrations = loadMigrationsWithSchemaVersion(2);
+    const migrations = loadMigrationsWithSchemaVersion(3);
+
+    await migrations.runPersonalDatabaseMigrations(fake.database);
+
+    expect(fake.withTransactionAsync).toHaveBeenCalledTimes(1);
+    expect(fake.execAsync).toHaveBeenCalledTimes(2);
+    expect(fake.execAsync).toHaveBeenCalledWith(
+      "PRAGMA user_version = 3;",
+    );
+    expect(fake.getFirstAsync).toHaveBeenCalledTimes(3);
+    expect(fake.getUserVersion()).toBe(3);
+  });
+
+  it("creates the journal table, non-empty-text check and deterministic date index in migration v3", async () => {
+    const fake = createFakeDatabase(2);
+    const migrations = loadMigrationsWithSchemaVersion(3);
+
+    await migrations.runPersonalDatabaseMigrations(fake.database);
+
+    const ddlSql = getSingleMigrationDdl(fake.execAsync);
+
+    expect(ddlSql).toMatch(/CREATE TABLE personal_journal_entries\s*\(/);
+    expect(ddlSql).toMatch(/id TEXT PRIMARY KEY NOT NULL/);
+    expect(ddlSql).toMatch(/entry_date TEXT NOT NULL UNIQUE/);
+    expect(ddlSql).toMatch(/reflection_text TEXT NULL/);
+    expect(ddlSql).toMatch(/gratitude_text TEXT NULL/);
+    expect(ddlSql).toMatch(/created_at_utc TEXT NOT NULL/);
+    expect(ddlSql).toMatch(/updated_at_utc TEXT NOT NULL/);
+    expect(ddlSql).toMatch(
+      /CHECK\s*\(\s*length\(trim\(coalesce\(reflection_text, ''\)\)\) > 0\s+OR length\(trim\(coalesce\(gratitude_text, ''\)\)\) > 0\s*\)/,
+    );
+    expect(ddlSql).toMatch(
+      /CREATE INDEX idx_personal_journal_entries_entry_date_id\s+ON personal_journal_entries \(entry_date DESC, id DESC\);/,
+    );
+    expect(ddlSql).not.toMatch(/\bFOREIGN\s+KEY\b/i);
+    expect(ddlSql).not.toMatch(/IF\s+NOT\s+EXISTS/i);
+  });
+
+  it("is idempotent when the database is already at v3", async () => {
+    const fake = createFakeDatabase(3);
+    const migrations = loadMigrationsWithSchemaVersion(3);
 
     await migrations.runPersonalDatabaseMigrations(fake.database);
 
@@ -179,9 +226,9 @@ describe("Personal database migrations", () => {
     expect(fake.execAsync).not.toHaveBeenCalled();
   });
 
-  it("fails closed when the database is newer than supported", async () => {
-    const fake = createFakeDatabase(3);
-    const migrations = loadMigrationsWithSchemaVersion(2);
+  it("fails closed when the database is newer than supported v3", async () => {
+    const fake = createFakeDatabase(4);
+    const migrations = loadMigrationsWithSchemaVersion(3);
 
     await expect(
       migrations.runPersonalDatabaseMigrations(fake.database),
@@ -199,7 +246,7 @@ describe("Personal database migrations", () => {
     const fake = createFakeDatabase(0, {
       readSequence: [row],
     });
-    const migrations = loadMigrationsWithSchemaVersion(2);
+    const migrations = loadMigrationsWithSchemaVersion(3);
 
     await expect(
       migrations.getPersonalDatabaseUserVersion(fake.database),
@@ -213,7 +260,7 @@ describe("Personal database migrations", () => {
     const fake = createFakeDatabase(0, {
       persistVersionWrites: false,
     });
-    const migrations = loadMigrationsWithSchemaVersion(2);
+    const migrations = loadMigrationsWithSchemaVersion(3);
 
     await expect(
       migrations.runPersonalDatabaseMigrations(fake.database),
@@ -228,16 +275,17 @@ describe("Personal database migrations", () => {
     );
   });
 
-  it("fails closed when the final version readback does not match v2", async () => {
+  it("fails closed when the final version readback does not match v3", async () => {
     const fake = createFakeDatabase(0, {
       readSequence: [
         { user_version: 0 },
         { user_version: 1 },
         { user_version: 2 },
-        { user_version: 1 },
+        { user_version: 3 },
+        { user_version: 2 },
       ],
     });
-    const migrations = loadMigrationsWithSchemaVersion(2);
+    const migrations = loadMigrationsWithSchemaVersion(3);
 
     await expect(
       migrations.runPersonalDatabaseMigrations(fake.database),
@@ -245,27 +293,30 @@ describe("Personal database migrations", () => {
       "PERSONAL_DATABASE_MIGRATION_FINAL_VERSION_MISMATCH",
     );
 
-    expect(fake.withTransactionAsync).toHaveBeenCalledTimes(2);
-    expect(fake.getFirstAsync).toHaveBeenCalledTimes(4);
-    expect(fake.getUserVersion()).toBe(2);
+    expect(fake.withTransactionAsync).toHaveBeenCalledTimes(3);
+    expect(fake.getFirstAsync).toHaveBeenCalledTimes(5);
+    expect(fake.getUserVersion()).toBe(3);
   });
 
-  it("fails closed when a required sequential migration step is missing", async () => {
+  it("fails closed when the next required sequential migration step is missing", async () => {
     const fake = createFakeDatabase(0);
-    const migrations = loadMigrationsWithSchemaVersion(3);
+    const migrations = loadMigrationsWithSchemaVersion(4);
 
     await expect(
       migrations.runPersonalDatabaseMigrations(fake.database),
-    ).rejects.toThrow("PERSONAL_DATABASE_MIGRATION_MISSING:3");
+    ).rejects.toThrow("PERSONAL_DATABASE_MIGRATION_MISSING:4");
 
-    expect(fake.withTransactionAsync).toHaveBeenCalledTimes(2);
-    expect(fake.execAsync).toHaveBeenCalledTimes(3);
+    expect(fake.withTransactionAsync).toHaveBeenCalledTimes(3);
+    expect(fake.execAsync).toHaveBeenCalledTimes(5);
     expect(fake.execAsync).toHaveBeenCalledWith(
       "PRAGMA user_version = 1;",
     );
     expect(fake.execAsync).toHaveBeenCalledWith(
       "PRAGMA user_version = 2;",
     );
-    expect(fake.getUserVersion()).toBe(2);
+    expect(fake.execAsync).toHaveBeenCalledWith(
+      "PRAGMA user_version = 3;",
+    );
+    expect(fake.getUserVersion()).toBe(3);
   });
 });
