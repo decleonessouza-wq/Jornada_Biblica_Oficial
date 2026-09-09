@@ -1072,7 +1072,7 @@ export default function HomeScreen() {
               <Text style={styles.quickSectionEyebrow}>NAVEGAÇÃO</Text>
               <Text style={styles.quickSectionTitle}>Acessos rápidos</Text>
             </View>
-            <Text style={styles.quickSectionHint}>3 recursos ativos</Text>
+            <Text style={styles.quickSectionHint}>4 recursos ativos</Text>
           </View>
 
           <View style={styles.quickGrid}>
@@ -1108,7 +1108,7 @@ export default function HomeScreen() {
               iconSource={require("../../assets/home/icons/favoritos_icone.png")}
               title="Favoritos"
               subtitle="Conteúdos salvos"
-              disabled
+              onPress={() => navigation.navigate("Favorites")}
             />
 
             <QuickAccessCard

@@ -39,6 +39,7 @@ export type MainTabParamList = {
 
 export type AppDrawerParamList = {
   MainTabs: NavigatorScreenParams<MainTabParamList> | undefined;
+  Favorites: undefined;
   Progress: undefined;
   History: undefined;
   Settings: undefined;

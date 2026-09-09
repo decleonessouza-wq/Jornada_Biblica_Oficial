@@ -1,6 +1,7 @@
 import { useState } from "react";
 
 import DedicationScreen from "../screens/DedicationScreen";
+import FavoritesScreen from "../screens/FavoritesScreen";
 import HistoryScreen from "../screens/HistoryScreen";
 import PrivacyScreen from "../screens/PrivacyScreen";
 import ProgressScreen from "../screens/ProgressScreen";
@@ -97,6 +98,15 @@ export default function AppDrawerNavigator() {
           );
         }}
       </AppDrawer.Screen>
+
+      <AppDrawer.Screen
+        name="Favorites"
+        component={FavoritesScreen}
+        options={{
+          title: "Favoritos",
+          drawerLabel: "Favoritos",
+        }}
+      />
 
       <AppDrawer.Screen
         name="Progress"
