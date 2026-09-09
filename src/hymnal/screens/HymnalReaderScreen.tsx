@@ -1,5 +1,7 @@
 import React, {
+  useCallback,
   useEffect,
+  useRef,
   useState,
 } from "react";
 import {
@@ -18,6 +20,7 @@ import type {
 import type {
   HymnalStackScreenProps,
 } from "../../navigation/types";
+import { getPersonalPlatformHub } from "../../services/personalPlatformHub";
 import { colors } from "../../theme/colors";
 import {
   createSQLiteHymnalRepository,
@@ -67,6 +70,10 @@ export default function HymnalReaderScreen({
     useState(0);
   const [hymnFontSize, setHymnFontSize] =
     useState(18);
+  const favoriteBusyRef = useRef(false);
+  const favoriteRequestGenerationRef = useRef(0);
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [favoriteBusy, setFavoriteBusy] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -114,6 +121,89 @@ export default function HymnalReaderScreen({
       active = false;
     };
   }, [editionId, hymnId, retryGeneration]);
+
+  useEffect(() => {
+    let active = true;
+    const generation = favoriteRequestGenerationRef.current + 1;
+    favoriteRequestGenerationRef.current = generation;
+    favoriteBusyRef.current = false;
+    setFavoriteBusy(false);
+    setIsFavorite(false);
+
+    void (async () => {
+      try {
+        const nextIsFavorite =
+          await getPersonalPlatformHub().favoritesService.isFavorite({
+            kind: "hymn",
+            editionId,
+            hymnId,
+          });
+
+        if (
+          !active ||
+          favoriteRequestGenerationRef.current !== generation
+        ) {
+          return;
+        }
+
+        setIsFavorite(nextIsFavorite);
+      } catch (error) {
+        if (
+          active &&
+          favoriteRequestGenerationRef.current === generation
+        ) {
+          console.warn(
+            "HYMNAL_READER_FAVORITE_LOAD_FAILED",
+            error,
+          );
+        }
+      }
+    })();
+
+    return () => {
+      active = false;
+      favoriteRequestGenerationRef.current += 1;
+      favoriteBusyRef.current = false;
+    };
+  }, [editionId, hymnId]);
+
+  const handleToggleFavorite = useCallback(async (): Promise<void> => {
+    if (favoriteBusyRef.current) {
+      return;
+    }
+
+    const generation = favoriteRequestGenerationRef.current + 1;
+    favoriteRequestGenerationRef.current = generation;
+    favoriteBusyRef.current = true;
+    setFavoriteBusy(true);
+
+    try {
+      const nextIsFavorite =
+        await getPersonalPlatformHub().favoritesService.toggle({
+          kind: "hymn",
+          editionId,
+          hymnId,
+        });
+
+      if (favoriteRequestGenerationRef.current !== generation) {
+        return;
+      }
+
+      setIsFavorite(nextIsFavorite);
+    } catch (error) {
+      if (favoriteRequestGenerationRef.current === generation) {
+        console.warn(
+          "HYMNAL_READER_FAVORITE_TOGGLE_FAILED",
+          error,
+        );
+      }
+    } finally {
+      if (favoriteRequestGenerationRef.current === generation) {
+        favoriteBusyRef.current = false;
+        setFavoriteBusy(false);
+      }
+    }
+  }, [editionId, hymnId]);
 
   return (
     <View style={styles.screen}>
@@ -263,15 +353,56 @@ export default function HymnalReaderScreen({
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.hero}>
-            <Text style={styles.hymnNumber}>
-              HINO {hymn.number}
-            </Text>
-            <Text
-              accessibilityRole="header"
-              style={styles.title}
-            >
-              {hymn.title}
-            </Text>
+            <View style={styles.heroHeadingRow}>
+              <View style={styles.heroTitleBlock}>
+                <Text style={styles.hymnNumber}>
+                  HINO {hymn.number}
+                </Text>
+                <Text
+                  accessibilityRole="header"
+                  style={styles.title}
+                >
+                  {hymn.title}
+                </Text>
+              </View>
+
+              <Pressable
+                testID="hymnal-reader-favorite"
+                accessibilityRole="button"
+                accessibilityLabel={
+                  isFavorite
+                    ? "Remover hino dos favoritos"
+                    : "Adicionar hino aos favoritos"
+                }
+                accessibilityState={{
+                  busy: favoriteBusy,
+                  disabled: favoriteBusy,
+                  selected: isFavorite,
+                }}
+                disabled={favoriteBusy}
+                onPress={() => {
+                  void handleToggleFavorite();
+                }}
+                style={({ pressed }) => [
+                  styles.favoriteButton,
+                  isFavorite && styles.favoriteButtonActive,
+                  favoriteBusy && styles.favoriteButtonDisabled,
+                  pressed &&
+                    !favoriteBusy &&
+                    styles.favoriteButtonPressed,
+                ]}
+              >
+                <Text
+                  accessible={false}
+                  style={[
+                    styles.favoriteIcon,
+                    isFavorite && styles.favoriteIconActive,
+                  ]}
+                >
+                  {isFavorite ? "★" : "☆"}
+                </Text>
+              </Pressable>
+            </View>
 
             {hymn.firstLine && (
               <Text style={styles.firstLine}>
@@ -441,6 +572,41 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     paddingHorizontal: 22,
     paddingVertical: 24,
+  },
+  heroHeadingRow: {
+    alignItems: "flex-start",
+    flexDirection: "row",
+  },
+  heroTitleBlock: {
+    flex: 1,
+    paddingRight: 12,
+  },
+  favoriteButton: {
+    alignItems: "center",
+    backgroundColor: colors.primaryPressed,
+    borderColor: colors.secondary,
+    borderRadius: 14,
+    borderWidth: 1,
+    justifyContent: "center",
+    minHeight: 48,
+    minWidth: 48,
+  },
+  favoriteButtonActive: {
+    backgroundColor: colors.secondarySoft,
+  },
+  favoriteButtonPressed: {
+    opacity: 0.72,
+  },
+  favoriteButtonDisabled: {
+    opacity: 0.55,
+  },
+  favoriteIcon: {
+    color: colors.secondary,
+    fontSize: 25,
+    lineHeight: 30,
+  },
+  favoriteIconActive: {
+    color: colors.warning,
   },
   hymnNumber: {
     color: colors.secondary,

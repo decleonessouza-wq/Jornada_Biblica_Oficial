@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import type { BibleBook } from "../../domain/bible/bibleBooks";
 import type { BibleVersionId } from "../../domain/bible/bibleVersion";
+import { getPersonalPlatformHub } from "../../services/personalPlatformHub";
 import { colors } from "../../theme/colors";
 import { BibleReaderFontControls } from "../components/BibleReaderFontControls";
 import { BibleReaderHeader } from "../components/BibleReaderHeader";
@@ -105,6 +106,9 @@ export default function BibleReaderScreen({
   const [readerChromeHeight, setReaderChromeHeight] =
     useState<number | null>(null);
   const [readerChromeHidden, setReaderChromeHidden] = useState(false);
+  const favoriteBusyVersesRef = useRef<Set<number>>(new Set());
+  const [favoriteVerses, setFavoriteVerses] =
+    useState<ReadonlySet<number>>(new Set());
 
   const resetReaderChrome = useCallback(() => {
     readerChromeOffsetRef.current = 0;
@@ -180,6 +184,8 @@ export default function BibleReaderScreen({
     setErrorMessage(null);
     setInitialVerse(undefined);
     setFontScale(DEFAULT_BIBLE_READER_FONT_SCALE);
+    favoriteBusyVersesRef.current.clear();
+    setFavoriteVerses(new Set());
 
     const parsedParams = parseOfflineBibleReaderRouteParams(params);
 
@@ -330,12 +336,44 @@ export default function BibleReaderScreen({
         return;
       }
 
+      const loadedFavoriteVerses = new Set<number>();
+
+      try {
+        const favorites =
+          await getPersonalPlatformHub().favoritesService.list();
+
+        if (generationRef.current !== generation) {
+          return;
+        }
+
+        for (const favorite of favorites) {
+          if (
+            favorite.target.kind === "bible_verse" &&
+            favorite.target.versionId === parsedParams.versionId &&
+            favorite.target.bookId === parsedParams.bookId &&
+            favorite.target.chapter === parsedParams.chapter
+          ) {
+            loadedFavoriteVerses.add(favorite.target.verse);
+          }
+        }
+      } catch (error) {
+        console.warn(
+          "BIBLE_READER_FAVORITES_LOAD_FAILED",
+          error,
+        );
+      }
+
+      if (generationRef.current !== generation) {
+        return;
+      }
+
       activeReadingRef.current = parsedParams;
       verseTrackingReadyRef.current =
         initialTargetVerse === undefined;
 
       setInitialVerse(initialTargetVerse);
       setFontScale(savedFontScale);
+      setFavoriteVerses(loadedFavoriteVerses);
       setData({
         version,
         versions: enabledVersions,
@@ -381,6 +419,69 @@ export default function BibleReaderScreen({
   const handleInitialRestoreComplete = useCallback(() => {
     verseTrackingReadyRef.current = true;
   }, []);
+
+  const handleToggleFavoriteVerse = useCallback(
+    async (verse: number): Promise<void> => {
+      const reading = activeReadingRef.current;
+
+      if (
+        !reading ||
+        !Number.isSafeInteger(verse) ||
+        verse <= 0 ||
+        favoriteBusyVersesRef.current.has(verse)
+      ) {
+        return;
+      }
+
+      const toggleGeneration = generationRef.current;
+      favoriteBusyVersesRef.current.add(verse);
+
+      try {
+        const isFavorite =
+          await getPersonalPlatformHub().favoritesService.toggle({
+            kind: "bible_verse",
+            versionId: reading.versionId,
+            bookId: reading.bookId,
+            chapter: reading.chapter,
+            verse,
+          });
+
+        const activeReading = activeReadingRef.current;
+
+        if (
+          generationRef.current !== toggleGeneration ||
+          !activeReading ||
+          activeReading.versionId !== reading.versionId ||
+          activeReading.bookId !== reading.bookId ||
+          activeReading.chapter !== reading.chapter
+        ) {
+          return;
+        }
+
+        setFavoriteVerses((current) => {
+          const next = new Set(current);
+
+          if (isFavorite) {
+            next.add(verse);
+          } else {
+            next.delete(verse);
+          }
+
+          return next;
+        });
+      } catch (error) {
+        console.warn(
+          "BIBLE_READER_FAVORITE_TOGGLE_FAILED",
+          error,
+        );
+      } finally {
+        if (generationRef.current === toggleGeneration) {
+          favoriteBusyVersesRef.current.delete(verse);
+        }
+      }
+    },
+    [],
+  );
 
   const handleFirstVisibleVerseChange = useCallback(
     (verse: number) => {
@@ -666,6 +767,8 @@ export default function BibleReaderScreen({
         onFirstVisibleVerseChange={handleFirstVisibleVerseChange}
         onInitialRestoreComplete={handleInitialRestoreComplete}
         onScrollOffsetChange={handleReadingScrollOffsetChange}
+        favoriteVerses={favoriteVerses}
+        onToggleFavoriteVerse={handleToggleFavoriteVerse}
         contentTopInset={readerChromeHeight ?? 0}
       />
     </View>

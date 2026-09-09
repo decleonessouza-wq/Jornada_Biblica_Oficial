@@ -7,6 +7,7 @@ import React, {
 import {
   FlatList,
   Platform,
+  Pressable,
   StyleSheet,
   Text,
   View,
@@ -25,6 +26,8 @@ type BibleVerseListProps = Readonly<{
   fontScale: BibleReaderFontScale;
   initialVerse?: number;
   highlightedVerse?: number;
+  favoriteVerses?: ReadonlySet<number>;
+  onToggleFavoriteVerse?: (verse: number) => void;
   onFirstVisibleVerseChange?: (verse: number) => void;
   onInitialRestoreComplete?: () => void;
   onScrollOffsetChange?: (offsetY: number) => void;
@@ -113,6 +116,8 @@ export function BibleVerseList({
   fontScale,
   initialVerse,
   highlightedVerse,
+  favoriteVerses,
+  onToggleFavoriteVerse,
   onFirstVisibleVerseChange,
   onInitialRestoreComplete,
   onScrollOffsetChange,
@@ -337,6 +342,7 @@ export function BibleVerseList({
     ({ item }) => {
       const isHighlighted = item.verse === highlightedVerse;
       const isRestoreTarget = item.verse === initialVerse;
+      const isFavorite = favoriteVerses?.has(item.verse) ?? false;
 
       return (
         <View
@@ -344,42 +350,80 @@ export function BibleVerseList({
           testID={
             isHighlighted ? "bible-reader-highlighted-verse" : undefined
           }
-          accessible
-          accessibilityRole="text"
-          accessibilityLabel={`${
-            isHighlighted ? "Resultado da busca. " : ""
-          }Vers?culo ${item.verse}. ${item.text}`}
           style={[
             styles.verseRow,
             isHighlighted && styles.verseRowHighlighted,
           ]}
         >
-          <Text
-            style={[
-              styles.verseNumber,
-              { fontSize: typography.verseNumberSize },
-              isHighlighted && styles.verseNumberHighlighted,
-            ]}
+          <View
+            accessible
+            accessibilityRole="text"
+            accessibilityLabel={`${
+              isHighlighted ? "Resultado da busca. " : ""
+            }Versículo ${item.verse}. ${item.text}`}
+            style={styles.verseContent}
           >
-            {item.verse}
-          </Text>
+            <Text
+              style={[
+                styles.verseNumber,
+                { fontSize: typography.verseNumberSize },
+                isHighlighted && styles.verseNumberHighlighted,
+              ]}
+            >
+              {item.verse}
+            </Text>
 
-          <Text
-            style={[
-              styles.verseText,
-              {
-                fontSize: typography.verseTextSize,
-                lineHeight: typography.verseLineHeight,
-              },
-              isHighlighted && styles.verseTextHighlighted,
-            ]}
-          >
-            {item.text}
-          </Text>
+            <Text
+              style={[
+                styles.verseText,
+                {
+                  fontSize: typography.verseTextSize,
+                  lineHeight: typography.verseLineHeight,
+                },
+                isHighlighted && styles.verseTextHighlighted,
+              ]}
+            >
+              {item.text}
+            </Text>
+          </View>
+
+          {onToggleFavoriteVerse && (
+            <Pressable
+              testID={`bible-reader-favorite-verse-${item.verse}`}
+              accessibilityRole="button"
+              accessibilityLabel={
+                isFavorite
+                  ? "Remover versículo dos favoritos"
+                  : "Adicionar versículo aos favoritos"
+              }
+              accessibilityState={{ selected: isFavorite }}
+              onPress={() => onToggleFavoriteVerse(item.verse)}
+              style={({ pressed }) => [
+                styles.favoriteButton,
+                pressed && styles.favoriteButtonPressed,
+              ]}
+            >
+              <Text
+                accessible={false}
+                style={[
+                  styles.favoriteIcon,
+                  isFavorite && styles.favoriteIconActive,
+                ]}
+              >
+                {isFavorite ? "★" : "☆"}
+              </Text>
+            </Pressable>
+          )}
         </View>
       );
     },
-    [highlightedVerse, initialVerse, typography],
+    [
+      favoriteVerses,
+      highlightedVerse,
+      initialVerse,
+      onToggleFavoriteVerse,
+      typography,
+    ],
   );
 
   const viewabilityConfig = useRef({
@@ -653,6 +697,29 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "flex-start",
     paddingVertical: 13,
+  },
+  verseContent: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "flex-start",
+  },
+  favoriteButton: {
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 44,
+    minWidth: 44,
+    marginLeft: 4,
+  },
+  favoriteButtonPressed: {
+    opacity: 0.65,
+  },
+  favoriteIcon: {
+    color: colors.textMuted,
+    fontSize: 24,
+    lineHeight: 28,
+  },
+  favoriteIconActive: {
+    color: colors.secondaryPressed,
   },
   verseRowHighlighted: {
     marginVertical: 4,
