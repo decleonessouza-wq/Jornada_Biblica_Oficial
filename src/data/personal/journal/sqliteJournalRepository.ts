@@ -8,7 +8,9 @@ import type {
   PersonalLocalDate,
   PersonalUtcTimestamp,
 } from "../../../domain/personal/personalTime";
-
+import type {
+  PersonalDatabase,
+} from "../personalDatabase";
 import {
   PersonalRepositoryBase,
 } from "../personalRepositoryBase";
@@ -184,6 +186,13 @@ export class SQLiteJournalRepository
   extends PersonalRepositoryBase
   implements JournalRepository
 {
+  // Intentionally widens the protected base constructor for hub composition.
+  // eslint-disable-next-line @typescript-eslint/no-useless-constructor
+  constructor(
+    personalDatabase: PersonalDatabase,
+  ) {
+    super(personalDatabase);
+  }
 
   async list(): Promise<
     readonly JournalEntry[]
