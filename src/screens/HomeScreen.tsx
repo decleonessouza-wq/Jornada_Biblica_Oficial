@@ -1072,7 +1072,7 @@ export default function HomeScreen() {
               <Text style={styles.quickSectionEyebrow}>NAVEGAÇÃO</Text>
               <Text style={styles.quickSectionTitle}>Acessos rápidos</Text>
             </View>
-            <Text style={styles.quickSectionHint}>4 recursos ativos</Text>
+            <Text style={styles.quickSectionHint}>5 recursos ativos</Text>
           </View>
 
           <View style={styles.quickGrid}>
@@ -1094,7 +1094,7 @@ export default function HomeScreen() {
               iconSource={require("../../assets/home/icons/diario_icone.png")}
               title="Meu Diário"
               subtitle="Anote e reflita"
-              disabled
+              onPress={() => navigation.navigate("Journal")}
             />
 
             <QuickAccessCard

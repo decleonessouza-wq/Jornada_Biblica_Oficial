@@ -97,12 +97,71 @@ describe("Favorites navigation and Home contract", () => {
     );
   });
 
-  it("reports four active quick-access resources", () => {
+  it("reports five active quick-access resources", () => {
     expect(homeSource).toContain(
-      ">4 recursos ativos<",
+      ">5 recursos ativos<",
     );
   });
 
+  it("routes the existing Home Meu Diário card to the Journal Drawer route", () => {
+    const cardStart = homeSource.indexOf(
+      'iconSource={require("../../assets/home/icons/diario_icone.png")}',
+    );
+
+    expect(cardStart).toBeGreaterThanOrEqual(0);
+
+    const cardEnd = homeSource.indexOf(
+      "/>",
+      cardStart,
+    );
+
+    expect(cardEnd).toBeGreaterThan(cardStart);
+
+    const cardBlock = homeSource.slice(
+      cardStart,
+      cardEnd + 2,
+    );
+
+    expect(cardBlock).toContain(
+      'title="Meu Diário"',
+    );
+    expect(cardBlock).toContain(
+      'subtitle="Anote e reflita"',
+    );
+    expect(cardBlock).toContain(
+      'onPress={() => navigation.navigate("Journal")}',
+    );
+  });
+
+  it("does not leave the Home Meu Diário card disabled", () => {
+    const cardStart = homeSource.indexOf(
+      'iconSource={require("../../assets/home/icons/diario_icone.png")}',
+    );
+    const cardEnd = homeSource.indexOf(
+      "/>",
+      cardStart,
+    );
+    const cardBlock = homeSource.slice(
+      cardStart,
+      cardEnd + 2,
+    );
+
+    expect(cardBlock).not.toMatch(
+      /\bdisabled\b/,
+    );
+  });
+
+  it("does not create a Journal bottom tab", () => {
+    expect(mainTabsSource).not.toContain(
+      'name="Journal"',
+    );
+    expect(mainTabsSource).not.toContain(
+      "JournalNavigator",
+    );
+    expect(mainTabsSource).not.toContain(
+      "JournalScreen",
+    );
+  });
   it("does not create a Favorites bottom tab", () => {
     expect(mainTabsSource).not.toContain(
       'name="Favorites"',
