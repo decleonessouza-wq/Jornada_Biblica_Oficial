@@ -51,6 +51,8 @@ function entryRow(
     source_type: "FREE",
     source_title_snapshot: null,
     prompt_snapshot: null,
+    category: null,
+    is_pinned: 0,
     created_at_utc: CREATED_AT,
     updated_at_utc: CREATED_AT,
     ...overrides,
@@ -105,6 +107,8 @@ function persistenceRecord(
     sourceType: "FREE",
     sourceTitleSnapshot: null,
     promptSnapshot: null,
+    category: null,
+    isPinned: false,
     references: [],
     tags: [],
     ...overrides,
@@ -167,6 +171,8 @@ describe("SQLiteJournalRepository v4", () => {
         source_type: "BIBLE",
         source_title_snapshot: "João 3",
         prompt_snapshot: "O que este texto revela?",
+        category: "REFLECTION",
+        is_pinned: 1,
       }),
     );
 
@@ -209,6 +215,8 @@ describe("SQLiteJournalRepository v4", () => {
       sourceType: "BIBLE",
       sourceTitleSnapshot: "João 3",
       promptSnapshot: "O que este texto revela?",
+      category: "REFLECTION",
+      isPinned: true,
       createdAtUtc: CREATED_AT,
       updatedAtUtc: CREATED_AT,
       references: [
@@ -270,6 +278,8 @@ describe("SQLiteJournalRepository v4", () => {
       "FREE",
       null,
       null,
+      null,
+      0,
       CREATED_AT,
       CREATED_AT,
     ]);
@@ -306,6 +316,8 @@ describe("SQLiteJournalRepository v4", () => {
     );
     expect(updateSql).not.toContain("status = ?");
     expect(updateSql).not.toContain("source_type = ?");
+    expect(updateSql).not.toContain("category = ?");
+    expect(updateSql).not.toContain("is_pinned = ?");
     expect(updateSql).not.toContain(
       "personal_journal_entry_references",
     );
@@ -372,6 +384,8 @@ describe("SQLiteJournalRepository v4", () => {
       sourceType: "BIBLE",
       sourceTitleSnapshot: "Leitura composta",
       promptSnapshot: "Registre o que aprendeu.",
+      category: "PROMISE",
+      isPinned: true,
       references: [
         journalReference(
           "ref-compound",
@@ -388,6 +402,36 @@ describe("SQLiteJournalRepository v4", () => {
     expect(
       harness.withTransactionAsync,
     ).toHaveBeenCalledTimes(1);
+
+    const entryInsertCall =
+      harness.runAsync.mock.calls.find(
+        ([sql]) =>
+          String(sql).includes(
+            "INSERT INTO personal_journal_entries",
+          ),
+      );
+
+    expect(entryInsertCall).toBeDefined();
+    expect(String(entryInsertCall?.[0])).toContain(
+      "category",
+    );
+    expect(String(entryInsertCall?.[0])).toContain(
+      "is_pinned",
+    );
+    expect(entryInsertCall?.slice(1)).toEqual([
+      ENTRY_ID,
+      ENTRY_DATE,
+      "Reflexão",
+      null,
+      "ACTIVE",
+      "BIBLE",
+      "Leitura composta",
+      "Registre o que aprendeu.",
+      "PROMISE",
+      1,
+      CREATED_AT,
+      CREATED_AT,
+    ]);
 
     const passageCalls =
       harness.runAsync.mock.calls.filter(
@@ -434,6 +478,8 @@ describe("SQLiteJournalRepository v4", () => {
       sourceType: "PLAN",
       sourceTitleSnapshot: "Plano anual",
       promptSnapshot: "Aplicação do dia",
+      category: "PRAYER",
+      isPinned: true,
       references: [
         journalReference(
           "ref-plan",
@@ -466,6 +512,35 @@ describe("SQLiteJournalRepository v4", () => {
 
     const allSql = harness.runAsync.mock.calls
       .map(([sql]) => String(sql));
+
+    const updateEntryCall =
+      harness.runAsync.mock.calls.find(
+        ([sql]) =>
+          String(sql).includes(
+            "UPDATE personal_journal_entries",
+          ),
+      );
+
+    expect(updateEntryCall).toBeDefined();
+    expect(String(updateEntryCall?.[0])).toContain(
+      "category = ?",
+    );
+    expect(String(updateEntryCall?.[0])).toContain(
+      "is_pinned = ?",
+    );
+    expect(updateEntryCall?.slice(1)).toEqual([
+      ENTRY_DATE,
+      "Reflexão",
+      null,
+      "ACTIVE",
+      "PLAN",
+      "Plano anual",
+      "Aplicação do dia",
+      "PRAYER",
+      1,
+      UPDATED_AT,
+      ENTRY_ID,
+    ]);
 
     expect(
       allSql.some(
@@ -556,6 +631,66 @@ describe("SQLiteJournalRepository v4", () => {
       "ORDER BY id DESC",
     );
     expect(sql).toContain("LIMIT 1");
+  });
+
+  it("lists tags and finds a tag by normalized name deterministically", async () => {
+    const listHarness = createHarness();
+
+    listHarness.getAllAsync.mockResolvedValueOnce([
+      {
+        id: "tag-faith",
+        name: "Fé",
+        normalized_name: "fe",
+      },
+      {
+        id: "tag-prayer",
+        name: "Oração",
+        normalized_name: "oracao",
+      },
+    ]);
+
+    await expect(
+      listHarness.repository.listTags(),
+    ).resolves.toEqual([
+      {
+        id: "tag-faith",
+        name: "Fé",
+        normalizedName: "fe",
+      },
+      {
+        id: "tag-prayer",
+        name: "Oração",
+        normalizedName: "oracao",
+      },
+    ]);
+
+    expect(
+      String(listHarness.getAllAsync.mock.calls[0]?.[0]),
+    ).toContain(
+      "ORDER BY normalized_name ASC, id ASC",
+    );
+
+    const findHarness = createHarness();
+
+    findHarness.getFirstAsync.mockResolvedValueOnce({
+      id: "tag-prayer",
+      name: "Oração",
+      normalized_name: "oracao",
+    });
+
+    await expect(
+      findHarness.repository.findTagByNormalizedName(
+        "oracao",
+      ),
+    ).resolves.toEqual({
+      id: "tag-prayer",
+      name: "Oração",
+      normalizedName: "oracao",
+    });
+
+    expect(
+      findHarness.getFirstAsync.mock.calls[0]?.[1],
+    ).toBe("oracao");
   });
 
   it("supports zero references and zero tags on a mapped record", async () => {
@@ -748,6 +883,18 @@ describe("SQLiteJournalRepository v4", () => {
       error:
         "PERSONAL_JOURNAL_ROW_SOURCE_TYPE_INVALID",
     },
+    {
+      field: "category",
+      value: "UNKNOWN_CATEGORY",
+      error:
+        "PERSONAL_JOURNAL_ROW_CATEGORY_INVALID",
+    },
+    {
+      field: "is_pinned",
+      value: 2,
+      error:
+        "PERSONAL_JOURNAL_ROW_IS_PINNED_INVALID",
+    },
   ])(
     "fails closed for invalid persisted $field",
     async ({ field, value, error }) => {
@@ -919,6 +1066,44 @@ describe("SQLiteJournalRepository v4", () => {
       "DELETE FROM personal_journal_tags",
     );
   });
+
+  it.each([
+    [
+      {
+        category: "BROKEN",
+      },
+      "PERSONAL_JOURNAL_CATEGORY_INVALID",
+    ],
+    [
+      {
+        isPinned: 1,
+      },
+      "PERSONAL_JOURNAL_IS_PINNED_INVALID",
+    ],
+  ] as const)(
+    "rejects malformed organization input before persistence %#",
+    async (overrides, errorCode) => {
+      const harness = createHarness();
+
+      const malformed =
+        {
+          ...persistenceRecord(),
+          ...overrides,
+        } as unknown as JournalEntryPersistenceRecord;
+
+      await expect(
+        harness.repository.create(malformed),
+      ).rejects.toThrow(errorCode);
+
+      expect(
+        harness.withConnection,
+      ).not.toHaveBeenCalled();
+      expect(
+        harness.withTransactionAsync,
+      ).not.toHaveBeenCalled();
+      expect(harness.runAsync).not.toHaveBeenCalled();
+    },
+  );
 
   it("rejects a malformed complete input before any persistence side effect", async () => {
     const harness = createHarness();

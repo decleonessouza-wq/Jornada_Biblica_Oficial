@@ -60,6 +60,8 @@ function persistenceEntry(
     sourceType: "FREE",
     sourceTitleSnapshot: "Contexto preservado",
     promptSnapshot: "Prompt preservado",
+    category: null,
+    isPinned: false,
     references: [],
     tags: [],
     ...overrides,
@@ -71,6 +73,8 @@ function createHarness() {
   const findById = jest.fn();
   const findByDate = jest.fn();
   const listByDate = jest.fn();
+  const listTags = jest.fn();
+  const findTagByNormalizedName = jest.fn();
   const create = jest.fn();
   const update = jest.fn();
   const remove = jest.fn();
@@ -80,6 +84,8 @@ function createHarness() {
     findById,
     findByDate,
     listByDate,
+    listTags,
+    findTagByNormalizedName,
     create,
     update,
     remove,
@@ -115,6 +121,8 @@ function createHarness() {
     findById,
     findByDate,
     listByDate,
+    listTags,
+    findTagByNormalizedName,
     create,
     update,
     remove,
@@ -126,24 +134,84 @@ function createHarness() {
 }
 
 describe("JournalService", () => {
-  it("delegates list without reordering repository results", async () => {
+  it("lists non-trashed entries without reordering repository results", async () => {
     const harness = createHarness();
     const first = persistenceEntry({
       id: ENTRY_ID,
       entryDate: ENTRY_DATE,
     });
+    const trashed = persistenceEntry({
+      id: OTHER_ENTRY_ID,
+      status: "TRASHED",
+    });
     const second = persistenceEntry({
       id: OTHER_ENTRY_ID,
       entryDate: OTHER_ENTRY_DATE,
+      status: "DRAFT",
     });
 
-    harness.list.mockResolvedValue([first, second]);
+    harness.list.mockResolvedValue([
+      first,
+      trashed,
+      second,
+    ]);
 
     await expect(
       harness.service.list(),
     ).resolves.toEqual([first, second]);
 
     expect(harness.list).toHaveBeenCalledTimes(1);
+  });
+
+  it("lists only trashed entries without reordering repository results", async () => {
+    const harness = createHarness();
+    const firstTrash = persistenceEntry({
+      status: "TRASHED",
+    });
+    const active = persistenceEntry({
+      id: OTHER_ENTRY_ID,
+    });
+    const secondTrash = persistenceEntry({
+      id: OTHER_ENTRY_ID,
+      status: "TRASHED",
+    });
+
+    harness.list.mockResolvedValue([
+      firstTrash,
+      active,
+      secondTrash,
+    ]);
+
+    await expect(
+      harness.service.listTrash(),
+    ).resolves.toEqual([
+      firstTrash,
+      secondTrash,
+    ]);
+  });
+
+  it("delegates tag catalog listing without reordering it", async () => {
+    const harness = createHarness();
+    const tags = [
+      {
+        id: "tag-faith",
+        name: "Fé",
+        normalizedName: "fe",
+      },
+      {
+        id: "tag-prayer",
+        name: "Oração",
+        normalizedName: "oracao",
+      },
+    ];
+
+    harness.listTags.mockResolvedValue(tags);
+
+    await expect(
+      harness.service.listTags(),
+    ).resolves.toBe(tags);
+
+    expect(harness.listTags).toHaveBeenCalledTimes(1);
   });
 
   it("delegates findById and preserves the full persistence record", async () => {
@@ -172,17 +240,27 @@ describe("JournalService", () => {
     );
   });
 
-  it("delegates listByDate and preserves multiple entries and repository order", async () => {
+  it("lists non-trashed entries by date while preserving repository order", async () => {
     const harness = createHarness();
     const first = persistenceEntry({
       id: OTHER_ENTRY_ID,
       entryDate: ENTRY_DATE,
     });
+    const trashed = persistenceEntry({
+      status: "TRASHED",
+      entryDate: ENTRY_DATE,
+    });
     const second = persistenceEntry({
       id: ENTRY_ID,
       entryDate: ENTRY_DATE,
+      status: "DRAFT",
     });
-    harness.listByDate.mockResolvedValue([first, second]);
+
+    harness.listByDate.mockResolvedValue([
+      first,
+      trashed,
+      second,
+    ]);
 
     await expect(
       harness.service.listByDate(ENTRY_DATE),
@@ -335,6 +413,8 @@ describe("JournalService", () => {
       sourceType: "FREE",
       sourceTitleSnapshot: null,
       promptSnapshot: null,
+      category: null,
+      isPinned: false,
       references: [],
       tags: [],
       createdAtUtc: CREATED_AT,
@@ -635,6 +715,346 @@ describe("JournalService", () => {
 
     expect(harness.update).not.toHaveBeenCalled();
   });
+
+  it("updates category tags and pin while preserving entry context", async () => {
+    const harness = createHarness();
+    const existingTag = {
+      id: "tag-existing",
+      name: "Oração",
+      normalizedName: "oracao",
+    };
+    const existing = persistenceEntry({
+      category: null,
+      isPinned: false,
+      tags: [],
+    });
+
+    harness.findById.mockResolvedValue(existing);
+    harness.findTagByNormalizedName
+      .mockResolvedValueOnce(existingTag)
+      .mockResolvedValueOnce(null);
+    harness.createId.mockReturnValueOnce(
+      "tag-new" as never,
+    );
+    harness.toUtcTimestamp.mockReturnValue(UPDATED_AT);
+
+    const updated =
+      await harness.service.updateOrganization(
+        ENTRY_ID,
+        {
+          category: "PRAYER",
+          isPinned: true,
+          tagNames: [
+            " Oração ",
+            "oração",
+            "  Fé   Viva  ",
+          ],
+        },
+      );
+
+    expect(
+      harness.findTagByNormalizedName.mock.calls,
+    ).toEqual([
+      ["oracao"],
+      ["fe viva"],
+    ]);
+    expect(harness.createId).toHaveBeenCalledWith(
+      "journal_tag",
+    );
+    expect(updated).toEqual({
+      ...existing,
+      category: "PRAYER",
+      isPinned: true,
+      tags: [
+        existingTag,
+        {
+          id: "tag-new" as never,
+          name: "Fé Viva",
+          normalizedName: "fe viva",
+        },
+      ],
+      updatedAtUtc: UPDATED_AT,
+    });
+    expect(harness.update).toHaveBeenCalledWith(
+      updated,
+    );
+  });
+
+  it("preserves omitted organization fields and supports clearing category and tags", async () => {
+    const harness = createHarness();
+    const existing = persistenceEntry({
+      category: "PROMISE",
+      isPinned: true,
+      tags: [
+        {
+          id: "tag-existing" as never,
+          name: "Promessa",
+          normalizedName: "promessa",
+        },
+      ],
+    });
+
+    harness.findById.mockResolvedValue(existing);
+    harness.toUtcTimestamp.mockReturnValue(UPDATED_AT);
+
+    const updated =
+      await harness.service.updateOrganization(
+        ENTRY_ID,
+        {
+          category: null,
+          tagNames: [],
+        },
+      );
+
+    expect(updated.category).toBeNull();
+    expect(updated.isPinned).toBe(true);
+    expect(updated.tags).toEqual([]);
+    expect(
+      harness.findTagByNormalizedName,
+    ).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    [
+      null,
+      "PERSONAL_JOURNAL_ORGANIZATION_TARGET_NOT_FOUND",
+    ],
+    [
+      persistenceEntry({ status: "TRASHED" }),
+      "PERSONAL_JOURNAL_ORGANIZATION_TARGET_TRASHED",
+    ],
+  ] as const)(
+    "rejects invalid organization target %#",
+    async (existing, errorCode) => {
+      const harness = createHarness();
+      harness.findById.mockResolvedValue(existing);
+
+      await expect(
+        harness.service.updateOrganization(
+          ENTRY_ID,
+          {
+            category: "REFLECTION",
+          },
+        ),
+      ).rejects.toThrow(errorCode);
+
+      expect(harness.update).not.toHaveBeenCalled();
+      expect(harness.now).not.toHaveBeenCalled();
+    },
+  );
+
+  it("rejects malformed category before persistence", async () => {
+    const harness = createHarness();
+    harness.findById.mockResolvedValue(
+      persistenceEntry(),
+    );
+
+    await expect(
+      harness.service.updateOrganization(
+        ENTRY_ID,
+        {
+          category:
+            "BROKEN" as never,
+        },
+      ),
+    ).rejects.toThrow(
+      "PERSONAL_JOURNAL_CATEGORY_INVALID",
+    );
+
+    expect(harness.update).not.toHaveBeenCalled();
+  });
+
+  it("rejects empty tag names before generating ids or persisting", async () => {
+    const harness = createHarness();
+    harness.findById.mockResolvedValue(
+      persistenceEntry(),
+    );
+
+    await expect(
+      harness.service.updateOrganization(
+        ENTRY_ID,
+        {
+          tagNames: ["   "],
+        },
+      ),
+    ).rejects.toThrow(
+      "PERSONAL_JOURNAL_TAG_NAME_INVALID",
+    );
+
+    expect(harness.createId).not.toHaveBeenCalled();
+    expect(harness.update).not.toHaveBeenCalled();
+  });
+
+  it("pins and unpins active entries through the organization contract", async () => {
+    const harness = createHarness();
+    const existing = persistenceEntry({
+      isPinned: false,
+    });
+
+    harness.findById.mockResolvedValue(existing);
+    harness.toUtcTimestamp.mockReturnValue(UPDATED_AT);
+
+    const pinned = await harness.service.setPinned(
+      ENTRY_ID,
+      true,
+    );
+
+    expect(pinned.isPinned).toBe(true);
+
+    harness.findById.mockResolvedValue({
+      ...pinned,
+      updatedAtUtc: CREATED_AT,
+    });
+
+    const unpinned =
+      await harness.service.setPinned(
+        ENTRY_ID,
+        false,
+      );
+
+    expect(unpinned.isPinned).toBe(false);
+  });
+
+  it("does not allow a draft to become pinned", async () => {
+    const harness = createHarness();
+
+    harness.findById.mockResolvedValue(
+      persistenceEntry({
+        status: "DRAFT",
+        isPinned: false,
+      }),
+    );
+
+    await expect(
+      harness.service.setPinned(
+        ENTRY_ID,
+        true,
+      ),
+    ).rejects.toThrow(
+      "PERSONAL_JOURNAL_PIN_TARGET_INVALID",
+    );
+
+    expect(harness.update).not.toHaveBeenCalled();
+  });
+
+  it("moves an active entry to trash and clears its pin without deleting content", async () => {
+    const harness = createHarness();
+    const existing = persistenceEntry({
+      category: "TESTIMONY",
+      isPinned: true,
+    });
+
+    harness.findById.mockResolvedValue(existing);
+    harness.toUtcTimestamp.mockReturnValue(UPDATED_AT);
+
+    const trashed =
+      await harness.service.moveToTrash(ENTRY_ID);
+
+    expect(trashed).toEqual({
+      ...existing,
+      status: "TRASHED",
+      isPinned: false,
+      updatedAtUtc: UPDATED_AT,
+    });
+    expect(harness.update).toHaveBeenCalledWith(
+      trashed,
+    );
+    expect(harness.remove).not.toHaveBeenCalled();
+  });
+
+  it("treats moving an already trashed entry as idempotent", async () => {
+    const harness = createHarness();
+    const existing = persistenceEntry({
+      status: "TRASHED",
+      isPinned: false,
+    });
+
+    harness.findById.mockResolvedValue(existing);
+
+    await expect(
+      harness.service.moveToTrash(ENTRY_ID),
+    ).resolves.toBe(existing);
+
+    expect(harness.now).not.toHaveBeenCalled();
+    expect(harness.update).not.toHaveBeenCalled();
+    expect(harness.remove).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    [
+      null,
+      "PERSONAL_JOURNAL_TRASH_TARGET_NOT_FOUND",
+    ],
+    [
+      persistenceEntry({ status: "DRAFT" }),
+      "PERSONAL_JOURNAL_TRASH_TARGET_INVALID",
+    ],
+  ] as const)(
+    "rejects invalid trash target %#",
+    async (existing, errorCode) => {
+      const harness = createHarness();
+      harness.findById.mockResolvedValue(existing);
+
+      await expect(
+        harness.service.moveToTrash(ENTRY_ID),
+      ).rejects.toThrow(errorCode);
+
+      expect(harness.update).not.toHaveBeenCalled();
+      expect(harness.remove).not.toHaveBeenCalled();
+    },
+  );
+
+  it("restores a trashed entry to active while keeping it unpinned", async () => {
+    const harness = createHarness();
+    const existing = persistenceEntry({
+      status: "TRASHED",
+      isPinned: false,
+      category: "REFLECTION",
+    });
+
+    harness.findById.mockResolvedValue(existing);
+    harness.toUtcTimestamp.mockReturnValue(UPDATED_AT);
+
+    const restored =
+      await harness.service.restoreFromTrash(
+        ENTRY_ID,
+      );
+
+    expect(restored).toEqual({
+      ...existing,
+      status: "ACTIVE",
+      isPinned: false,
+      updatedAtUtc: UPDATED_AT,
+    });
+    expect(harness.update).toHaveBeenCalledWith(
+      restored,
+    );
+  });
+
+  it.each([
+    [
+      null,
+      "PERSONAL_JOURNAL_RESTORE_TARGET_NOT_FOUND",
+    ],
+    [
+      persistenceEntry({ status: "ACTIVE" }),
+      "PERSONAL_JOURNAL_RESTORE_TARGET_INVALID",
+    ],
+  ] as const)(
+    "rejects invalid restore target %#",
+    async (existing, errorCode) => {
+      const harness = createHarness();
+      harness.findById.mockResolvedValue(existing);
+
+      await expect(
+        harness.service.restoreFromTrash(
+          ENTRY_ID,
+        ),
+      ).rejects.toThrow(errorCode);
+
+      expect(harness.update).not.toHaveBeenCalled();
+    },
+  );
 
   it("delegates remove exactly once", async () => {
     const harness = createHarness();

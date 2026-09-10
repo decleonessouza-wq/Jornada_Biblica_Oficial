@@ -44,6 +44,7 @@ const mockCreateDraft = jest.fn();
 const mockUpdateDraft = jest.fn();
 const mockPublishDraft = jest.fn();
 const mockUpdate = jest.fn();
+const mockUpdateOrganization = jest.fn();
 
 const entryId =
   "journal-entry-edit" as JournalEntryId;
@@ -61,6 +62,8 @@ const existingEntry = {
   sourceType: "FREE",
   sourceTitleSnapshot: null,
   promptSnapshot: null,
+  category: null,
+  isPinned: false,
   references: [],
   tags: [],
   createdAtUtc:
@@ -88,6 +91,8 @@ function configureHub(): void {
       updateDraft: mockUpdateDraft,
       publishDraft: mockPublishDraft,
       update: mockUpdate,
+      updateOrganization:
+        mockUpdateOrganization,
     },
   } as unknown as ReturnType<
     typeof getPersonalPlatformHub
@@ -147,7 +152,7 @@ async function advanceAutosave(): Promise<void> {
 }
 
 describe(
-  "JournalEntryEditorScreen P16-P2",
+  "JournalEntryEditorScreen P16-P3 organization",
   () => {
     beforeEach(() => {
       jest.useFakeTimers();
@@ -159,6 +164,7 @@ describe(
       mockUpdateDraft.mockReset();
       mockPublishDraft.mockReset();
       mockUpdate.mockReset();
+      mockUpdateOrganization.mockReset();
       mockedGetPersonalPlatformHub.mockReset();
 
       mockGetTodayEntryDate.mockReturnValue(
@@ -179,6 +185,9 @@ describe(
       mockUpdate.mockResolvedValue(
         existingEntry,
       );
+      mockUpdateOrganization.mockResolvedValue(
+        existingEntry,
+      );
 
       configureHub();
     });
@@ -189,22 +198,80 @@ describe(
       jest.useRealTimers();
     });
 
-    it("starts a new entry with today's local date from the service", () => {
+    it(
+      "starts a new entry with today's local date from the service",
+      () => {
+        const view = renderEditor();
+
+        expect(
+          view.getByText("Novo registro"),
+        ).toBeTruthy();
+        expect(
+          view.getByLabelText("Data do registro")
+            .props.value,
+        ).toBe("10/09/2026");
+        expect(
+          view.getByLabelText("Tags do registro")
+            .props.value,
+        ).toBe("");
+        expect(
+          view.getByLabelText(
+            "Remover categoria do registro",
+          ).props.accessibilityState.selected,
+        ).toBe(true);
+        expect(
+          view.getByLabelText(
+            "Marcar registro como fixado",
+          ),
+        ).toBeTruthy();
+        expect(
+          mockGetTodayEntryDate,
+        ).toHaveBeenCalledTimes(1);
+        expect(
+          mockFindById,
+        ).not.toHaveBeenCalled();
+      },
+      10000,
+    );
+
+    it("autosaves category and tags together with the same draft", async () => {
       const view = renderEditor();
 
+      fireEvent.press(
+        view.getByLabelText(
+          "Selecionar categoria Oração",
+        ),
+      );
+      fireEvent.changeText(
+        view.getByLabelText(
+          "Tags do registro",
+        ),
+        " oração, Família ",
+      );
+
+      await advanceAutosave();
+
+      await waitFor(() => {
+        expect(
+          mockCreateDraft,
+        ).toHaveBeenCalledTimes(1);
+        expect(
+          mockUpdateOrganization,
+        ).toHaveBeenCalledWith(
+          draftId,
+          {
+            category: "PRAYER",
+            tagNames: [
+              "oração",
+              "Família",
+            ],
+          },
+        );
+      });
+
       expect(
-        view.getByText("Novo registro"),
-      ).toBeTruthy();
-      expect(
-        view.getByLabelText("Data do registro")
-          .props.value,
-      ).toBe("10/09/2026");
-      expect(
-        mockGetTodayEntryDate,
-      ).toHaveBeenCalledTimes(1);
-      expect(
-        mockFindById,
-      ).not.toHaveBeenCalled();
+        mockUpdateOrganization.mock.calls[0]?.[1],
+      ).not.toHaveProperty("isPinned");
     });
 
     it("autosaves a new draft after the user changes content", async () => {
@@ -436,6 +503,148 @@ describe(
       });
     });
 
+    it("loads and saves category tags and pin for an active entry", async () => {
+      const organizedEntry = {
+        ...existingEntry,
+        category: "REFLECTION",
+        isPinned: false,
+        tags: [
+          {
+            id: "tag-faith" as never,
+            name: "Fé",
+            normalizedName: "fe",
+          },
+        ],
+      } as JournalEntryPersistenceRecord;
+
+      mockFindById.mockResolvedValue(
+        organizedEntry,
+      );
+
+      const view = renderEditor(entryId);
+
+      await waitFor(() => {
+        expect(
+          view.getByLabelText(
+            "Tags do registro",
+          ).props.value,
+        ).toBe("Fé");
+        expect(
+          view.getByLabelText(
+            "Selecionar categoria Reflexão",
+          ).props.accessibilityState.selected,
+        ).toBe(true);
+      });
+
+      fireEvent.press(
+        view.getByLabelText(
+          "Selecionar categoria Promessa",
+        ),
+      );
+      fireEvent.changeText(
+        view.getByLabelText(
+          "Tags do registro",
+        ),
+        "Fé, Promessa",
+      );
+      fireEvent.press(
+        view.getByLabelText(
+          "Marcar registro como fixado",
+        ),
+      );
+
+      fireEvent.press(
+        view.getByLabelText(
+          "Salvar registro do diário",
+        ),
+      );
+
+      await waitFor(() => {
+        expect(
+          mockUpdateOrganization,
+        ).toHaveBeenLastCalledWith(
+          entryId,
+          {
+            category: "PROMISE",
+            tagNames: [
+              "Fé",
+              "Promessa",
+            ],
+            isPinned: true,
+          },
+        );
+        expect(
+          view.goBack,
+        ).toHaveBeenCalledTimes(1);
+      });
+    });
+
+    it("retries organization after direct create without duplicating the entry", async () => {
+      mockUpdateOrganization
+        .mockRejectedValueOnce(
+          new Error("temporary"),
+        )
+        .mockResolvedValueOnce(
+          existingEntry,
+        );
+
+      const view = renderEditor();
+
+      fireEvent.changeText(
+        view.getByLabelText("Reflexão"),
+        "Registro sem duplicação.",
+      );
+
+      fireEvent.press(
+        view.getByLabelText(
+          "Salvar registro do diário",
+        ),
+      );
+
+      await waitFor(() => {
+        expect(
+          view.getByText(
+            "Não foi possível salvar seu registro agora. Tente novamente.",
+          ),
+        ).toBeTruthy();
+      });
+
+      expect(
+        mockCreate,
+      ).toHaveBeenCalledTimes(1);
+      expect(
+        view.goBack,
+      ).not.toHaveBeenCalled();
+
+      fireEvent.press(
+        view.getByLabelText(
+          "Salvar registro do diário",
+        ),
+      );
+
+      await waitFor(() => {
+        expect(
+          mockUpdate,
+        ).toHaveBeenCalledWith(
+          entryId,
+          expect.objectContaining({
+            reflectionText:
+              "Registro sem duplicação.",
+          }),
+        );
+        expect(
+          mockUpdateOrganization,
+        ).toHaveBeenCalledTimes(2);
+        expect(
+          view.goBack,
+        ).toHaveBeenCalledTimes(1);
+      });
+
+      expect(
+        mockCreate,
+      ).toHaveBeenCalledTimes(1);
+    });
+
     it("blocks explicit save when date is invalid", async () => {
       const view = renderEditor();
 
@@ -607,6 +816,15 @@ describe(
       );
       expect(source).toContain(
         "publishDraft",
+      );
+      expect(source).toContain(
+        "updateOrganization",
+      );
+      expect(source).toContain(
+        "CATEGORY_OPTIONS",
+      );
+      expect(source).toContain(
+        "Tags do registro",
       );
       expect(source).not.toMatch(
         /SQLiteJournalRepository|JournalRepository|expo-sqlite|AsyncStorage/i,

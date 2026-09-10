@@ -8,11 +8,13 @@ import type {
   BibleReference,
 } from "../../../domain/bible/bibleReference";
 import {
+  JOURNAL_CATEGORIES,
   JOURNAL_ENTRY_STATUSES,
   JOURNAL_GRATITUDE_MAX_CHARS,
   JOURNAL_REFLECTION_MAX_CHARS,
   JOURNAL_SOURCE_TYPES,
   type JournalEntry,
+  type JournalCategory,
   type JournalEntryId,
   type JournalEntryReference,
   type JournalEntryReferenceId,
@@ -45,6 +47,8 @@ type JournalEntryRow = Readonly<{
   source_type: unknown;
   source_title_snapshot: unknown;
   prompt_snapshot: unknown;
+  category: unknown;
+  is_pinned: unknown;
   created_at_utc: unknown;
   updated_at_utc: unknown;
 }>;
@@ -163,6 +167,38 @@ function isJournalSourceType(
   );
 }
 
+function isJournalCategory(
+  value: unknown,
+): value is JournalCategory {
+  return JOURNAL_CATEGORIES.some(
+    (category) => category === value,
+  );
+}
+
+function assertNullableJournalCategory(
+  value: unknown,
+  errorCode: string,
+): asserts value is JournalCategory | null {
+  if (value !== null && !isJournalCategory(value)) {
+    throw new Error(errorCode);
+  }
+}
+
+function mapSqliteBoolean(
+  value: unknown,
+  errorCode: string,
+): boolean {
+  if (value === 0) {
+    return false;
+  }
+
+  if (value === 1) {
+    return true;
+  }
+
+  throw new Error(errorCode);
+}
+
 function assertNonNegativeInteger(
   value: unknown,
   errorCode: string,
@@ -240,7 +276,7 @@ function assertJournalEntryCore(
   }
 }
 
-function hasAnyV4Field(
+function hasAnyPersistenceField(
   entry: JournalEntry | JournalEntryPersistenceRecord,
 ): boolean {
   return (
@@ -248,6 +284,8 @@ function hasAnyV4Field(
     "sourceType" in entry ||
     "sourceTitleSnapshot" in entry ||
     "promptSnapshot" in entry ||
+    "category" in entry ||
+    "isPinned" in entry ||
     "references" in entry ||
     "tags" in entry
   );
@@ -410,6 +448,16 @@ function assertValidPersistenceRecord(
     candidate.promptSnapshot,
     "PERSONAL_JOURNAL_PROMPT_SNAPSHOT_INVALID",
   );
+  assertNullableJournalCategory(
+    candidate.category,
+    "PERSONAL_JOURNAL_CATEGORY_INVALID",
+  );
+
+  if (typeof candidate.isPinned !== "boolean") {
+    throw new Error(
+      "PERSONAL_JOURNAL_IS_PINNED_INVALID",
+    );
+  }
 
   if (!Array.isArray(candidate.references)) {
     throw new Error(
@@ -518,6 +566,14 @@ function mapJournalEntryRowBase(
     row.prompt_snapshot,
     "PERSONAL_JOURNAL_ROW_PROMPT_SNAPSHOT_INVALID",
   );
+  assertNullableJournalCategory(
+    row.category,
+    "PERSONAL_JOURNAL_ROW_CATEGORY_INVALID",
+  );
+  const isPinned = mapSqliteBoolean(
+    row.is_pinned,
+    "PERSONAL_JOURNAL_ROW_IS_PINNED_INVALID",
+  );
   assertValidUtcTimestamp(
     row.created_at_utc,
     "PERSONAL_JOURNAL_ROW_CREATED_AT_UTC_INVALID",
@@ -546,6 +602,8 @@ function mapJournalEntryRowBase(
     sourceType: row.source_type,
     sourceTitleSnapshot: row.source_title_snapshot,
     promptSnapshot: row.prompt_snapshot,
+    category: row.category,
+    isPinned,
     createdAtUtc: row.created_at_utc,
     updatedAtUtc: row.updated_at_utc,
   };
@@ -1019,6 +1077,8 @@ async function insertEntry(
   sourceType: JournalSourceType,
   sourceTitleSnapshot: string | null,
   promptSnapshot: string | null,
+  category: JournalCategory | null,
+  isPinned: boolean,
 ): Promise<void> {
   await database.runAsync(
     `
@@ -1031,10 +1091,12 @@ INSERT INTO personal_journal_entries (
   source_type,
   source_title_snapshot,
   prompt_snapshot,
+  category,
+  is_pinned,
   created_at_utc,
   updated_at_utc
 )
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `,
     entry.id,
     entry.entryDate,
@@ -1044,6 +1106,8 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     sourceType,
     sourceTitleSnapshot,
     promptSnapshot,
+    category,
+    isPinned ? 1 : 0,
     entry.createdAtUtc,
     entry.updatedAtUtc,
   );
@@ -1200,6 +1264,8 @@ SELECT
   source_type,
   source_title_snapshot,
   prompt_snapshot,
+  category,
+  is_pinned,
   created_at_utc,
   updated_at_utc
 FROM personal_journal_entries
@@ -1335,10 +1401,79 @@ ORDER BY id DESC
     );
   }
 
+  async listTags(): Promise<readonly JournalTag[]> {
+    return this.personalDatabase.withConnection(
+      async (database) => {
+        const rows =
+          await database.getAllAsync<JournalTagRow>(
+            `
+SELECT
+  id,
+  name,
+  normalized_name
+FROM personal_journal_tags
+ORDER BY normalized_name ASC, id ASC
+`,
+          );
+
+        const tags = rows.map(mapJournalTagRow);
+        const ids = new Set<string>();
+        const normalizedNames = new Set<string>();
+
+        for (const tag of tags) {
+          if (
+            ids.has(tag.id) ||
+            normalizedNames.has(tag.normalizedName)
+          ) {
+            throw new Error(
+              "PERSONAL_JOURNAL_TAG_LIST_DUPLICATE",
+            );
+          }
+
+          ids.add(tag.id);
+          normalizedNames.add(tag.normalizedName);
+        }
+
+        return tags;
+      },
+    );
+  }
+
+  async findTagByNormalizedName(
+    normalizedName: string,
+  ): Promise<JournalTag | null> {
+    assertNonEmptyString(
+      normalizedName,
+      "PERSONAL_JOURNAL_TAG_NORMALIZED_NAME_INVALID",
+    );
+
+    return this.personalDatabase.withConnection(
+      async (database) => {
+        const row =
+          await database.getFirstAsync<JournalTagRow>(
+            `
+SELECT
+  id,
+  name,
+  normalized_name
+FROM personal_journal_tags
+WHERE normalized_name = ?
+LIMIT 1
+`,
+            normalizedName,
+          );
+
+        return row === null
+          ? null
+          : mapJournalTagRow(row);
+      },
+    );
+  }
+
   async create(
     entry: JournalEntry | JournalEntryPersistenceRecord,
   ): Promise<void> {
-    if (!hasAnyV4Field(entry)) {
+    if (!hasAnyPersistenceField(entry)) {
       assertJournalEntryCore(entry, false);
 
       await this.personalDatabase.withConnection(
@@ -1350,6 +1485,8 @@ ORDER BY id DESC
             "FREE",
             null,
             null,
+            null,
+            false,
           );
         },
       );
@@ -1369,6 +1506,8 @@ ORDER BY id DESC
               entry.sourceType,
               entry.sourceTitleSnapshot,
               entry.promptSnapshot,
+              entry.category,
+              entry.isPinned,
             );
             await persistReferences(
               database,
@@ -1387,7 +1526,7 @@ ORDER BY id DESC
   async update(
     entry: JournalEntry | JournalEntryPersistenceRecord,
   ): Promise<void> {
-    if (!hasAnyV4Field(entry)) {
+    if (!hasAnyPersistenceField(entry)) {
       assertJournalEntryCore(entry, false);
 
       await this.personalDatabase.withConnection(
@@ -1436,6 +1575,8 @@ SET
   source_type = ?,
   source_title_snapshot = ?,
   prompt_snapshot = ?,
+  category = ?,
+  is_pinned = ?,
   updated_at_utc = ?
 WHERE id = ?
 `,
@@ -1446,6 +1587,8 @@ WHERE id = ?
               entry.sourceType,
               entry.sourceTitleSnapshot,
               entry.promptSnapshot,
+              entry.category,
+              entry.isPinned ? 1 : 0,
               entry.updatedAtUtc,
               entry.id,
             );

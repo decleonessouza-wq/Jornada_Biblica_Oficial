@@ -22,6 +22,25 @@ export const JOURNAL_ENTRY_STATUSES = [
 export type JournalEntryStatus =
   (typeof JOURNAL_ENTRY_STATUSES)[number];
 
+export const JOURNAL_CATEGORIES = [
+  "REFLECTION",
+  "PRAYER",
+  "GRATITUDE",
+  "LEARNING",
+  "PROMISE",
+  "DECISION",
+  "QUESTION",
+  "TESTIMONY",
+] as const;
+
+export type JournalCategory =
+  (typeof JOURNAL_CATEGORIES)[number];
+
+export type JournalOrganizationAttributes = Readonly<{
+  category: JournalCategory | null;
+  isPinned: boolean;
+}>;
+
 export const JOURNAL_SOURCE_TYPES = [
   "FREE",
   "BIBLE",

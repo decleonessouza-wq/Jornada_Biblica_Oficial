@@ -185,6 +185,32 @@ CREATE TABLE personal_journal_entry_tags (
 `);
     },
   },
+  {
+    version: 5,
+    up: async (database) => {
+      await database.execAsync(`
+ALTER TABLE personal_journal_entries
+ADD COLUMN category TEXT NULL
+  CHECK (
+    category IS NULL
+    OR category IN (
+      'REFLECTION',
+      'PRAYER',
+      'GRATITUDE',
+      'LEARNING',
+      'PROMISE',
+      'DECISION',
+      'QUESTION',
+      'TESTIMONY'
+    )
+  );
+
+ALTER TABLE personal_journal_entries
+ADD COLUMN is_pinned INTEGER NOT NULL DEFAULT 0
+  CHECK (is_pinned IN (0, 1));
+`);
+    },
+  },
 ] as const;
 
 export async function getPersonalDatabaseUserVersion(

@@ -1,5 +1,6 @@
 import type { BibleReference } from "../src/domain/bible/bibleReference";
 import {
+  JOURNAL_CATEGORIES,
   JOURNAL_ENTRY_STATUSES,
   JOURNAL_GRATITUDE_MAX_CHARS,
   JOURNAL_REFLECTION_MAX_CHARS,
@@ -7,6 +8,7 @@ import {
   type JournalEntry,
   type JournalEntryId,
   type JournalEntryPlatformAttributes,
+  type JournalOrganizationAttributes,
   type JournalEntryReference,
   type JournalEntryReferenceId,
   type JournalEntryTag,
@@ -28,6 +30,32 @@ describe("Journal domain contracts", () => {
     expect(new Set(JOURNAL_ENTRY_STATUSES).size).toBe(
       JOURNAL_ENTRY_STATUSES.length,
     );
+  });
+
+  it("locks the exact official journal categories without duplicates", () => {
+    expect([...JOURNAL_CATEGORIES]).toEqual([
+      "REFLECTION",
+      "PRAYER",
+      "GRATITUDE",
+      "LEARNING",
+      "PROMISE",
+      "DECISION",
+      "QUESTION",
+      "TESTIMONY",
+    ]);
+    expect(new Set(JOURNAL_CATEGORIES).size).toBe(
+      JOURNAL_CATEGORIES.length,
+    );
+
+    const organization: JournalOrganizationAttributes = {
+      category: "REFLECTION",
+      isPinned: true,
+    };
+
+    expect(organization).toEqual({
+      category: "REFLECTION",
+      isPinned: true,
+    });
   });
 
   it("locks the exact journal source types without duplicates", () => {

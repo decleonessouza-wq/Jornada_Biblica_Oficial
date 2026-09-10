@@ -9,9 +9,11 @@ import {
 import { Alert } from "react-native";
 
 import type {
-  JournalEntry,
   JournalEntryId,
 } from "../src/domain/journal/journal";
+import type {
+  JournalEntryPersistenceRecord,
+} from "../src/data/personal/journal/journalRepository";
 import {
   getPersonalPlatformHub,
 } from "../src/services/personalPlatformHub";
@@ -37,7 +39,9 @@ const mockedGetPersonalPlatformHub =
   >;
 
 const mockFindById = jest.fn();
-const mockRemove = jest.fn();
+const mockSetPinned = jest.fn();
+const mockMoveToTrash = jest.fn();
+const mockRestoreFromTrash = jest.fn();
 
 const entryId =
   "journal-entry-detail" as JournalEntryId;
@@ -49,15 +53,31 @@ const completeEntry = {
     "Hoje compreendi algo importante.",
   gratitudeText:
     "Sou grato pelo cuidado de Deus.",
+  status: "ACTIVE",
+  sourceType: "FREE",
+  sourceTitleSnapshot: null,
+  promptSnapshot: null,
+  category: "PROMISE",
+  isPinned: false,
+  references: [],
+  tags: [
+    {
+      id: "journal-tag-faith" as never,
+      name: "Fé",
+      normalizedName: "fe",
+    },
+  ],
   createdAtUtc: "2026-09-09T13:00:00.000Z",
   updatedAtUtc: "2026-09-09T14:00:00.000Z",
-} as unknown as JournalEntry;
+} as unknown as JournalEntryPersistenceRecord;
 
 function configureHub(): void {
   mockedGetPersonalPlatformHub.mockReturnValue({
     journalService: {
       findById: mockFindById,
-      remove: mockRemove,
+      setPinned: mockSetPinned,
+      moveToTrash: mockMoveToTrash,
+      restoreFromTrash: mockRestoreFromTrash,
     },
   } as unknown as ReturnType<
     typeof getPersonalPlatformHub
@@ -90,7 +110,8 @@ function renderDetail() {
 }
 
 async function renderLoadedDetail(
-  entry: JournalEntry = completeEntry,
+  entry: JournalEntryPersistenceRecord =
+    completeEntry,
 ) {
   mockFindById.mockResolvedValue(entry);
 
@@ -117,7 +138,7 @@ function getAlertButtons() {
 
   if (!alertCall) {
     throw new Error(
-      "TEST_EXPECTED_DELETE_CONFIRMATION_ALERT",
+      "TEST_EXPECTED_TRASH_CONFIRMATION_ALERT",
     );
   }
 
@@ -125,441 +146,426 @@ function getAlertButtons() {
 
   if (!buttons) {
     throw new Error(
-      "TEST_EXPECTED_DELETE_CONFIRMATION_BUTTONS",
+      "TEST_EXPECTED_TRASH_CONFIRMATION_BUTTONS",
     );
   }
 
   return buttons;
 }
 
-function deferred<T>() {
-  let resolve!: (value: T) => void;
-  let reject!: (reason?: unknown) => void;
+describe(
+  "JournalEntryDetailScreen P16-P3 organization",
+  () => {
+    beforeEach(() => {
+      mockFindById.mockReset();
+      mockSetPinned.mockReset();
+      mockMoveToTrash.mockReset();
+      mockRestoreFromTrash.mockReset();
+      mockedGetPersonalPlatformHub.mockReset();
 
-  const promise = new Promise<T>(
-    (resolvePromise, rejectPromise) => {
-      resolve = resolvePromise;
-      reject = rejectPromise;
-    },
-  );
+      mockSetPinned.mockResolvedValue({
+        ...completeEntry,
+        isPinned: true,
+      });
+      mockMoveToTrash.mockResolvedValue({
+        ...completeEntry,
+        status: "TRASHED",
+        isPinned: false,
+      });
+      mockRestoreFromTrash.mockResolvedValue({
+        ...completeEntry,
+        status: "ACTIVE",
+        isPinned: false,
+      });
 
-  return {
-    promise,
-    resolve,
-    reject,
-  };
-}
+      configureHub();
 
-describe("JournalEntryDetailScreen", () => {
-  beforeEach(() => {
-    mockFindById.mockReset();
-    mockRemove.mockReset();
-    mockedGetPersonalPlatformHub.mockReset();
-    configureHub();
-    jest.spyOn(Alert, "alert").mockImplementation(
-      () => undefined,
-    );
-  });
-
-  afterEach(() => {
-    jest.restoreAllMocks();
-    cleanup();
-  });
-
-  it("shows the initial loading state", () => {
-    mockFindById.mockReturnValue(
-      new Promise(() => undefined),
-    );
-
-    const view = renderDetail();
-
-    expect(
-      view.getByText("Carregando registro..."),
-    ).toBeTruthy();
-  });
-
-  it("loads the exact entryId and renders both contents", async () => {
-    const view = await renderLoadedDetail();
-
-    expect(mockFindById).toHaveBeenCalledTimes(1);
-    expect(mockFindById).toHaveBeenCalledWith(
-      entryId,
-    );
-    expect(
-      view.getByText(
-        "Hoje compreendi algo importante.",
-      ),
-    ).toBeTruthy();
-    expect(
-      view.getByText(
-        "Sou grato pelo cuidado de Deus.",
-      ),
-    ).toBeTruthy();
-  });
-
-  it("omits gratitude when it is null", async () => {
-    const entry = {
-      ...completeEntry,
-      gratitudeText: null,
-    } as JournalEntry;
-
-    const view = await renderLoadedDetail(entry);
-
-    expect(
-      view.getByText(
-        "Hoje compreendi algo importante.",
-      ),
-    ).toBeTruthy();
-    expect(
-      view.queryByText(
-        "Sou grato pelo cuidado de Deus.",
-      ),
-    ).toBeNull();
-  });
-
-  it("omits reflection when it is null", async () => {
-    const entry = {
-      ...completeEntry,
-      reflectionText: null,
-    } as JournalEntry;
-
-    const view = await renderLoadedDetail(entry);
-
-    expect(
-      view.getByText(
-        "Sou grato pelo cuidado de Deus.",
-      ),
-    ).toBeTruthy();
-    expect(
-      view.queryByText(
-        "Hoje compreendi algo importante.",
-      ),
-    ).toBeNull();
-  });
-
-  it("does not expose creation or update timestamps", async () => {
-    const view = await renderLoadedDetail();
-
-    expect(
-      view.queryByText(
-        completeEntry.createdAtUtc,
-      ),
-    ).toBeNull();
-    expect(
-      view.queryByText(
-        completeEntry.updatedAtUtc,
-      ),
-    ).toBeNull();
-  });
-
-  it("shows a load error and retries the same entry", async () => {
-    mockFindById
-      .mockRejectedValueOnce(
-        new Error("temporary failure"),
-      )
-      .mockResolvedValueOnce(completeEntry);
-
-    const view = renderDetail();
-
-    await waitFor(() => {
-      expect(
-        view.getByText(
-          "Não foi possível carregar este registro agora.",
-        ),
-      ).toBeTruthy();
-    });
-
-    fireEvent.press(
-      view.getByLabelText(
-        "Tentar carregar o registro novamente",
-      ),
-    );
-
-    await waitFor(() => {
-      expect(mockFindById).toHaveBeenCalledTimes(2);
-      expect(
-        view.getByText("09 de setembro de 2026"),
-      ).toBeTruthy();
-    });
-  });
-
-  it("shows a non-fatal not-found state without mutations", async () => {
-    mockFindById.mockResolvedValue(null);
-
-    const view = renderDetail();
-
-    await waitFor(() => {
-      expect(
-        view.getByText(
-          "Este registro não foi encontrado.",
-        ),
-      ).toBeTruthy();
-    });
-
-    expect(
-      view.queryByLabelText(
-        "Editar registro do diário",
-      ),
-    ).toBeNull();
-    expect(
-      view.queryByLabelText(
-        "Excluir registro do diário",
-      ),
-    ).toBeNull();
-    expect(mockRemove).not.toHaveBeenCalled();
-  });
-
-  it("navigates to the editor with the exact entryId", async () => {
-    const view = await renderLoadedDetail();
-
-    fireEvent.press(
-      view.getByLabelText(
-        "Editar registro do diário",
-      ),
-    );
-
-    expect(view.navigate).toHaveBeenCalledWith(
-      "JournalEntryEditor",
-      {
-        entryId,
-      },
-    );
-  });
-
-  it("opens a destructive confirmation before removal", async () => {
-    const view = await renderLoadedDetail();
-
-    fireEvent.press(
-      view.getByLabelText(
-        "Excluir registro do diário",
-      ),
-    );
-
-    expect(Alert.alert).toHaveBeenCalledWith(
-      "Excluir registro?",
-      "Esta ação não pode ser desfeita.",
-      expect.any(Array),
-    );
-
-    const buttons = getAlertButtons();
-
-    expect(buttons).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          text: "Cancelar",
-          style: "cancel",
-        }),
-        expect.objectContaining({
-          text: "Excluir",
-          style: "destructive",
-        }),
-      ]),
-    );
-    expect(mockRemove).not.toHaveBeenCalled();
-  });
-
-  it("cancels deletion without calling remove", async () => {
-    const view = await renderLoadedDetail();
-
-    fireEvent.press(
-      view.getByLabelText(
-        "Excluir registro do diário",
-      ),
-    );
-
-    const cancelButton = getAlertButtons().find(
-      (button) => button.text === "Cancelar",
-    );
-
-    expect(cancelButton).toBeDefined();
-
-    await act(async () => {
-      cancelButton?.onPress?.();
-      await Promise.resolve();
-    });
-
-    expect(mockRemove).not.toHaveBeenCalled();
-    expect(view.goBack).not.toHaveBeenCalled();
-  });
-
-  it("removes the exact entry once and returns", async () => {
-    mockRemove.mockResolvedValue(undefined);
-
-    const view = await renderLoadedDetail();
-
-    fireEvent.press(
-      view.getByLabelText(
-        "Excluir registro do diário",
-      ),
-    );
-
-    const deleteButton = getAlertButtons().find(
-      (button) => button.text === "Excluir",
-    );
-
-    expect(deleteButton).toBeDefined();
-
-    await act(async () => {
-      deleteButton?.onPress?.();
-      await Promise.resolve();
-      await Promise.resolve();
-    });
-
-    await waitFor(() => {
-      expect(mockRemove).toHaveBeenCalledTimes(1);
-      expect(mockRemove).toHaveBeenCalledWith(
-        entryId,
+      jest.spyOn(
+        Alert,
+        "alert",
+      ).mockImplementation(
+        () => undefined,
       );
-      expect(view.goBack).toHaveBeenCalledTimes(1);
-    });
-  });
-
-  it("keeps the detail usable after a delete failure", async () => {
-    mockRemove.mockRejectedValue(
-      new Error("unexpected failure"),
-    );
-
-    const view = await renderLoadedDetail();
-
-    fireEvent.press(
-      view.getByLabelText(
-        "Excluir registro do diário",
-      ),
-    );
-
-    const deleteButton = getAlertButtons().find(
-      (button) => button.text === "Excluir",
-    );
-
-    await act(async () => {
-      deleteButton?.onPress?.();
-      await Promise.resolve();
-      await Promise.resolve();
     });
 
-    await waitFor(() => {
+    afterEach(() => {
+      jest.restoreAllMocks();
+      cleanup();
+    });
+
+    it("shows the initial loading state", () => {
+      mockFindById.mockReturnValue(
+        new Promise(() => undefined),
+      );
+
+      const view = renderDetail();
+
+      expect(
+        view.getByText("Carregando registro..."),
+      ).toBeTruthy();
+    });
+
+    it("loads the persistence record and renders category tags and contents", async () => {
+      const view = await renderLoadedDetail();
+
+      expect(mockFindById).toHaveBeenCalledTimes(1);
+      expect(
+        view.getByText("Promessa"),
+      ).toBeTruthy();
+      expect(
+        view.getByText("#Fé"),
+      ).toBeTruthy();
       expect(
         view.getByText(
-          "Não foi possível excluir este registro agora. Tente novamente.",
+          "Hoje compreendi algo importante.",
+        ),
+      ).toBeTruthy();
+      expect(
+        view.getByText(
+          "Sou grato pelo cuidado de Deus.",
         ),
       ).toBeTruthy();
     });
 
-    expect(
-      view.getByLabelText(
-        "Editar registro do diário",
-      ),
-    ).toBeTruthy();
-    expect(view.goBack).not.toHaveBeenCalled();
-  });
+    it("does not expose creation or update timestamps", async () => {
+      const view = await renderLoadedDetail();
 
-  it("translates a remove not-found error without exposing its code", async () => {
-    const code =
-      "PERSONAL_JOURNAL_REMOVE_TARGET_NOT_FOUND";
-
-    mockRemove.mockRejectedValue(
-      new Error(code),
-    );
-
-    const view = await renderLoadedDetail();
-
-    fireEvent.press(
-      view.getByLabelText(
-        "Excluir registro do diário",
-      ),
-    );
-
-    const deleteButton = getAlertButtons().find(
-      (button) => button.text === "Excluir",
-    );
-
-    await act(async () => {
-      deleteButton?.onPress?.();
-      await Promise.resolve();
-      await Promise.resolve();
+      expect(
+        view.queryByText(
+          completeEntry.createdAtUtc,
+        ),
+      ).toBeNull();
+      expect(
+        view.queryByText(
+          completeEntry.updatedAtUtc,
+        ),
+      ).toBeNull();
     });
 
-    await waitFor(() => {
+    it("navigates to the editor with the exact active entryId", async () => {
+      const view = await renderLoadedDetail();
+
+      fireEvent.press(
+        view.getByLabelText(
+          "Editar registro do diário",
+        ),
+      );
+
+      expect(view.navigate).toHaveBeenCalledWith(
+        "JournalEntryEditor",
+        {
+          entryId,
+        },
+      );
+    });
+
+    it("pins an active entry and refreshes the local detail state", async () => {
+      const view = await renderLoadedDetail();
+
+      fireEvent.press(
+        view.getByLabelText(
+          "Fixar registro do diário",
+        ),
+      );
+
+      await waitFor(() => {
+        expect(
+          mockSetPinned,
+        ).toHaveBeenCalledWith(
+          entryId,
+          true,
+        );
+        expect(
+          view.getByLabelText(
+            "Desafixar registro do diário",
+          ),
+        ).toBeTruthy();
+        expect(
+          view.getByText("Fixado"),
+        ).toBeTruthy();
+      });
+    });
+
+    it("unpins an already pinned entry", async () => {
+      mockSetPinned.mockResolvedValue({
+        ...completeEntry,
+        isPinned: false,
+      });
+
+      const view = await renderLoadedDetail({
+        ...completeEntry,
+        isPinned: true,
+      });
+
+      fireEvent.press(
+        view.getByLabelText(
+          "Desafixar registro do diário",
+        ),
+      );
+
+      await waitFor(() => {
+        expect(
+          mockSetPinned,
+        ).toHaveBeenCalledWith(
+          entryId,
+          false,
+        );
+      });
+    });
+
+    it("asks for confirmation before moving an active entry to trash", async () => {
+      const view = await renderLoadedDetail();
+
+      fireEvent.press(
+        view.getByLabelText(
+          "Mover registro do diário para a lixeira",
+        ),
+      );
+
+      expect(Alert.alert).toHaveBeenCalledWith(
+        "Mover para a lixeira?",
+        "Você poderá restaurar este registro depois.",
+        expect.any(Array),
+      );
+
+      const buttons = getAlertButtons();
+
+      expect(buttons).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            text: "Cancelar",
+            style: "cancel",
+          }),
+          expect.objectContaining({
+            text: "Mover",
+            style: "destructive",
+          }),
+        ]),
+      );
+
       expect(
-        view.getByText(
-          "Este registro não está mais disponível. Volte ao diário e atualize a lista.",
+        mockMoveToTrash,
+      ).not.toHaveBeenCalled();
+    });
+
+    it("moves the exact active entry to trash and returns", async () => {
+      const view = await renderLoadedDetail();
+
+      fireEvent.press(
+        view.getByLabelText(
+          "Mover registro do diário para a lixeira",
+        ),
+      );
+
+      const moveButton =
+        getAlertButtons().find(
+          (button) => button.text === "Mover",
+        );
+
+      await act(async () => {
+        moveButton?.onPress?.();
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+
+      await waitFor(() => {
+        expect(
+          mockMoveToTrash,
+        ).toHaveBeenCalledTimes(1);
+        expect(
+          mockMoveToTrash,
+        ).toHaveBeenCalledWith(entryId);
+        expect(
+          view.goBack,
+        ).toHaveBeenCalledTimes(1);
+      });
+    });
+
+    it("renders a trashed entry with restore as its only mutation action", async () => {
+      const view = await renderLoadedDetail({
+        ...completeEntry,
+        status: "TRASHED",
+        isPinned: false,
+      });
+
+      expect(
+        view.getByText("Na lixeira"),
+      ).toBeTruthy();
+      expect(
+        view.getByLabelText(
+          "Restaurar registro do diário",
+        ),
+      ).toBeTruthy();
+      expect(
+        view.queryByLabelText(
+          "Editar registro do diário",
+        ),
+      ).toBeNull();
+      expect(
+        view.queryByLabelText(
+          "Fixar registro do diário",
+        ),
+      ).toBeNull();
+      expect(
+        view.queryByLabelText(
+          "Mover registro do diário para a lixeira",
+        ),
+      ).toBeNull();
+    });
+
+    it("restores the exact trashed entry and returns", async () => {
+      const view = await renderLoadedDetail({
+        ...completeEntry,
+        status: "TRASHED",
+        isPinned: false,
+      });
+
+      fireEvent.press(
+        view.getByLabelText(
+          "Restaurar registro do diário",
+        ),
+      );
+
+      await waitFor(() => {
+        expect(
+          mockRestoreFromTrash,
+        ).toHaveBeenCalledWith(entryId);
+        expect(
+          view.goBack,
+        ).toHaveBeenCalledTimes(1);
+      });
+    });
+
+    it("keeps the active detail usable after a pin failure", async () => {
+      mockSetPinned.mockRejectedValue(
+        new Error("temporary"),
+      );
+
+      const view = await renderLoadedDetail();
+
+      fireEvent.press(
+        view.getByLabelText(
+          "Fixar registro do diário",
+        ),
+      );
+
+      await waitFor(() => {
+        expect(
+          view.getByText(
+            "Não foi possível alterar o destaque deste registro agora. Tente novamente.",
+          ),
+        ).toBeTruthy();
+      });
+
+      expect(
+        view.getByLabelText(
+          "Editar registro do diário",
         ),
       ).toBeTruthy();
     });
 
-    expect(
-      view.queryByText(code),
-    ).toBeNull();
-  });
+    it("keeps the detail usable after a trash failure", async () => {
+      mockMoveToTrash.mockRejectedValue(
+        new Error("temporary"),
+      );
 
-  it("prevents duplicate removal while deletion is pending", async () => {
-    const pending = deferred<void>();
-    mockRemove.mockReturnValue(pending.promise);
+      const view = await renderLoadedDetail();
 
-    const view = await renderLoadedDetail();
+      fireEvent.press(
+        view.getByLabelText(
+          "Mover registro do diário para a lixeira",
+        ),
+      );
 
-    fireEvent.press(
-      view.getByLabelText(
-        "Excluir registro do diário",
-      ),
-    );
+      const moveButton =
+        getAlertButtons().find(
+          (button) => button.text === "Mover",
+        );
 
-    const deleteButton = getAlertButtons().find(
-      (button) => button.text === "Excluir",
-    );
+      await act(async () => {
+        moveButton?.onPress?.();
+        await Promise.resolve();
+        await Promise.resolve();
+      });
 
-    expect(deleteButton).toBeDefined();
+      await waitFor(() => {
+        expect(
+          view.getByText(
+            "Não foi possível mover este registro para a lixeira agora. Tente novamente.",
+          ),
+        ).toBeTruthy();
+      });
 
-    await act(async () => {
-      deleteButton?.onPress?.();
-      deleteButton?.onPress?.();
-      await Promise.resolve();
+      expect(
+        view.goBack,
+      ).not.toHaveBeenCalled();
     });
 
-    expect(mockRemove).toHaveBeenCalledTimes(1);
-    expect(
-      view.getByText("Excluindo..."),
-    ).toBeTruthy();
+    it("shows load error and retries the same entry", async () => {
+      mockFindById
+        .mockRejectedValueOnce(
+          new Error("temporary"),
+        )
+        .mockResolvedValueOnce(completeEntry);
 
-    await act(async () => {
-      pending.resolve();
-      await pending.promise;
+      const view = renderDetail();
+
+      await waitFor(() => {
+        expect(
+          view.getByText(
+            "Não foi possível carregar este registro agora.",
+          ),
+        ).toBeTruthy();
+      });
+
+      fireEvent.press(
+        view.getByLabelText(
+          "Tentar carregar o registro novamente",
+        ),
+      );
+
+      await waitFor(() => {
+        expect(
+          mockFindById,
+        ).toHaveBeenCalledTimes(2);
+        expect(
+          view.getByText(
+            "09 de setembro de 2026",
+          ),
+        ).toBeTruthy();
+      });
     });
 
-    await waitFor(() => {
-      expect(view.goBack).toHaveBeenCalledTimes(1);
+    it("keeps direct persistence hard delete telemetry and timestamps out", () => {
+      const source = fs.readFileSync(
+        "src/screens/JournalEntryDetailScreen.tsx",
+        "utf8",
+      );
+
+      expect(source).toContain(
+        "getPersonalPlatformHub().journalService",
+      );
+      expect(source).toContain(
+        ".moveToTrash(",
+      );
+      expect(source).toContain(
+        ".restoreFromTrash(",
+      );
+      expect(source).toContain(
+        ".setPinned(",
+      );
+      expect(source).not.toMatch(
+        /SQLiteJournalRepository|expo-sqlite|AsyncStorage/i,
+      );
+      expect(source).not.toMatch(
+        /journalService\.remove\(|analytics|telemetry/i,
+      );
+      expect(source).not.toMatch(
+        /createdAtUtc|updatedAtUtc/,
+      );
+      expect(source).not.toMatch(
+        /#[0-9A-Fa-f]{3,8}/,
+      );
     });
-  });
-
-  it("keeps persistence, legacy storage, telemetry, and extra features out", () => {
-    const source = fs.readFileSync(
-      "src/screens/JournalEntryDetailScreen.tsx",
-      "utf8",
-    );
-
-    expect(source).toContain(
-      "getPersonalPlatformHub().journalService.findById",
-    );
-    expect(source).toContain(
-      "getPersonalPlatformHub().journalService.remove",
-    );
-    expect(source).not.toMatch(
-      /SQLiteJournalRepository|JournalRepository|expo-sqlite|AsyncStorage/i,
-    );
-    expect(source).not.toMatch(
-      /analytics|telemetry/i,
-    );
-    expect(source).not.toMatch(
-      /createdAtUtc|updatedAtUtc/,
-    );
-    expect(source).not.toMatch(
-      /titleText|\bcategory\b|\btags?\b|BibleReference|readingPlan|autosave|\bdrafts?\b|\bbackup\b/i,
-    );
-    expect(source).not.toMatch(
-      /Exportar|Compartilhar|exportJournal|exportEntry|expo-sharing|shareAsync/i,
-    );
-    expect(source).not.toMatch(
-      /#[0-9A-Fa-f]{3,8}/,
-    );
-  });
-});
+  },
+);

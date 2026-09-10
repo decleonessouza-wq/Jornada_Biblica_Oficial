@@ -3,6 +3,7 @@ import type {
   JournalEntryId,
   JournalEntryPlatformAttributes,
   JournalEntryReference,
+  JournalOrganizationAttributes,
   JournalTag,
 } from "../../../domain/journal/journal";
 import type {
@@ -12,6 +13,7 @@ import type {
 export type JournalEntryPersistenceRecord =
   JournalEntry &
   JournalEntryPlatformAttributes &
+  JournalOrganizationAttributes &
   Readonly<{
     references: readonly JournalEntryReference[];
     tags: readonly JournalTag[];
@@ -31,6 +33,12 @@ export interface JournalRepository {
   listByDate(
     entryDate: PersonalLocalDate,
   ): Promise<readonly JournalEntryPersistenceRecord[]>;
+
+  listTags(): Promise<readonly JournalTag[]>;
+
+  findTagByNormalizedName(
+    normalizedName: string,
+  ): Promise<JournalTag | null>;
 
   create(
     entry: JournalEntry | JournalEntryPersistenceRecord,

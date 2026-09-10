@@ -14,7 +14,12 @@ import {
   View,
 } from "react-native";
 
-import type { JournalEntry } from "../domain/journal/journal";
+import type {
+  JournalCategory,
+} from "../domain/journal/journal";
+import type {
+  JournalEntryPersistenceRecord,
+} from "../data/personal/journal/journalRepository";
 import type { JournalStackScreenProps } from "../navigation/types";
 import { getPersonalPlatformHub } from "../services/personalPlatformHub";
 import { colors } from "../theme/colors";
@@ -27,6 +32,26 @@ type LoadStatus =
   | "ready"
   | "error"
   | "not-found";
+
+type ActionBusy =
+  | "pin"
+  | "trash"
+  | "restore"
+  | null;
+
+const CATEGORY_LABELS: Record<
+  JournalCategory,
+  string
+> = {
+  REFLECTION: "Reflexão",
+  PRAYER: "Oração",
+  GRATITUDE: "Gratidão",
+  LEARNING: "Aprendizado",
+  PROMISE: "Promessa",
+  DECISION: "Decisão",
+  QUESTION: "Pergunta",
+  TESTIMONY: "Testemunho",
+};
 
 const MONTH_NAMES = [
   "janeiro",
@@ -71,26 +96,25 @@ function formatEntryDate(entryDate: string): string {
   );
 }
 
-function getDeleteErrorMessage(
-  error: unknown,
+function getActionErrorMessage(
+  action: Exclude<ActionBusy, null>,
 ): string {
-  const code =
-    error instanceof Error
-      ? error.message
-      : "";
-
-  if (
-    code ===
-    "PERSONAL_JOURNAL_REMOVE_TARGET_NOT_FOUND"
-  ) {
+  if (action === "pin") {
     return (
-      "Este registro não está mais disponível. " +
-      "Volte ao diário e atualize a lista."
+      "Não foi possível alterar o destaque deste registro agora. " +
+      "Tente novamente."
+    );
+  }
+
+  if (action === "restore") {
+    return (
+      "Não foi possível restaurar este registro agora. " +
+      "Tente novamente."
     );
   }
 
   return (
-    "Não foi possível excluir este registro agora. " +
+    "Não foi possível mover este registro para a lixeira agora. " +
     "Tente novamente."
   );
 }
@@ -101,20 +125,24 @@ export default function JournalEntryDetailScreen({
 }: JournalEntryDetailScreenProps) {
   const { entryId } = route.params;
   const loadGenerationRef = useRef(0);
-  const deleteLockRef = useRef(false);
+  const actionLockRef = useRef(false);
 
   const [entry, setEntry] =
-    useState<JournalEntry | null>(null);
+    useState<JournalEntryPersistenceRecord | null>(
+      null,
+    );
   const [loadStatus, setLoadStatus] =
     useState<LoadStatus>("loading");
-  const [deleting, setDeleting] = useState(false);
-  const [deleteMessage, setDeleteMessage] =
+  const [actionBusy, setActionBusy] =
+    useState<ActionBusy>(null);
+  const [actionMessage, setActionMessage] =
     useState<string | null>(null);
 
   const loadEntry = useCallback(async () => {
     const generation = ++loadGenerationRef.current;
+
     setLoadStatus("loading");
-    setDeleteMessage(null);
+    setActionMessage(null);
 
     try {
       const nextEntry =
@@ -126,7 +154,10 @@ export default function JournalEntryDetailScreen({
         return;
       }
 
-      if (nextEntry === null) {
+      if (
+        nextEntry === null ||
+        nextEntry.status === "DRAFT"
+      ) {
         setEntry(null);
         setLoadStatus("not-found");
         return;
@@ -153,58 +184,132 @@ export default function JournalEntryDetailScreen({
   }, [loadEntry]);
 
   const editEntry = useCallback(() => {
-    navigation.navigate("JournalEntryEditor", {
-      entryId,
-    });
-  }, [entryId, navigation]);
-
-  const removeEntry = useCallback(async () => {
-    if (deleteLockRef.current) {
+    if (entry?.status !== "ACTIVE") {
       return;
     }
 
-    deleteLockRef.current = true;
-    setDeleting(true);
-    setDeleteMessage(null);
+    navigation.navigate("JournalEntryEditor", {
+      entryId,
+    });
+  }, [entry, entryId, navigation]);
+
+  const togglePinned = useCallback(async () => {
+    if (
+      actionLockRef.current ||
+      entry?.status !== "ACTIVE"
+    ) {
+      return;
+    }
+
+    actionLockRef.current = true;
+    setActionBusy("pin");
+    setActionMessage(null);
 
     try {
-      await getPersonalPlatformHub().journalService.remove(
-        entryId,
-      );
-      navigation.goBack();
-    } catch (error) {
-      setDeleteMessage(
-        getDeleteErrorMessage(error),
+      const updated =
+        await getPersonalPlatformHub().journalService.setPinned(
+          entryId,
+          !entry.isPinned,
+        );
+
+      setEntry(updated);
+    } catch {
+      setActionMessage(
+        getActionErrorMessage("pin"),
       );
     } finally {
-      deleteLockRef.current = false;
-      setDeleting(false);
+      actionLockRef.current = false;
+      setActionBusy(null);
     }
-  }, [entryId, navigation]);
+  }, [entry, entryId]);
 
-  const requestDelete = useCallback(() => {
-    if (deleteLockRef.current || deleting) {
+  const moveEntryToTrash =
+    useCallback(async () => {
+      if (
+        actionLockRef.current ||
+        entry?.status !== "ACTIVE"
+      ) {
+        return;
+      }
+
+      actionLockRef.current = true;
+      setActionBusy("trash");
+      setActionMessage(null);
+
+      try {
+        await getPersonalPlatformHub().journalService.moveToTrash(
+          entryId,
+        );
+
+        navigation.goBack();
+      } catch {
+        setActionMessage(
+          getActionErrorMessage("trash"),
+        );
+      } finally {
+        actionLockRef.current = false;
+        setActionBusy(null);
+      }
+    }, [entry, entryId, navigation]);
+
+  const requestTrash = useCallback(() => {
+    if (
+      actionLockRef.current ||
+      actionBusy !== null ||
+      entry?.status !== "ACTIVE"
+    ) {
       return;
     }
 
     Alert.alert(
-      "Excluir registro?",
-      "Esta ação não pode ser desfeita.",
+      "Mover para a lixeira?",
+      "Você poderá restaurar este registro depois.",
       [
         {
           text: "Cancelar",
           style: "cancel",
         },
         {
-          text: "Excluir",
+          text: "Mover",
           style: "destructive",
           onPress: () => {
-            void removeEntry();
+            void moveEntryToTrash();
           },
         },
       ],
     );
-  }, [deleting, removeEntry]);
+  }, [actionBusy, entry, moveEntryToTrash]);
+
+  const restoreEntry = useCallback(async () => {
+    if (
+      actionLockRef.current ||
+      entry?.status !== "TRASHED"
+    ) {
+      return;
+    }
+
+    actionLockRef.current = true;
+    setActionBusy("restore");
+    setActionMessage(null);
+
+    try {
+      await getPersonalPlatformHub().journalService.restoreFromTrash(
+        entryId,
+      );
+
+      navigation.goBack();
+    } catch {
+      setActionMessage(
+        getActionErrorMessage("restore"),
+      );
+    } finally {
+      actionLockRef.current = false;
+      setActionBusy(null);
+    }
+  }, [entry, entryId, navigation]);
+
+  const isBusy = actionBusy !== null;
+  const isTrashed = entry?.status === "TRASHED";
 
   return (
     <View style={styles.screen}>
@@ -216,11 +321,14 @@ export default function JournalEntryDetailScreen({
         <View style={styles.header}>
           <Text style={styles.eyebrow}>DIÁRIO</Text>
           <Text style={styles.title}>
-            Registro do dia
+            {isTrashed
+              ? "Registro na lixeira"
+              : "Registro do dia"}
           </Text>
           <Text style={styles.subtitle}>
-            Releia o que foi importante e preserve essa
-            lembrança.
+            {isTrashed
+              ? "Este registro está guardado na lixeira e pode ser restaurado."
+              : "Releia o que foi importante e preserve essa lembrança."}
           </Text>
         </View>
 
@@ -276,9 +384,63 @@ export default function JournalEntryDetailScreen({
         {loadStatus === "ready" && entry !== null && (
           <>
             <View style={styles.entryCard}>
-              <Text style={styles.entryDate}>
-                {formatEntryDate(entry.entryDate)}
-              </Text>
+              <View style={styles.entryHeading}>
+                <Text style={styles.entryDate}>
+                  {formatEntryDate(entry.entryDate)}
+                </Text>
+
+                {entry.status === "TRASHED" && (
+                  <View style={styles.trashBadge}>
+                    <Text style={styles.trashBadgeText}>
+                      Na lixeira
+                    </Text>
+                  </View>
+                )}
+              </View>
+
+              {(entry.category !== null ||
+                entry.isPinned) && (
+                <View style={styles.metaRow}>
+                  {entry.category !== null && (
+                    <View style={styles.categoryBadge}>
+                      <Text
+                        style={styles.categoryBadgeText}
+                      >
+                        {
+                          CATEGORY_LABELS[
+                            entry.category
+                          ]
+                        }
+                      </Text>
+                    </View>
+                  )}
+
+                  {entry.isPinned && (
+                    <View style={styles.pinnedBadge}>
+                      <Text
+                        style={styles.pinnedBadgeText}
+                      >
+                        Fixado
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              )}
+
+              {entry.tags.length > 0 && (
+                <View style={styles.tagsRow}>
+                  {entry.tags.map((tag) => (
+                    <View
+                      key={tag.id}
+                      style={styles.tagChip}
+                    >
+                      <Text style={styles.tagText}>
+                        #{tag.name}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              )}
 
               {entry.reflectionText !== null && (
                 <View style={styles.entrySection}>
@@ -303,64 +465,128 @@ export default function JournalEntryDetailScreen({
               )}
             </View>
 
-            {deleteMessage !== null && (
+            {actionMessage !== null && (
               <View
                 accessibilityRole="alert"
                 style={styles.messageCard}
               >
                 <Text style={styles.messageText}>
-                  {deleteMessage}
+                  {actionMessage}
                 </Text>
               </View>
             )}
 
-            <View style={styles.actions}>
+            {entry.status === "ACTIVE" ? (
+              <View style={styles.actions}>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Editar registro do diário"
+                  disabled={isBusy}
+                  onPress={editEntry}
+                  style={({ pressed }) => [
+                    styles.primaryButton,
+                    isBusy &&
+                      styles.buttonDisabled,
+                    pressed &&
+                      !isBusy &&
+                      styles.pressed,
+                  ]}
+                >
+                  <Text
+                    style={styles.primaryButtonText}
+                  >
+                    Editar
+                  </Text>
+                </Pressable>
+
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={
+                    entry.isPinned
+                      ? "Desafixar registro do diário"
+                      : "Fixar registro do diário"
+                  }
+                  accessibilityState={{
+                    disabled: isBusy,
+                    busy: actionBusy === "pin",
+                  }}
+                  disabled={isBusy}
+                  onPress={() => {
+                    void togglePinned();
+                  }}
+                  style={({ pressed }) => [
+                    styles.secondaryButton,
+                    isBusy &&
+                      styles.buttonDisabled,
+                    pressed &&
+                      !isBusy &&
+                      styles.pressed,
+                  ]}
+                >
+                  <Text
+                    style={styles.secondaryButtonText}
+                  >
+                    {actionBusy === "pin"
+                      ? "Atualizando..."
+                      : entry.isPinned
+                        ? "Desafixar"
+                        : "Fixar"}
+                  </Text>
+                </Pressable>
+
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Mover registro do diário para a lixeira"
+                  accessibilityState={{
+                    disabled: isBusy,
+                    busy: actionBusy === "trash",
+                  }}
+                  disabled={isBusy}
+                  onPress={requestTrash}
+                  style={({ pressed }) => [
+                    styles.trashButton,
+                    isBusy &&
+                      styles.buttonDisabled,
+                    pressed &&
+                      !isBusy &&
+                      styles.pressed,
+                  ]}
+                >
+                  <Text style={styles.trashButtonText}>
+                    {actionBusy === "trash"
+                      ? "Movendo..."
+                      : "Mover para a lixeira"}
+                  </Text>
+                </Pressable>
+              </View>
+            ) : (
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel="Editar registro do diário"
-                disabled={deleting}
-                onPress={editEntry}
+                accessibilityLabel="Restaurar registro do diário"
+                accessibilityState={{
+                  disabled: isBusy,
+                  busy: actionBusy === "restore",
+                }}
+                disabled={isBusy}
+                onPress={() => {
+                  void restoreEntry();
+                }}
                 style={({ pressed }) => [
                   styles.primaryButton,
-                  deleting &&
+                  isBusy &&
                     styles.buttonDisabled,
                   pressed &&
-                    !deleting &&
+                    !isBusy &&
                     styles.pressed,
                 ]}
               >
-                <Text
-                  style={styles.primaryButtonText}
-                >
-                  Editar
+                <Text style={styles.primaryButtonText}>
+                  {actionBusy === "restore"
+                    ? "Restaurando..."
+                    : "Restaurar registro"}
                 </Text>
               </Pressable>
-
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Excluir registro do diário"
-                accessibilityState={{
-                  disabled: deleting,
-                  busy: deleting,
-                }}
-                disabled={deleting}
-                onPress={requestDelete}
-                style={({ pressed }) => [
-                  styles.deleteButton,
-                  deleting &&
-                    styles.buttonDisabled,
-                  pressed &&
-                    !deleting &&
-                    styles.pressed,
-                ]}
-              >
-                <Text style={styles.deleteButtonText}>
-                  {deleting
-                    ? "Excluindo..."
-                    : "Excluir registro"}
-                </Text>
-              </Pressable>
-            </View>
+            )}
           </>
         )}
       </ScrollView>
@@ -453,10 +679,74 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     paddingVertical: 20,
   },
+  entryHeading: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    flexWrap: "wrap",
+    gap: 8,
+  },
   entryDate: {
     color: colors.textStrong,
     fontSize: 18,
     fontWeight: "800",
+  },
+  metaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  categoryBadge: {
+    borderRadius: 999,
+    backgroundColor: colors.surfaceHighlight,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  categoryBadgeText: {
+    color: colors.secondaryPressed,
+    fontSize: 11,
+    fontWeight: "800",
+  },
+  pinnedBadge: {
+    borderRadius: 999,
+    backgroundColor: colors.surfaceAlt,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  pinnedBadgeText: {
+    color: colors.primary,
+    fontSize: 11,
+    fontWeight: "800",
+  },
+  trashBadge: {
+    borderRadius: 999,
+    backgroundColor: colors.surfaceAlt,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  trashBadgeText: {
+    color: colors.danger,
+    fontSize: 11,
+    fontWeight: "800",
+  },
+  tagsRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 7,
+  },
+  tagChip: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 999,
+    backgroundColor: colors.surfaceAlt,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+  },
+  tagText: {
+    color: colors.textMuted,
+    fontSize: 11,
+    fontWeight: "700",
   },
   entrySection: {
     gap: 6,
@@ -475,14 +765,14 @@ const styles = StyleSheet.create({
   },
   messageCard: {
     borderWidth: 1,
-    borderColor: colors.danger,
+    borderColor: colors.warning,
     borderRadius: 14,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surfaceHighlight,
     paddingHorizontal: 14,
     paddingVertical: 12,
   },
   messageText: {
-    color: colors.danger,
+    color: colors.textStrong,
     fontSize: 13,
     lineHeight: 19,
     textAlign: "center",
@@ -504,20 +794,36 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "800",
   },
-  deleteButton: {
+  secondaryButton: {
     alignItems: "center",
     justifyContent: "center",
-    minHeight: 48,
+    minHeight: 46,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    borderRadius: 14,
+    backgroundColor: colors.surface,
+    paddingHorizontal: 18,
+    paddingVertical: 11,
+  },
+  secondaryButtonText: {
+    color: colors.primary,
+    fontSize: 14,
+    fontWeight: "800",
+  },
+  trashButton: {
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 46,
     borderWidth: 1,
     borderColor: colors.danger,
     borderRadius: 14,
     backgroundColor: colors.surface,
     paddingHorizontal: 18,
-    paddingVertical: 12,
+    paddingVertical: 11,
   },
-  deleteButtonText: {
+  trashButtonText: {
     color: colors.danger,
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: "800",
   },
   buttonDisabled: {

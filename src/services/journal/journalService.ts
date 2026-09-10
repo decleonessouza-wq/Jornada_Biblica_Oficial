@@ -1,8 +1,11 @@
 import {
+  JOURNAL_CATEGORIES,
   JOURNAL_GRATITUDE_MAX_CHARS,
   JOURNAL_REFLECTION_MAX_CHARS,
+  type JournalCategory,
   type JournalEntry,
   type JournalEntryId,
+  type JournalTag,
 } from "../../domain/journal/journal";
 import type {
   PersonalCanonicalIdFactory,
@@ -34,6 +37,17 @@ export type CreateJournalDraftInput =
 
 export type UpdateJournalDraftInput =
   UpdateJournalEntryInput;
+
+export type UpdateJournalOrganizationInput = Readonly<{
+  category?: JournalCategory | null;
+  tagNames?: readonly string[];
+  isPinned?: boolean;
+}>;
+
+type NormalizedJournalTagInput = Readonly<{
+  name: string;
+  normalizedName: string;
+}>;
 
 function normalizeOptionalJournalText(
   value: string | null | undefined,
@@ -89,6 +103,80 @@ function normalizeGratitudeText(
   );
 }
 
+function isJournalCategory(
+  value: unknown,
+): value is JournalCategory {
+  return JOURNAL_CATEGORIES.some(
+    (category) => category === value,
+  );
+}
+
+function normalizeJournalTagName(
+  value: unknown,
+): NormalizedJournalTagInput {
+  if (typeof value !== "string") {
+    throw new Error(
+      "PERSONAL_JOURNAL_TAG_NAME_INVALID",
+    );
+  }
+
+  const name =
+    value.trim().replace(/\s+/g, " ");
+
+  if (name.length === 0) {
+    throw new Error(
+      "PERSONAL_JOURNAL_TAG_NAME_INVALID",
+    );
+  }
+
+  const normalizedName = name
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+
+  if (normalizedName.length === 0) {
+    throw new Error(
+      "PERSONAL_JOURNAL_TAG_NAME_INVALID",
+    );
+  }
+
+  return {
+    name,
+    normalizedName,
+  };
+}
+
+function normalizeJournalTagNames(
+  values: readonly string[],
+): readonly NormalizedJournalTagInput[] {
+  if (!Array.isArray(values)) {
+    throw new Error(
+      "PERSONAL_JOURNAL_TAGS_INVALID",
+    );
+  }
+
+  const byNormalizedName =
+    new Map<string, NormalizedJournalTagInput>();
+
+  for (const value of values) {
+    const normalized =
+      normalizeJournalTagName(value);
+
+    if (
+      !byNormalizedName.has(
+        normalized.normalizedName,
+      )
+    ) {
+      byNormalizedName.set(
+        normalized.normalizedName,
+        normalized,
+      );
+    }
+  }
+
+  return [...byNormalizedName.values()];
+}
+
 export class JournalService {
   constructor(
     private readonly repository: JournalRepository,
@@ -100,7 +188,25 @@ export class JournalService {
   async list(): Promise<
     readonly JournalEntryPersistenceRecord[]
   > {
-    return this.repository.list();
+    const entries = await this.repository.list();
+
+    return entries.filter(
+      (entry) => entry.status !== "TRASHED",
+    );
+  }
+
+  async listTrash(): Promise<
+    readonly JournalEntryPersistenceRecord[]
+  > {
+    const entries = await this.repository.list();
+
+    return entries.filter(
+      (entry) => entry.status === "TRASHED",
+    );
+  }
+
+  async listTags(): Promise<readonly JournalTag[]> {
+    return this.repository.listTags();
   }
 
   async findById(
@@ -120,7 +226,12 @@ export class JournalService {
   ): Promise<
     readonly JournalEntryPersistenceRecord[]
   > {
-    return this.repository.listByDate(entryDate);
+    const entries =
+      await this.repository.listByDate(entryDate);
+
+    return entries.filter(
+      (entry) => entry.status !== "TRASHED",
+    );
   }
 
   getTodayEntryDate(): PersonalLocalDate {
@@ -191,6 +302,8 @@ export class JournalService {
       sourceType: "FREE",
       sourceTitleSnapshot: null,
       promptSnapshot: null,
+      category: null,
+      isPinned: false,
       references: [],
       tags: [],
       createdAtUtc: timestamp,
@@ -358,6 +471,187 @@ export class JournalService {
     await this.repository.update(updatedEntry);
 
     return updatedEntry;
+  }
+
+  async updateOrganization(
+    id: JournalEntryId,
+    input: UpdateJournalOrganizationInput,
+  ): Promise<JournalEntryPersistenceRecord> {
+    const existing =
+      await this.repository.findById(id);
+
+    if (existing === null) {
+      throw new Error(
+        "PERSONAL_JOURNAL_ORGANIZATION_TARGET_NOT_FOUND",
+      );
+    }
+
+    if (existing.status === "TRASHED") {
+      throw new Error(
+        "PERSONAL_JOURNAL_ORGANIZATION_TARGET_TRASHED",
+      );
+    }
+
+    if (
+      input.category !== undefined &&
+      input.category !== null &&
+      !isJournalCategory(input.category)
+    ) {
+      throw new Error(
+        "PERSONAL_JOURNAL_CATEGORY_INVALID",
+      );
+    }
+
+    if (
+      input.isPinned !== undefined &&
+      typeof input.isPinned !== "boolean"
+    ) {
+      throw new Error(
+        "PERSONAL_JOURNAL_IS_PINNED_INVALID",
+      );
+    }
+
+    if (
+      input.isPinned === true &&
+      existing.status !== "ACTIVE"
+    ) {
+      throw new Error(
+        "PERSONAL_JOURNAL_PIN_TARGET_INVALID",
+      );
+    }
+
+    let tags = existing.tags;
+
+    if (input.tagNames !== undefined) {
+      const normalizedInputs =
+        normalizeJournalTagNames(input.tagNames);
+      const resolvedTags: JournalTag[] = [];
+
+      for (const normalized of normalizedInputs) {
+        const existingTag =
+          await this.repository.findTagByNormalizedName(
+            normalized.normalizedName,
+          );
+
+        if (existingTag !== null) {
+          resolvedTags.push(existingTag);
+          continue;
+        }
+
+        resolvedTags.push({
+          id: this.canonicalIdFactory.create(
+            "journal_tag",
+          ),
+          name: normalized.name,
+          normalizedName: normalized.normalizedName,
+        });
+      }
+
+      tags = resolvedTags;
+    }
+
+    const now = this.clock.now();
+    const updatedAtUtc =
+      this.datePolicy.toUtcTimestamp(now);
+
+    const updated: JournalEntryPersistenceRecord = {
+      ...existing,
+      category:
+        input.category === undefined
+          ? existing.category
+          : input.category,
+      isPinned:
+        input.isPinned === undefined
+          ? existing.isPinned
+          : input.isPinned,
+      tags,
+      updatedAtUtc,
+    };
+
+    await this.repository.update(updated);
+
+    return updated;
+  }
+
+  async setPinned(
+    id: JournalEntryId,
+    isPinned: boolean,
+  ): Promise<JournalEntryPersistenceRecord> {
+    return this.updateOrganization(id, {
+      isPinned,
+    });
+  }
+
+  async moveToTrash(
+    id: JournalEntryId,
+  ): Promise<JournalEntryPersistenceRecord> {
+    const existing =
+      await this.repository.findById(id);
+
+    if (existing === null) {
+      throw new Error(
+        "PERSONAL_JOURNAL_TRASH_TARGET_NOT_FOUND",
+      );
+    }
+
+    if (existing.status === "TRASHED") {
+      return existing;
+    }
+
+    if (existing.status !== "ACTIVE") {
+      throw new Error(
+        "PERSONAL_JOURNAL_TRASH_TARGET_INVALID",
+      );
+    }
+
+    const now = this.clock.now();
+    const updatedAtUtc =
+      this.datePolicy.toUtcTimestamp(now);
+
+    const trashed: JournalEntryPersistenceRecord = {
+      ...existing,
+      status: "TRASHED",
+      isPinned: false,
+      updatedAtUtc,
+    };
+
+    await this.repository.update(trashed);
+
+    return trashed;
+  }
+
+  async restoreFromTrash(
+    id: JournalEntryId,
+  ): Promise<JournalEntryPersistenceRecord> {
+    const existing =
+      await this.repository.findById(id);
+
+    if (existing === null) {
+      throw new Error(
+        "PERSONAL_JOURNAL_RESTORE_TARGET_NOT_FOUND",
+      );
+    }
+
+    if (existing.status !== "TRASHED") {
+      throw new Error(
+        "PERSONAL_JOURNAL_RESTORE_TARGET_INVALID",
+      );
+    }
+
+    const now = this.clock.now();
+    const updatedAtUtc =
+      this.datePolicy.toUtcTimestamp(now);
+
+    const restored: JournalEntryPersistenceRecord = {
+      ...existing,
+      status: "ACTIVE",
+      isPinned: false,
+      updatedAtUtc,
+    };
+
+    await this.repository.update(restored);
+
+    return restored;
   }
 
   async remove(

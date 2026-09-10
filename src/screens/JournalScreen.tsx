@@ -16,6 +16,9 @@ import {
 import type {
   JournalEntryPersistenceRecord,
 } from "../data/personal/journal/journalRepository";
+import type {
+  JournalCategory,
+} from "../domain/journal/journal";
 import type { JournalStackScreenProps } from "../navigation/types";
 import { getPersonalPlatformHub } from "../services/personalPlatformHub";
 import { colors } from "../theme/colors";
@@ -28,11 +31,29 @@ type LoadStatus =
   | "ready"
   | "error";
 
+type ViewMode =
+  | "journal"
+  | "trash";
+
 type TimelineSection = Readonly<{
   key: string;
   title: string;
   entries: readonly JournalEntryPersistenceRecord[];
 }>;
+
+const CATEGORY_LABELS: Record<
+  JournalCategory,
+  string
+> = {
+  REFLECTION: "Reflexão",
+  PRAYER: "Oração",
+  GRATITUDE: "Gratidão",
+  LEARNING: "Aprendizado",
+  PROMISE: "Promessa",
+  DECISION: "Decisão",
+  QUESTION: "Pergunta",
+  TESTIMONY: "Testemunho",
+};
 
 const MONTH_NAMES = [
   "janeiro",
@@ -278,6 +299,139 @@ function buildTimeline(
   return sections;
 }
 
+type EntryCardProps = Readonly<{
+  entry: JournalEntryPersistenceRecord;
+  onPress: () => void;
+  trashed?: boolean;
+}>;
+
+function EntryCard({
+  entry,
+  onPress,
+  trashed = false,
+}: EntryCardProps) {
+  const formattedDate =
+    formatEntryDate(entry.entryDate);
+  const isDraft =
+    entry.status === "DRAFT";
+
+  return (
+    <Pressable
+      testID={`journal-entry-${entry.id}`}
+      accessibilityRole="button"
+      accessibilityLabel={
+        trashed
+          ? `Abrir registro na lixeira de ${formattedDate}`
+          : isDraft
+            ? `Continuar rascunho do diário de ${formattedDate}`
+            : `Abrir registro do diário de ${formattedDate}`
+      }
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.entryCard,
+        isDraft && styles.draftCard,
+        trashed && styles.trashCard,
+        pressed && styles.entryCardPressed,
+      ]}
+    >
+      <View style={styles.entryTopLine}>
+        <View style={styles.entryMeta}>
+          <Text style={styles.entryDate}>
+            {formattedDate}
+          </Text>
+
+          {isDraft && (
+            <View style={styles.draftBadge}>
+              <Text style={styles.draftBadgeText}>
+                Rascunho
+              </Text>
+            </View>
+          )}
+
+          {entry.isPinned && !trashed && (
+            <View style={styles.pinnedBadge}>
+              <Text style={styles.pinnedBadgeText}>
+                Fixado
+              </Text>
+            </View>
+          )}
+
+          {trashed && (
+            <View style={styles.trashBadge}>
+              <Text style={styles.trashBadgeText}>
+                Na lixeira
+              </Text>
+            </View>
+          )}
+        </View>
+
+        <Text style={styles.openHint}>
+          {trashed
+            ? "Ver"
+            : isDraft
+              ? "Continuar"
+              : "Abrir"}
+        </Text>
+      </View>
+
+      {entry.category !== null && (
+        <View style={styles.organizationRow}>
+          <View style={styles.categoryBadge}>
+            <Text style={styles.categoryBadgeText}>
+              {CATEGORY_LABELS[entry.category]}
+            </Text>
+          </View>
+        </View>
+      )}
+
+      {entry.tags.length > 0 && (
+        <View style={styles.tagsRow}>
+          {entry.tags.map((tag) => (
+            <View
+              key={tag.id}
+              style={styles.tagChip}
+            >
+              <Text style={styles.tagText}>
+                #{tag.name}
+              </Text>
+            </View>
+          ))}
+        </View>
+      )}
+
+      {entry.reflectionText !== null && (
+        <View style={styles.entrySection}>
+          <Text style={styles.entryLabel}>
+            Reflexão
+          </Text>
+          <Text style={styles.entryText}>
+            {entry.reflectionText}
+          </Text>
+        </View>
+      )}
+
+      {entry.gratitudeText !== null && (
+        <View style={styles.entrySection}>
+          <Text style={styles.entryLabel}>
+            Gratidão
+          </Text>
+          <Text style={styles.entryText}>
+            {entry.gratitudeText}
+          </Text>
+        </View>
+      )}
+
+      {isDraft &&
+        entry.reflectionText === null &&
+        entry.gratitudeText === null && (
+          <Text style={styles.draftEmptyText}>
+            Continue escrevendo seu registro.
+          </Text>
+        )}
+    </Pressable>
+  );
+}
+
 export default function JournalScreen({
   navigation,
 }: JournalScreenProps) {
@@ -290,51 +444,58 @@ export default function JournalScreen({
     useState("");
   const [status, setStatus] =
     useState<LoadStatus>("loading");
+  const [viewMode, setViewMode] =
+    useState<ViewMode>("journal");
 
-  const loadEntries = useCallback(async () => {
-    const generation =
-      ++loadGenerationRef.current;
+  const loadEntries = useCallback(
+    async (mode: ViewMode) => {
+      const generation =
+        ++loadGenerationRef.current;
 
-    setStatus("loading");
+      setStatus("loading");
 
-    try {
-      const journalService =
-        getPersonalPlatformHub().journalService;
-      const today =
-        journalService.getTodayEntryDate();
-      const nextEntries =
-        await journalService.list();
+      try {
+        const journalService =
+          getPersonalPlatformHub().journalService;
+        const today =
+          journalService.getTodayEntryDate();
+        const nextEntries =
+          mode === "trash"
+            ? await journalService.listTrash()
+            : await journalService.list();
 
-      if (
-        generation !==
-        loadGenerationRef.current
-      ) {
-        return;
+        if (
+          generation !==
+          loadGenerationRef.current
+        ) {
+          return;
+        }
+
+        setTodayEntryDate(today);
+        setEntries(nextEntries);
+        setStatus("ready");
+      } catch {
+        if (
+          generation !==
+          loadGenerationRef.current
+        ) {
+          return;
+        }
+
+        setStatus("error");
       }
-
-      setTodayEntryDate(today);
-      setEntries(nextEntries);
-      setStatus("ready");
-    } catch {
-      if (
-        generation !==
-        loadGenerationRef.current
-      ) {
-        return;
-      }
-
-      setStatus("error");
-    }
-  }, []);
+    },
+    [],
+  );
 
   useFocusEffect(
     useCallback(() => {
-      void loadEntries();
+      void loadEntries(viewMode);
 
       return () => {
         loadGenerationRef.current += 1;
       };
-    }, [loadEntries]),
+    }, [loadEntries, viewMode]),
   );
 
   const startNewEntry = useCallback(() => {
@@ -367,9 +528,39 @@ export default function JournalScreen({
     [navigation],
   );
 
+  const showTrash = useCallback(() => {
+    setViewMode("trash");
+    void loadEntries("trash");
+  }, [loadEntries]);
+
+  const showJournal = useCallback(() => {
+    setViewMode("journal");
+    void loadEntries("journal");
+  }, [loadEntries]);
+
+  const pinnedEntries =
+    viewMode === "journal"
+      ? entries.filter(
+          (entry) =>
+            entry.status === "ACTIVE" &&
+            entry.isPinned,
+        )
+      : [];
+
+  const timelineEntries =
+    viewMode === "journal"
+      ? entries.filter(
+          (entry) =>
+            !(
+              entry.status === "ACTIVE" &&
+              entry.isPinned
+            ),
+        )
+      : entries;
+
   const timeline =
     buildTimeline(
-      entries,
+      timelineEntries,
       todayEntryDate,
     );
 
@@ -385,26 +576,61 @@ export default function JournalScreen({
             DIÁRIO
           </Text>
           <Text style={styles.title}>
-            Meu Diário
+            {viewMode === "trash"
+              ? "Lixeira"
+              : "Meu Diário"}
           </Text>
           <Text style={styles.subtitle}>
-            Registre o que você aprendeu, viveu e não quer
-            esquecer.
+            {viewMode === "trash"
+              ? "Revise registros removidos e restaure o que quiser preservar."
+              : "Registre o que você aprendeu, viveu e não quer esquecer."}
           </Text>
 
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Registrar nova entrada no diário"
-            onPress={startNewEntry}
-            style={({ pressed }) => [
-              styles.primaryButton,
-              pressed && styles.pressed,
-            ]}
-          >
-            <Text style={styles.primaryButtonText}>
-              Novo registro
-            </Text>
-          </Pressable>
+          {viewMode === "journal" ? (
+            <>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Registrar nova entrada no diário"
+                onPress={startNewEntry}
+                style={({ pressed }) => [
+                  styles.primaryButton,
+                  pressed && styles.pressed,
+                ]}
+              >
+                <Text style={styles.primaryButtonText}>
+                  Novo registro
+                </Text>
+              </Pressable>
+
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Abrir lixeira do diário"
+                onPress={showTrash}
+                style={({ pressed }) => [
+                  styles.secondaryButton,
+                  pressed && styles.pressed,
+                ]}
+              >
+                <Text style={styles.secondaryButtonText}>
+                  Ver lixeira
+                </Text>
+              </Pressable>
+            </>
+          ) : (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Voltar para o diário"
+              onPress={showJournal}
+              style={({ pressed }) => [
+                styles.primaryButton,
+                pressed && styles.pressed,
+              ]}
+            >
+              <Text style={styles.primaryButtonText}>
+                Voltar ao diário
+              </Text>
+            </Pressable>
+          )}
         </View>
 
         {status === "loading" && (
@@ -414,7 +640,9 @@ export default function JournalScreen({
               color={colors.primary}
             />
             <Text style={styles.stateTitle}>
-              Carregando seu diário...
+              {viewMode === "trash"
+                ? "Carregando lixeira..."
+                : "Carregando seu diário..."}
             </Text>
           </View>
         )}
@@ -422,16 +650,22 @@ export default function JournalScreen({
         {status === "error" && (
           <View style={styles.stateCard}>
             <Text style={styles.stateTitle}>
-              Não foi possível carregar seu diário agora.
+              {viewMode === "trash"
+                ? "Não foi possível carregar a lixeira agora."
+                : "Não foi possível carregar seu diário agora."}
             </Text>
             <Text style={styles.stateText}>
               Tente novamente para atualizar seus registros.
             </Text>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Tentar carregar o diário novamente"
+              accessibilityLabel={
+                viewMode === "trash"
+                  ? "Tentar carregar a lixeira novamente"
+                  : "Tentar carregar o diário novamente"
+              }
               onPress={() => {
-                void loadEntries();
+                void loadEntries(viewMode);
               }}
               style={({ pressed }) => [
                 styles.retryButton,
@@ -449,12 +683,40 @@ export default function JournalScreen({
           entries.length === 0 && (
             <View style={styles.stateCard}>
               <Text style={styles.stateTitle}>
-                Seu diário ainda está vazio
+                {viewMode === "trash"
+                  ? "Sua lixeira está vazia"
+                  : "Seu diário ainda está vazio"}
               </Text>
               <Text style={styles.stateText}>
-                Quando você registrar uma reflexão ou gratidão,
-                ela aparecerá aqui.
+                {viewMode === "trash"
+                  ? "Registros movidos para a lixeira aparecerão aqui."
+                  : "Quando você registrar uma reflexão ou gratidão, ela aparecerá aqui."}
               </Text>
+            </View>
+          )}
+
+        {status === "ready" &&
+          viewMode === "journal" &&
+          pinnedEntries.length > 0 && (
+            <View style={styles.pinnedSection}>
+              <View style={styles.sectionHeading}>
+                <Text style={styles.timelineTitle}>
+                  Fixados
+                </Text>
+                <Text style={styles.sectionHint}>
+                  Para encontrar rápido
+                </Text>
+              </View>
+
+              <View style={styles.list}>
+                {pinnedEntries.map((entry) => (
+                  <EntryCard
+                    key={entry.id}
+                    entry={entry}
+                    onPress={() => openEntry(entry)}
+                  />
+                ))}
+              </View>
             </View>
           )}
 
@@ -474,154 +736,18 @@ export default function JournalScreen({
 
                   <View style={styles.list}>
                     {section.entries.map(
-                      (entry) => {
-                        const formattedDate =
-                          formatEntryDate(
-                            entry.entryDate,
-                          );
-                        const isDraft =
-                          entry.status ===
-                          "DRAFT";
-
-                        return (
-                          <Pressable
-                            key={entry.id}
-                            testID={`journal-entry-${entry.id}`}
-                            accessibilityRole="button"
-                            accessibilityLabel={
-                              isDraft
-                                ? `Continuar rascunho do diário de ${formattedDate}`
-                                : `Abrir registro do diário de ${formattedDate}`
-                            }
-                            onPress={() =>
-                              openEntry(entry)
-                            }
-                            style={({
-                              pressed,
-                            }) => [
-                              styles.entryCard,
-                              isDraft &&
-                                styles.draftCard,
-                              pressed &&
-                                styles.entryCardPressed,
-                            ]}
-                          >
-                            <View
-                              style={
-                                styles.entryTopLine
-                              }
-                            >
-                              <View
-                                style={
-                                  styles.entryMeta
-                                }
-                              >
-                                <Text
-                                  style={
-                                    styles.entryDate
-                                  }
-                                >
-                                  {
-                                    formattedDate
-                                  }
-                                </Text>
-
-                                {isDraft && (
-                                  <View
-                                    style={
-                                      styles.draftBadge
-                                    }
-                                  >
-                                    <Text
-                                      style={
-                                        styles.draftBadgeText
-                                      }
-                                    >
-                                      Rascunho
-                                    </Text>
-                                  </View>
-                                )}
-                              </View>
-
-                              <Text
-                                style={
-                                  styles.openHint
-                                }
-                              >
-                                {isDraft
-                                  ? "Continuar"
-                                  : "Abrir"}
-                              </Text>
-                            </View>
-
-                            {entry.reflectionText !==
-                              null && (
-                              <View
-                                style={
-                                  styles.entrySection
-                                }
-                              >
-                                <Text
-                                  style={
-                                    styles.entryLabel
-                                  }
-                                >
-                                  Reflexão
-                                </Text>
-                                <Text
-                                  style={
-                                    styles.entryText
-                                  }
-                                >
-                                  {
-                                    entry.reflectionText
-                                  }
-                                </Text>
-                              </View>
-                            )}
-
-                            {entry.gratitudeText !==
-                              null && (
-                              <View
-                                style={
-                                  styles.entrySection
-                                }
-                              >
-                                <Text
-                                  style={
-                                    styles.entryLabel
-                                  }
-                                >
-                                  Gratidão
-                                </Text>
-                                <Text
-                                  style={
-                                    styles.entryText
-                                  }
-                                >
-                                  {
-                                    entry.gratitudeText
-                                  }
-                                </Text>
-                              </View>
-                            )}
-
-                            {isDraft &&
-                              entry.reflectionText ===
-                                null &&
-                              entry.gratitudeText ===
-                                null && (
-                                <Text
-                                  style={
-                                    styles.draftEmptyText
-                                  }
-                                >
-                                  Continue escrevendo seu registro.
-                                </Text>
-                              )}
-                          </Pressable>
-                        );
-                      },
+                      (entry) => (
+                        <EntryCard
+                          key={entry.id}
+                          entry={entry}
+                          trashed={
+                            viewMode === "trash"
+                          }
+                          onPress={() =>
+                            openEntry(entry)
+                          }
+                        />
+                      ),
                     )}
                   </View>
                 </View>
@@ -689,6 +815,22 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "800",
   },
+  secondaryButton: {
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 44,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 14,
+    backgroundColor: colors.surface,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+  },
+  secondaryButtonText: {
+    color: colors.primary,
+    fontSize: 14,
+    fontWeight: "800",
+  },
   stateCard: {
     alignItems: "center",
     gap: 8,
@@ -725,6 +867,27 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "800",
   },
+  pinnedSection: {
+    gap: 9,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 20,
+    backgroundColor: colors.surfaceAlt,
+    paddingHorizontal: 12,
+    paddingVertical: 14,
+  },
+  sectionHeading: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
+    paddingHorizontal: 2,
+  },
+  sectionHint: {
+    color: colors.textMuted,
+    fontSize: 11,
+    fontWeight: "700",
+  },
   timeline: {
     gap: 18,
   },
@@ -750,6 +913,9 @@ const styles = StyleSheet.create({
     paddingVertical: 15,
   },
   draftCard: {
+    backgroundColor: colors.surfaceAlt,
+  },
+  trashCard: {
     backgroundColor: colors.surfaceAlt,
   },
   entryCardPressed: {
@@ -784,6 +950,65 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: "800",
     textTransform: "uppercase",
+  },
+  pinnedBadge: {
+    borderRadius: 999,
+    backgroundColor: colors.surfaceHighlight,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  pinnedBadgeText: {
+    color: colors.primary,
+    fontSize: 10,
+    fontWeight: "800",
+    textTransform: "uppercase",
+  },
+  trashBadge: {
+    borderRadius: 999,
+    backgroundColor: colors.surface,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  trashBadgeText: {
+    color: colors.danger,
+    fontSize: 10,
+    fontWeight: "800",
+    textTransform: "uppercase",
+  },
+  organizationRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  categoryBadge: {
+    borderRadius: 999,
+    backgroundColor: colors.surfaceHighlight,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+  },
+  categoryBadgeText: {
+    color: colors.secondaryPressed,
+    fontSize: 11,
+    fontWeight: "800",
+  },
+  tagsRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 7,
+  },
+  tagChip: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 999,
+    backgroundColor: colors.surfaceAlt,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  tagText: {
+    color: colors.textMuted,
+    fontSize: 11,
+    fontWeight: "700",
   },
   openHint: {
     color: colors.primary,

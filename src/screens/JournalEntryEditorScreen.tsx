@@ -17,6 +17,7 @@ import {
 import {
   JOURNAL_GRATITUDE_MAX_CHARS,
   JOURNAL_REFLECTION_MAX_CHARS,
+  type JournalCategory,
   type JournalEntryId,
 } from "../domain/journal/journal";
 import type {
@@ -45,7 +46,23 @@ type DraftSnapshot = Readonly<{
   entryDate: PersonalLocalDate;
   reflectionText: string;
   gratitudeText: string;
+  category: JournalCategory | null;
+  tagNames: readonly string[];
 }>;
+
+const CATEGORY_OPTIONS: readonly Readonly<{
+  value: JournalCategory;
+  label: string;
+}>[] = [
+  { value: "REFLECTION", label: "Reflexão" },
+  { value: "PRAYER", label: "Oração" },
+  { value: "GRATITUDE", label: "Gratidão" },
+  { value: "LEARNING", label: "Aprendizado" },
+  { value: "PROMISE", label: "Promessa" },
+  { value: "DECISION", label: "Decisão" },
+  { value: "QUESTION", label: "Pergunta" },
+  { value: "TESTIMONY", label: "Testemunho" },
+];
 
 const CONTENT_REQUIRED_MESSAGE =
   "Escreva uma reflexão ou gratidão antes de salvar.";
@@ -54,6 +71,21 @@ const DATE_INVALID_MESSAGE =
   "Informe uma data válida no formato DD/MM/AAAA.";
 
 const AUTOSAVE_DELAY_MS = 800;
+
+function parseTagNames(
+  value: string,
+): readonly string[] {
+  return value
+    .split(",")
+    .map((tag) => tag.trim())
+    .filter((tag) => tag.length > 0);
+}
+
+function formatTagNames(
+  tags: readonly Readonly<{ name: string }>[],
+): string {
+  return tags.map((tag) => tag.name).join(", ");
+}
 
 function getJournalErrorMessage(error: unknown): string {
   const code =
@@ -175,6 +207,8 @@ export default function JournalEntryEditorScreen({
   const hasUserEditedRef = useRef(false);
   const draftEntryIdRef =
     useRef<JournalEntryId | null>(null);
+  const activeEntryIdRef =
+    useRef<JournalEntryId | null>(null);
   const autosaveTimerRef =
     useRef<ReturnType<typeof setTimeout> | null>(
       null,
@@ -188,6 +222,12 @@ export default function JournalEntryEditorScreen({
     useState("");
   const [entryDateInput, setEntryDateInput] =
     useState("");
+  const [category, setCategory] =
+    useState<JournalCategory | null>(null);
+  const [tagsInput, setTagsInput] =
+    useState("");
+  const [isPinned, setIsPinned] =
+    useState(false);
   const [loadedStatus, setLoadedStatus] =
     useState<"ACTIVE" | "DRAFT" | null>(null);
   const [loadStatus, setLoadStatus] =
@@ -216,7 +256,11 @@ export default function JournalEntryEditorScreen({
     if (routeEntryId === undefined) {
       hasUserEditedRef.current = false;
       draftEntryIdRef.current = null;
+      activeEntryIdRef.current = null;
       setLoadedStatus(null);
+      setCategory(null);
+      setTagsInput("");
+      setIsPinned(false);
       setEntryDateInput(
         formatEntryDateInput(
           journalService.getTodayEntryDate(),
@@ -261,8 +305,17 @@ export default function JournalEntryEditorScreen({
         entry.status === "DRAFT"
           ? entry.id
           : null;
+      activeEntryIdRef.current =
+        entry.status === "ACTIVE"
+          ? entry.id
+          : null;
 
       setLoadedStatus(entry.status);
+      setCategory(entry.category);
+      setTagsInput(
+        formatTagNames(entry.tags),
+      );
+      setIsPinned(entry.isPinned);
       setEntryDateInput(
         formatEntryDateInput(
           entry.entryDate,
@@ -323,22 +376,40 @@ export default function JournalEntryEditorScreen({
                 getPersonalPlatformHub()
                   .journalService;
 
-              if (
-                draftEntryIdRef.current === null
-              ) {
+              const contentSnapshot = {
+                entryDate: snapshot.entryDate,
+                reflectionText:
+                  snapshot.reflectionText,
+                gratitudeText:
+                  snapshot.gratitudeText,
+              };
+
+              let draftId =
+                draftEntryIdRef.current;
+
+              if (draftId === null) {
                 const draft =
                   await journalService.createDraft(
-                    snapshot,
+                    contentSnapshot,
                   );
 
+                draftId = draft.id;
                 draftEntryIdRef.current =
                   draft.id;
               } else {
                 await journalService.updateDraft(
-                  draftEntryIdRef.current,
-                  snapshot,
+                  draftId,
+                  contentSnapshot,
                 );
               }
+
+              await journalService.updateOrganization(
+                draftId,
+                {
+                  category: snapshot.category,
+                  tagNames: snapshot.tagNames,
+                },
+              );
 
               if (mountedRef.current) {
                 setAutosaveStatus("saved");
@@ -382,6 +453,8 @@ export default function JournalEntryEditorScreen({
       entryDate,
       reflectionText,
       gratitudeText,
+      category,
+      tagNames: parseTagNames(tagsInput),
     };
 
     autosaveTimerRef.current = setTimeout(
@@ -394,6 +467,7 @@ export default function JournalEntryEditorScreen({
 
     return clearAutosaveTimer;
   }, [
+    category,
     clearAutosaveTimer,
     entryDateInput,
     gratitudeText,
@@ -402,6 +476,7 @@ export default function JournalEntryEditorScreen({
     persistDraft,
     reflectionText,
     saving,
+    tagsInput,
   ]);
 
   const markEdited = useCallback(() => {
@@ -451,28 +526,65 @@ export default function JournalEntryEditorScreen({
         reflectionText,
         gratitudeText,
       };
+      const tagNames =
+        parseTagNames(tagsInput);
+
+      let savedEntryId =
+        activeEntryIdRef.current;
 
       if (loadedStatus === "ACTIVE") {
-        if (routeEntryId === undefined) {
+        savedEntryId =
+          savedEntryId ?? routeEntryId ?? null;
+
+        if (savedEntryId === null) {
           throw new Error(
             "PERSONAL_JOURNAL_UPDATE_TARGET_NOT_FOUND",
           );
         }
 
         await journalService.update(
-          routeEntryId,
+          savedEntryId,
           input,
         );
       } else if (
         draftEntryIdRef.current !== null
       ) {
+        savedEntryId =
+          draftEntryIdRef.current;
+
         await journalService.publishDraft(
-          draftEntryIdRef.current,
+          savedEntryId,
           input,
         );
+
+        draftEntryIdRef.current = null;
+        activeEntryIdRef.current =
+          savedEntryId;
+
+        if (mountedRef.current) {
+          setLoadedStatus("ACTIVE");
+        }
       } else {
-        await journalService.create(input);
+        const created =
+          await journalService.create(input);
+
+        savedEntryId = created.id;
+        activeEntryIdRef.current =
+          savedEntryId;
+
+        if (mountedRef.current) {
+          setLoadedStatus("ACTIVE");
+        }
       }
+
+      await journalService.updateOrganization(
+        savedEntryId,
+        {
+          category,
+          tagNames,
+          isPinned,
+        },
+      );
 
       hasUserEditedRef.current = false;
       navigation.goBack();
@@ -488,14 +600,17 @@ export default function JournalEntryEditorScreen({
       }
     }
   }, [
+    category,
     clearAutosaveTimer,
     entryDateInput,
     gratitudeText,
+    isPinned,
     loadStatus,
     loadedStatus,
     navigation,
     reflectionText,
     routeEntryId,
+    tagsInput,
   ]);
 
   const isEditingActive =
@@ -606,6 +721,176 @@ export default function JournalEntryEditorScreen({
               <Text style={styles.fieldHelp}>
                 Use o dia em que esta reflexão aconteceu.
               </Text>
+            </View>
+
+            <View style={styles.field}>
+              <Text style={styles.fieldLabel}>
+                Categoria
+              </Text>
+              <Text style={styles.fieldHelp}>
+                Escolha uma categoria para encontrar e organizar este registro com mais facilidade.
+              </Text>
+
+              <View style={styles.choiceWrap}>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Remover categoria do registro"
+                  accessibilityState={{
+                    selected: category === null,
+                    disabled: saving,
+                  }}
+                  disabled={saving}
+                  onPress={() => {
+                    markEdited();
+                    setCategory(null);
+                  }}
+                  style={({ pressed }) => [
+                    styles.choiceChip,
+                    category === null &&
+                      styles.choiceChipSelected,
+                    pressed &&
+                      !saving &&
+                      styles.pressed,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.choiceChipText,
+                      category === null &&
+                        styles.choiceChipTextSelected,
+                    ]}
+                  >
+                    Sem categoria
+                  </Text>
+                </Pressable>
+
+                {CATEGORY_OPTIONS.map((option) => {
+                  const selected =
+                    category === option.value;
+
+                  return (
+                    <Pressable
+                      key={option.value}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Selecionar categoria ${option.label}`}
+                      accessibilityState={{
+                        selected,
+                        disabled: saving,
+                      }}
+                      disabled={saving}
+                      onPress={() => {
+                        markEdited();
+                        setCategory(option.value);
+                      }}
+                      style={({ pressed }) => [
+                        styles.choiceChip,
+                        selected &&
+                          styles.choiceChipSelected,
+                        pressed &&
+                          !saving &&
+                          styles.pressed,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.choiceChipText,
+                          selected &&
+                            styles.choiceChipTextSelected,
+                        ]}
+                      >
+                        {option.label}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+
+            <View style={styles.field}>
+              <Text style={styles.fieldLabel}>
+                Tags
+              </Text>
+              <TextInput
+                accessibilityLabel="Tags do registro"
+                value={tagsInput}
+                onChangeText={(value) => {
+                  markEdited();
+                  setTagsInput(value);
+                }}
+                editable={!saving}
+                placeholder="oração, família, promessa"
+                placeholderTextColor={
+                  colors.textMuted
+                }
+                style={styles.organizationInput}
+              />
+              <Text style={styles.fieldHelp}>
+                Separe as tags por vírgulas.
+              </Text>
+            </View>
+
+            <View style={styles.field}>
+              <Text style={styles.fieldLabel}>
+                Destaque
+              </Text>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={
+                  isPinned
+                    ? "Desmarcar registro como fixado"
+                    : "Marcar registro como fixado"
+                }
+                accessibilityState={{
+                  selected: isPinned,
+                  disabled: saving,
+                }}
+                disabled={saving}
+                onPress={() => {
+                  setFormMessage(null);
+                  setIsPinned(
+                    (current) => !current,
+                  );
+                }}
+                style={({ pressed }) => [
+                  styles.pinControl,
+                  isPinned &&
+                    styles.pinControlSelected,
+                  pressed &&
+                    !saving &&
+                    styles.pressed,
+                ]}
+              >
+                <View style={styles.pinControlText}>
+                  <Text style={styles.pinTitle}>
+                    {isPinned
+                      ? "Registro fixado"
+                      : "Fixar este registro"}
+                  </Text>
+                  <Text style={styles.pinHelp}>
+                    {isEditingActive
+                      ? "Registros fixados aparecem em destaque no Diário."
+                      : "A fixação será aplicada quando você salvar o registro."}
+                  </Text>
+                </View>
+
+                <View
+                  style={[
+                    styles.pinIndicator,
+                    isPinned &&
+                      styles.pinIndicatorSelected,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.pinIndicatorText,
+                      isPinned &&
+                        styles.pinIndicatorTextSelected,
+                    ]}
+                  >
+                    {isPinned ? "Sim" : "Não"}
+                  </Text>
+                </View>
+              </Pressable>
             </View>
 
             <View style={styles.field}>
@@ -863,6 +1148,97 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: 12,
     lineHeight: 17,
+  },
+  choiceWrap: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  choiceChip: {
+    minHeight: 36,
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 999,
+    backgroundColor: colors.surfaceAlt,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+  },
+  choiceChipSelected: {
+    borderColor: colors.primary,
+    backgroundColor: colors.surfaceHighlight,
+  },
+  choiceChipText: {
+    color: colors.textMuted,
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  choiceChipTextSelected: {
+    color: colors.primary,
+    fontWeight: "800",
+  },
+  organizationInput: {
+    minHeight: 48,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 16,
+    backgroundColor: colors.surfaceAlt,
+    color: colors.text,
+    fontSize: 15,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+  },
+  pinControl: {
+    minHeight: 62,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 16,
+    backgroundColor: colors.surfaceAlt,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+  },
+  pinControlSelected: {
+    borderColor: colors.primary,
+    backgroundColor: colors.surfaceHighlight,
+  },
+  pinControlText: {
+    flex: 1,
+    gap: 3,
+  },
+  pinTitle: {
+    color: colors.textStrong,
+    fontSize: 14,
+    fontWeight: "800",
+  },
+  pinHelp: {
+    color: colors.textMuted,
+    fontSize: 11,
+    lineHeight: 16,
+  },
+  pinIndicator: {
+    minWidth: 42,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 999,
+    backgroundColor: colors.surface,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+  },
+  pinIndicatorSelected: {
+    borderColor: colors.primary,
+  },
+  pinIndicatorText: {
+    color: colors.textMuted,
+    fontSize: 11,
+    fontWeight: "800",
+  },
+  pinIndicatorTextSelected: {
+    color: colors.primary,
   },
   counterText: {
     color: colors.textMuted,
