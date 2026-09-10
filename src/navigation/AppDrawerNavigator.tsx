@@ -84,6 +84,11 @@ export default function AppDrawerNavigator() {
             navigation.navigate("History");
           };
 
+          const handleOpenJournal = () => {
+            closeQuickActions();
+            navigation.navigate("Journal");
+          };
+
           return (
             <>
               <MainTabsNavigator onQuickAction={openQuickActions} />
@@ -94,6 +99,7 @@ export default function AppDrawerNavigator() {
                 onOpenPlan={handleOpenPlan}
                 onOpenProgress={handleOpenProgress}
                 onOpenHistory={handleOpenHistory}
+                onOpenJournal={handleOpenJournal}
               />
             </>
           );
