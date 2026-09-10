@@ -13,6 +13,7 @@ import type {
   PersonalLocalDate,
 } from "../../domain/personal/personalTime";
 import type {
+  JournalEntryPersistenceRecord,
   JournalRepository,
 } from "../../data/personal/journal/journalRepository";
 
@@ -23,9 +24,16 @@ export type CreateJournalEntryInput = Readonly<{
 }>;
 
 export type UpdateJournalEntryInput = Readonly<{
+  entryDate?: PersonalLocalDate;
   reflectionText?: string | null;
   gratitudeText?: string | null;
 }>;
+
+export type CreateJournalDraftInput =
+  CreateJournalEntryInput;
+
+export type UpdateJournalDraftInput =
+  UpdateJournalEntryInput;
 
 function normalizeOptionalJournalText(
   value: string | null | undefined,
@@ -89,26 +97,35 @@ export class JournalService {
     private readonly datePolicy: PersonalDatePolicy,
   ) {}
 
-  async list(): Promise<readonly JournalEntry[]> {
+  async list(): Promise<
+    readonly JournalEntryPersistenceRecord[]
+  > {
     return this.repository.list();
   }
 
   async findById(
     id: JournalEntryId,
-  ): Promise<JournalEntry | null> {
+  ): Promise<JournalEntryPersistenceRecord | null> {
     return this.repository.findById(id);
   }
 
   async findByDate(
     entryDate: PersonalLocalDate,
-  ): Promise<JournalEntry | null> {
+  ): Promise<JournalEntryPersistenceRecord | null> {
     return this.repository.findByDate(entryDate);
   }
 
   async listByDate(
     entryDate: PersonalLocalDate,
-  ): Promise<readonly JournalEntry[]> {
+  ): Promise<
+    readonly JournalEntryPersistenceRecord[]
+  > {
     return this.repository.listByDate(entryDate);
+  }
+
+  getTodayEntryDate(): PersonalLocalDate {
+    const now = this.clock.now();
+    return this.datePolicy.toLocalDate(now);
   }
 
   async create(
@@ -149,6 +166,149 @@ export class JournalService {
     return entry;
   }
 
+  async createDraft(
+    input: CreateJournalDraftInput = {},
+  ): Promise<JournalEntryPersistenceRecord> {
+    const now = this.clock.now();
+    const entryDate =
+      input.entryDate ??
+      this.datePolicy.toLocalDate(now);
+    const timestamp =
+      this.datePolicy.toUtcTimestamp(now);
+
+    const draft: JournalEntryPersistenceRecord = {
+      id: this.canonicalIdFactory.create(
+        "journal_entry",
+      ),
+      entryDate,
+      reflectionText: normalizeReflectionText(
+        input.reflectionText,
+      ),
+      gratitudeText: normalizeGratitudeText(
+        input.gratitudeText,
+      ),
+      status: "DRAFT",
+      sourceType: "FREE",
+      sourceTitleSnapshot: null,
+      promptSnapshot: null,
+      references: [],
+      tags: [],
+      createdAtUtc: timestamp,
+      updatedAtUtc: timestamp,
+    };
+
+    await this.repository.create(draft);
+
+    return draft;
+  }
+
+  async updateDraft(
+    id: JournalEntryId,
+    input: UpdateJournalDraftInput,
+  ): Promise<JournalEntryPersistenceRecord> {
+    const existing =
+      await this.repository.findById(id);
+
+    if (existing === null) {
+      throw new Error(
+        "PERSONAL_JOURNAL_DRAFT_TARGET_NOT_FOUND",
+      );
+    }
+
+    if (existing.status !== "DRAFT") {
+      throw new Error(
+        "PERSONAL_JOURNAL_DRAFT_TARGET_INVALID",
+      );
+    }
+
+    const reflectionText =
+      input.reflectionText === undefined
+        ? existing.reflectionText
+        : normalizeReflectionText(
+            input.reflectionText,
+          );
+    const gratitudeText =
+      input.gratitudeText === undefined
+        ? existing.gratitudeText
+        : normalizeGratitudeText(
+            input.gratitudeText,
+          );
+
+    const now = this.clock.now();
+    const updatedAtUtc =
+      this.datePolicy.toUtcTimestamp(now);
+
+    const updatedDraft: JournalEntryPersistenceRecord = {
+      ...existing,
+      entryDate:
+        input.entryDate ?? existing.entryDate,
+      reflectionText,
+      gratitudeText,
+      status: "DRAFT",
+      updatedAtUtc,
+    };
+
+    await this.repository.update(updatedDraft);
+
+    return updatedDraft;
+  }
+
+  async publishDraft(
+    id: JournalEntryId,
+    input: UpdateJournalDraftInput = {},
+  ): Promise<JournalEntryPersistenceRecord> {
+    const existing =
+      await this.repository.findById(id);
+
+    if (existing === null) {
+      throw new Error(
+        "PERSONAL_JOURNAL_DRAFT_TARGET_NOT_FOUND",
+      );
+    }
+
+    if (existing.status !== "DRAFT") {
+      throw new Error(
+        "PERSONAL_JOURNAL_DRAFT_TARGET_INVALID",
+      );
+    }
+
+    const reflectionText =
+      input.reflectionText === undefined
+        ? existing.reflectionText
+        : normalizeReflectionText(
+            input.reflectionText,
+          );
+    const gratitudeText =
+      input.gratitudeText === undefined
+        ? existing.gratitudeText
+        : normalizeGratitudeText(
+            input.gratitudeText,
+          );
+
+    assertJournalContentRequired(
+      reflectionText,
+      gratitudeText,
+    );
+
+    const now = this.clock.now();
+    const updatedAtUtc =
+      this.datePolicy.toUtcTimestamp(now);
+
+    const published: JournalEntryPersistenceRecord = {
+      ...existing,
+      entryDate:
+        input.entryDate ?? existing.entryDate,
+      reflectionText,
+      gratitudeText,
+      status: "ACTIVE",
+      updatedAtUtc,
+    };
+
+    await this.repository.update(published);
+
+    return published;
+  }
+
   async update(
     id: JournalEntryId,
     input: UpdateJournalEntryInput,
@@ -187,7 +347,8 @@ export class JournalService {
 
     const updatedEntry: JournalEntry = {
       id: existing.id,
-      entryDate: existing.entryDate,
+      entryDate:
+        input.entryDate ?? existing.entryDate,
       reflectionText,
       gratitudeText,
       createdAtUtc: existing.createdAtUtc,

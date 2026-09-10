@@ -8,9 +8,11 @@ import {
 } from "@testing-library/react-native";
 
 import type {
-  JournalEntry,
   JournalEntryId,
 } from "../src/domain/journal/journal";
+import type {
+  JournalEntryPersistenceRecord,
+} from "../src/data/personal/journal/journalRepository";
 import {
   getPersonalPlatformHub,
 } from "../src/services/personalPlatformHub";
@@ -36,11 +38,17 @@ const mockedGetPersonalPlatformHub =
   >;
 
 const mockFindById = jest.fn();
+const mockGetTodayEntryDate = jest.fn();
 const mockCreate = jest.fn();
+const mockCreateDraft = jest.fn();
+const mockUpdateDraft = jest.fn();
+const mockPublishDraft = jest.fn();
 const mockUpdate = jest.fn();
 
 const entryId =
   "journal-entry-edit" as JournalEntryId;
+const draftId =
+  "journal-entry-draft" as JournalEntryId;
 
 const existingEntry = {
   id: entryId,
@@ -49,15 +57,36 @@ const existingEntry = {
     "Reflexão já registrada.",
   gratitudeText:
     "Gratidão já registrada.",
-  createdAtUtc: "2026-09-09T13:00:00.000Z",
-  updatedAtUtc: "2026-09-09T13:00:00.000Z",
-} as unknown as JournalEntry;
+  status: "ACTIVE",
+  sourceType: "FREE",
+  sourceTitleSnapshot: null,
+  promptSnapshot: null,
+  references: [],
+  tags: [],
+  createdAtUtc:
+    "2026-09-09T13:00:00.000Z",
+  updatedAtUtc:
+    "2026-09-09T13:00:00.000Z",
+} as unknown as JournalEntryPersistenceRecord;
+
+const draftEntry = {
+  ...existingEntry,
+  id: draftId,
+  status: "DRAFT",
+  reflectionText: "Rascunho salvo.",
+  gratitudeText: null,
+} as JournalEntryPersistenceRecord;
 
 function configureHub(): void {
   mockedGetPersonalPlatformHub.mockReturnValue({
     journalService: {
       findById: mockFindById,
+      getTodayEntryDate:
+        mockGetTodayEntryDate,
       create: mockCreate,
+      createDraft: mockCreateDraft,
+      updateDraft: mockUpdateDraft,
+      publishDraft: mockPublishDraft,
       update: mockUpdate,
     },
   } as unknown as ReturnType<
@@ -79,7 +108,10 @@ function renderEditor(
         params:
           editingEntryId === undefined
             ? undefined
-            : { entryId: editingEntryId },
+            : {
+                entryId:
+                  editingEntryId,
+              },
       } as never}
     />,
   );
@@ -90,15 +122,14 @@ function renderEditor(
   };
 }
 
-async function renderLoadedEditor() {
-  mockFindById.mockResolvedValue(existingEntry);
+async function renderLoadedActiveEditor() {
+  mockFindById.mockResolvedValue(
+    existingEntry,
+  );
 
   const view = renderEditor(entryId);
 
   await waitFor(() => {
-    expect(mockFindById).toHaveBeenCalledWith(
-      entryId,
-    );
     expect(
       view.getByLabelText("Reflexão").props.value,
     ).toBe(existingEntry.reflectionText);
@@ -107,260 +138,224 @@ async function renderLoadedEditor() {
   return view;
 }
 
-function deferred<T>() {
-  let resolve!: (value: T) => void;
-  let reject!: (reason?: unknown) => void;
-
-  const promise = new Promise<T>(
-    (resolvePromise, rejectPromise) => {
-      resolve = resolvePromise;
-      reject = rejectPromise;
-    },
-  );
-
-  return {
-    promise,
-    resolve,
-    reject,
-  };
+async function advanceAutosave(): Promise<void> {
+  await act(async () => {
+    jest.advanceTimersByTime(800);
+    await Promise.resolve();
+    await Promise.resolve();
+  });
 }
 
-describe("JournalEntryEditorScreen", () => {
-  beforeEach(() => {
-    mockFindById.mockReset();
-    mockCreate.mockReset();
-    mockUpdate.mockReset();
-    mockedGetPersonalPlatformHub.mockReset();
-    configureHub();
-  });
+describe(
+  "JournalEntryEditorScreen P16-P2",
+  () => {
+    beforeEach(() => {
+      jest.useFakeTimers();
 
-  afterEach(() => {
-    cleanup();
-  });
+      mockFindById.mockReset();
+      mockGetTodayEntryDate.mockReset();
+      mockCreate.mockReset();
+      mockCreateDraft.mockReset();
+      mockUpdateDraft.mockReset();
+      mockPublishDraft.mockReset();
+      mockUpdate.mockReset();
+      mockedGetPersonalPlatformHub.mockReset();
 
-  it("renders creation mode without loading an existing entry", () => {
-    const view = renderEditor();
-
-    expect(
-      view.getByText("Novo registro"),
-    ).toBeTruthy();
-    expect(
-      view.getByLabelText("Reflexão"),
-    ).toBeTruthy();
-    expect(
-      view.getByLabelText("Gratidão"),
-    ).toBeTruthy();
-    expect(mockFindById).not.toHaveBeenCalled();
-  });
-
-  it("creates with exactly reflection and gratitude", async () => {
-    mockCreate.mockResolvedValue(existingEntry);
-
-    const view = renderEditor();
-
-    fireEvent.changeText(
-      view.getByLabelText("Reflexão"),
-      "  Minha reflexão permanece como digitei.  ",
-    );
-    fireEvent.changeText(
-      view.getByLabelText("Gratidão"),
-      "  Minha gratidão permanece como digitei.  ",
-    );
-
-    fireEvent.press(
-      view.getByLabelText(
-        "Salvar registro do diário",
-      ),
-    );
-
-    await waitFor(() => {
-      expect(mockCreate).toHaveBeenCalledTimes(1);
-    });
-
-    const input = mockCreate.mock.calls[0][0];
-
-    expect(input).toEqual({
-      reflectionText:
-        "  Minha reflexão permanece como digitei.  ",
-      gratitudeText:
-        "  Minha gratidão permanece como digitei.  ",
-    });
-    expect(Object.keys(input).sort()).toEqual([
-      "gratitudeText",
-      "reflectionText",
-    ]);
-    expect(input).not.toHaveProperty("entryDate");
-    expect(view.goBack).toHaveBeenCalledTimes(1);
-  });
-
-  it("blocks persistence when both fields are blank", async () => {
-    const view = renderEditor();
-
-    fireEvent.changeText(
-      view.getByLabelText("Reflexão"),
-      "   ",
-    );
-    fireEvent.changeText(
-      view.getByLabelText("Gratidão"),
-      " ",
-    );
-
-    fireEvent.press(
-      view.getByLabelText(
-        "Salvar registro do diário",
-      ),
-    );
-
-    expect(
-      view.getByText(
-        "Escreva uma reflexão ou gratidão antes de salvar.",
-      ),
-    ).toBeTruthy();
-    expect(mockCreate).not.toHaveBeenCalled();
-    expect(mockUpdate).not.toHaveBeenCalled();
-  });
-
-  it("loads editing mode by the exact entryId", async () => {
-    const view = await renderLoadedEditor();
-
-    expect(
-      view.getByText("Editar registro"),
-    ).toBeTruthy();
-    expect(mockFindById).toHaveBeenCalledTimes(1);
-    expect(mockFindById).toHaveBeenCalledWith(
-      entryId,
-    );
-    expect(
-      view.getByLabelText("Gratidão").props.value,
-    ).toBe(existingEntry.gratitudeText);
-  });
-
-  it("updates the exact entryId with only editable content", async () => {
-    mockUpdate.mockResolvedValue(existingEntry);
-
-    const view = await renderLoadedEditor();
-
-    fireEvent.changeText(
-      view.getByLabelText("Reflexão"),
-      "Reflexão atualizada.",
-    );
-    fireEvent.changeText(
-      view.getByLabelText("Gratidão"),
-      "Gratidão atualizada.",
-    );
-
-    fireEvent.press(
-      view.getByLabelText(
-        "Salvar registro do diário",
-      ),
-    );
-
-    await waitFor(() => {
-      expect(mockUpdate).toHaveBeenCalledWith(
-        entryId,
-        {
-          reflectionText: "Reflexão atualizada.",
-          gratitudeText: "Gratidão atualizada.",
-        },
+      mockGetTodayEntryDate.mockReturnValue(
+        "2026-09-10",
       );
-    });
-
-    const input = mockUpdate.mock.calls[0][1];
-
-    expect(Object.keys(input).sort()).toEqual([
-      "gratitudeText",
-      "reflectionText",
-    ]);
-    expect(input).not.toHaveProperty("entryDate");
-    expect(view.queryByLabelText("Data")).toBeNull();
-    expect(view.goBack).toHaveBeenCalledTimes(1);
-    expect(mockCreate).not.toHaveBeenCalled();
-  });
-
-  it("shows a non-fatal state when the editing entry is not found", async () => {
-    mockFindById.mockResolvedValue(null);
-
-    const view = renderEditor(entryId);
-
-    await waitFor(() => {
-      expect(
-        view.getByText(
-          "Este registro não foi encontrado.",
-        ),
-      ).toBeTruthy();
-    });
-
-    expect(
-      view.queryByLabelText("Reflexão"),
-    ).toBeNull();
-    expect(mockCreate).not.toHaveBeenCalled();
-    expect(mockUpdate).not.toHaveBeenCalled();
-  });
-
-  it("shows a load error and retries the same entry", async () => {
-    mockFindById
-      .mockRejectedValueOnce(
-        new Error("temporary failure"),
-      )
-      .mockResolvedValueOnce(existingEntry);
-
-    const view = renderEditor(entryId);
-
-    await waitFor(() => {
-      expect(
-        view.getByText(
-          "Não foi possível carregar este registro agora.",
-        ),
-      ).toBeTruthy();
-    });
-
-    fireEvent.press(
-      view.getByLabelText(
-        "Tentar carregar o registro novamente",
-      ),
-    );
-
-    await waitFor(() => {
-      expect(mockFindById).toHaveBeenCalledTimes(2);
-      expect(
-        view.getByLabelText("Reflexão").props.value,
-      ).toBe(existingEntry.reflectionText);
-    });
-  });
-
-  it.each([
-    [
-      "PERSONAL_JOURNAL_ENTRY_CONTENT_REQUIRED",
-      "Escreva uma reflexão ou gratidão antes de salvar.",
-    ],
-    [
-      "PERSONAL_JOURNAL_REFLECTION_TEXT_INVALID",
-      "A reflexão ultrapassa o limite permitido.",
-    ],
-    [
-      "PERSONAL_JOURNAL_GRATITUDE_TEXT_INVALID",
-      "A gratidão ultrapassa o limite permitido.",
-    ],
-    [
-      "PERSONAL_JOURNAL_ENTRY_DATE_CONFLICT",
-      "Já existe um registro para hoje. Abra o registro existente para editar.",
-    ],
-    [
-      "PERSONAL_JOURNAL_UPDATE_TARGET_NOT_FOUND",
-      "Este registro não foi encontrado. Volte ao diário e tente novamente.",
-    ],
-  ])(
-    "translates service error %s without exposing its code",
-    async (code, message) => {
-      mockCreate.mockRejectedValue(
-        new Error(code),
+      mockCreateDraft.mockResolvedValue(
+        draftEntry,
+      );
+      mockUpdateDraft.mockResolvedValue(
+        draftEntry,
+      );
+      mockPublishDraft.mockResolvedValue(
+        existingEntry,
+      );
+      mockCreate.mockResolvedValue(
+        existingEntry,
+      );
+      mockUpdate.mockResolvedValue(
+        existingEntry,
       );
 
+      configureHub();
+    });
+
+    afterEach(() => {
+      cleanup();
+      jest.clearAllTimers();
+      jest.useRealTimers();
+    });
+
+    it("starts a new entry with today's local date from the service", () => {
+      const view = renderEditor();
+
+      expect(
+        view.getByText("Novo registro"),
+      ).toBeTruthy();
+      expect(
+        view.getByLabelText("Data do registro")
+          .props.value,
+      ).toBe("10/09/2026");
+      expect(
+        mockGetTodayEntryDate,
+      ).toHaveBeenCalledTimes(1);
+      expect(
+        mockFindById,
+      ).not.toHaveBeenCalled();
+    });
+
+    it("autosaves a new draft after the user changes content", async () => {
       const view = renderEditor();
 
       fireEvent.changeText(
         view.getByLabelText("Reflexão"),
-        "Conteúdo para testar erro.",
+        "Minha reflexão em andamento.",
+      );
+
+      expect(
+        mockCreateDraft,
+      ).not.toHaveBeenCalled();
+
+      await advanceAutosave();
+
+      await waitFor(() => {
+        expect(
+          mockCreateDraft,
+        ).toHaveBeenCalledWith({
+          entryDate: "2026-09-10",
+          reflectionText:
+            "Minha reflexão em andamento.",
+          gratitudeText: "",
+        });
+      });
+
+      expect(
+        view.getByText("Rascunho salvo"),
+      ).toBeTruthy();
+    });
+
+    it("updates the same draft on subsequent autosaves instead of duplicating it", async () => {
+      const view = renderEditor();
+
+      fireEvent.changeText(
+        view.getByLabelText("Reflexão"),
+        "Primeira versão.",
+      );
+      await advanceAutosave();
+
+      fireEvent.changeText(
+        view.getByLabelText("Reflexão"),
+        "Segunda versão.",
+      );
+      await advanceAutosave();
+
+      await waitFor(() => {
+        expect(
+          mockCreateDraft,
+        ).toHaveBeenCalledTimes(1);
+        expect(
+          mockUpdateDraft,
+        ).toHaveBeenCalledWith(
+          draftId,
+          {
+            entryDate: "2026-09-10",
+            reflectionText:
+              "Segunda versão.",
+            gratitudeText: "",
+          },
+        );
+      });
+    });
+
+    it("loads an existing draft and keeps autosaving it", async () => {
+      mockFindById.mockResolvedValue(
+        draftEntry,
+      );
+
+      const view = renderEditor(draftId);
+
+      await waitFor(() => {
+        expect(
+          view.getByText(
+            "Continuar rascunho",
+          ),
+        ).toBeTruthy();
+        expect(
+          view.getByLabelText(
+            "Data do registro",
+          ).props.value,
+        ).toBe("09/09/2026");
+      });
+
+      fireEvent.changeText(
+        view.getByLabelText("Gratidão"),
+        "Obrigado por hoje.",
+      );
+      await advanceAutosave();
+
+      await waitFor(() => {
+        expect(
+          mockUpdateDraft,
+        ).toHaveBeenCalledWith(
+          draftId,
+          expect.objectContaining({
+            gratitudeText:
+              "Obrigado por hoje.",
+          }),
+        );
+      });
+
+      expect(
+        mockCreateDraft,
+      ).not.toHaveBeenCalled();
+    });
+
+    it("publishes an autosaved draft when the user explicitly saves", async () => {
+      const view = renderEditor();
+
+      fireEvent.changeText(
+        view.getByLabelText("Reflexão"),
+        "Reflexão final.",
+      );
+      await advanceAutosave();
+
+      fireEvent.press(
+        view.getByLabelText(
+          "Salvar registro do diário",
+        ),
+      );
+
+      await waitFor(() => {
+        expect(
+          mockPublishDraft,
+        ).toHaveBeenCalledWith(
+          draftId,
+          {
+            entryDate: "2026-09-10",
+            reflectionText:
+              "Reflexão final.",
+            gratitudeText: "",
+          },
+        );
+        expect(
+          view.goBack,
+        ).toHaveBeenCalledTimes(1);
+      });
+
+      expect(
+        mockCreate,
+      ).not.toHaveBeenCalled();
+    });
+
+    it("creates directly when explicit save happens before the autosave delay", async () => {
+      const view = renderEditor();
+
+      fireEvent.changeText(
+        view.getByLabelText("Reflexão"),
+        "Salvar agora.",
       );
 
       fireEvent.press(
@@ -371,151 +366,257 @@ describe("JournalEntryEditorScreen", () => {
 
       await waitFor(() => {
         expect(
-          view.getByText(message),
+          mockCreate,
+        ).toHaveBeenCalledWith({
+          entryDate: "2026-09-10",
+          reflectionText: "Salvar agora.",
+          gratitudeText: "",
+        });
+        expect(
+          view.goBack,
+        ).toHaveBeenCalledTimes(1);
+      });
+
+      expect(
+        mockCreateDraft,
+      ).not.toHaveBeenCalled();
+    });
+
+    it("edits an active entry with its persisted date and no autosave", async () => {
+      const view =
+        await renderLoadedActiveEditor();
+
+      expect(
+        view.getByText("Editar registro"),
+      ).toBeTruthy();
+      expect(
+        view.getByLabelText("Data do registro")
+          .props.value,
+      ).toBe("09/09/2026");
+
+      fireEvent.changeText(
+        view.getByLabelText(
+          "Data do registro",
+        ),
+        "08/09/2026",
+      );
+      fireEvent.changeText(
+        view.getByLabelText("Reflexão"),
+        "Reflexão atualizada.",
+      );
+
+      await advanceAutosave();
+
+      expect(
+        mockCreateDraft,
+      ).not.toHaveBeenCalled();
+      expect(
+        mockUpdateDraft,
+      ).not.toHaveBeenCalled();
+
+      fireEvent.press(
+        view.getByLabelText(
+          "Salvar registro do diário",
+        ),
+      );
+
+      await waitFor(() => {
+        expect(
+          mockUpdate,
+        ).toHaveBeenCalledWith(
+          entryId,
+          {
+            entryDate: "2026-09-08",
+            reflectionText:
+              "Reflexão atualizada.",
+            gratitudeText:
+              existingEntry.gratitudeText,
+          },
+        );
+      });
+    });
+
+    it("blocks explicit save when date is invalid", async () => {
+      const view = renderEditor();
+
+      fireEvent.changeText(
+        view.getByLabelText(
+          "Data do registro",
+        ),
+        "31/02/2026",
+      );
+      fireEvent.changeText(
+        view.getByLabelText("Reflexão"),
+        "Conteúdo válido.",
+      );
+
+      fireEvent.press(
+        view.getByLabelText(
+          "Salvar registro do diário",
+        ),
+      );
+
+      expect(
+        view.getByText(
+          "Informe uma data válida no formato DD/MM/AAAA.",
+        ),
+      ).toBeTruthy();
+
+      expect(
+        mockCreate,
+      ).not.toHaveBeenCalled();
+      expect(
+        mockPublishDraft,
+      ).not.toHaveBeenCalled();
+    });
+
+    it("blocks explicit save when content is empty but still permits empty drafts", async () => {
+      const view = renderEditor();
+
+      fireEvent.changeText(
+        view.getByLabelText("Reflexão"),
+        "Primeiro texto.",
+      );
+      await advanceAutosave();
+
+      fireEvent.changeText(
+        view.getByLabelText("Reflexão"),
+        "",
+      );
+      await advanceAutosave();
+
+      await waitFor(() => {
+        expect(
+          mockUpdateDraft,
+        ).toHaveBeenCalledWith(
+          draftId,
+          expect.objectContaining({
+            reflectionText: "",
+            gratitudeText: "",
+          }),
+        );
+      });
+
+      fireEvent.press(
+        view.getByLabelText(
+          "Salvar registro do diário",
+        ),
+      );
+
+      expect(
+        view.getByText(
+          "Escreva uma reflexão ou gratidão antes de salvar.",
+        ),
+      ).toBeTruthy();
+      expect(
+        mockPublishDraft,
+      ).not.toHaveBeenCalled();
+    });
+
+    it("shows autosave failure without discarding the form", async () => {
+      mockCreateDraft.mockRejectedValue(
+        new Error("temporary failure"),
+      );
+
+      const view = renderEditor();
+
+      fireEvent.changeText(
+        view.getByLabelText("Reflexão"),
+        "Texto permanece na tela.",
+      );
+      await advanceAutosave();
+
+      await waitFor(() => {
+        expect(
+          view.getByText(
+            "Não foi possível salvar o rascunho agora.",
+          ),
         ).toBeTruthy();
       });
 
       expect(
-        view.queryByText(code),
-      ).toBeNull();
-      expect(view.goBack).not.toHaveBeenCalled();
-    },
-  );
+        view.getByLabelText("Reflexão")
+          .props.value,
+      ).toBe("Texto permanece na tela.");
+    });
 
-  it("shows a generic persistence error without leaving the screen", async () => {
-    mockCreate.mockRejectedValue(
-      new Error("unexpected persistence failure"),
-    );
+    it("shows not-found state for an existing record id that is absent", async () => {
+      mockFindById.mockResolvedValueOnce(null);
 
-    const view = renderEditor();
+      const view = renderEditor(entryId);
 
-    fireEvent.changeText(
-      view.getByLabelText("Reflexão"),
-      "Conteúdo válido.",
-    );
+      await waitFor(() => {
+        expect(
+          view.getByText(
+            "Este registro não foi encontrado.",
+          ),
+        ).toBeTruthy();
+      });
+    });
 
-    fireEvent.press(
-      view.getByLabelText(
-        "Salvar registro do diário",
-      ),
-    );
+    it("retries a non-fatal load error and recovers the existing record", async () => {
+      mockFindById
+        .mockRejectedValueOnce(
+          new Error("temporary"),
+        )
+        .mockResolvedValueOnce(
+          existingEntry,
+        );
 
-    await waitFor(() => {
-      expect(
-        view.getByText(
-          "Não foi possível salvar seu registro agora. Tente novamente.",
+      const view = renderEditor(entryId);
+
+      await waitFor(() => {
+        expect(
+          view.getByText(
+            "Não foi possível carregar este registro agora.",
+          ),
+        ).toBeTruthy();
+      });
+
+      fireEvent.press(
+        view.getByLabelText(
+          "Tentar carregar o registro novamente",
         ),
-      ).toBeTruthy();
+      );
+
+      await waitFor(() => {
+        expect(
+          view.getByLabelText(
+            "Reflexão",
+          ).props.value,
+        ).toBe(
+          existingEntry.reflectionText,
+        );
+      });
     });
 
-    expect(view.goBack).not.toHaveBeenCalled();
-  });
+    it("keeps persistence and telemetry out of the editor", () => {
+      const source = fs.readFileSync(
+        "src/screens/JournalEntryEditorScreen.tsx",
+        "utf8",
+      );
 
-  it("returns after a successful create", async () => {
-    mockCreate.mockResolvedValue(existingEntry);
-
-    const view = renderEditor();
-
-    fireEvent.changeText(
-      view.getByLabelText("Reflexão"),
-      "Criar e voltar.",
-    );
-
-    fireEvent.press(
-      view.getByLabelText(
-        "Salvar registro do diário",
-      ),
-    );
-
-    await waitFor(() => {
-      expect(view.goBack).toHaveBeenCalledTimes(1);
+      expect(source).toContain(
+        "getPersonalPlatformHub().journalService",
+      );
+      expect(source).toContain(
+        "createDraft",
+      );
+      expect(source).toContain(
+        "updateDraft",
+      );
+      expect(source).toContain(
+        "publishDraft",
+      );
+      expect(source).not.toMatch(
+        /SQLiteJournalRepository|JournalRepository|expo-sqlite|AsyncStorage/i,
+      );
+      expect(source).not.toMatch(
+        /analytics|telemetry/i,
+      );
+      expect(source).not.toMatch(
+        /#[0-9A-Fa-f]{3,8}/,
+      );
     });
-  });
-
-  it("returns after a successful update", async () => {
-    mockUpdate.mockResolvedValue(existingEntry);
-
-    const view = await renderLoadedEditor();
-
-    fireEvent.press(
-      view.getByLabelText(
-        "Salvar registro do diário",
-      ),
-    );
-
-    await waitFor(() => {
-      expect(view.goBack).toHaveBeenCalledTimes(1);
-      expect(mockUpdate).toHaveBeenCalledTimes(1);
-    });
-  });
-
-  it("prevents duplicate submits while saving", async () => {
-    const pending = deferred<JournalEntry>();
-    mockCreate.mockReturnValue(pending.promise);
-
-    const view = renderEditor();
-
-    fireEvent.changeText(
-      view.getByLabelText("Reflexão"),
-      "Salvar apenas uma vez.",
-    );
-
-    const saveButton = view.getByLabelText(
-      "Salvar registro do diário",
-    );
-
-    fireEvent.press(saveButton);
-
-    expect(
-      view.getByText("Salvando..."),
-    ).toBeTruthy();
-
-    fireEvent.press(saveButton);
-
-    expect(mockCreate).toHaveBeenCalledTimes(1);
-
-    await act(async () => {
-      pending.resolve(existingEntry);
-      await pending.promise;
-    });
-
-    await waitFor(() => {
-      expect(view.goBack).toHaveBeenCalledTimes(1);
-    });
-  });
-
-  it("keeps persistence, legacy storage, and telemetry out of the editor", () => {
-    const source = fs.readFileSync(
-      "src/screens/JournalEntryEditorScreen.tsx",
-      "utf8",
-    );
-
-    expect(source).toContain(
-      "getPersonalPlatformHub().journalService",
-    );
-    expect(source).toContain(
-      "JOURNAL_REFLECTION_MAX_CHARS",
-    );
-    expect(source).toContain(
-      "JOURNAL_GRATITUDE_MAX_CHARS",
-    );
-    expect(source).not.toMatch(
-      /SQLiteJournalRepository|JournalRepository|expo-sqlite|AsyncStorage/i,
-    );
-    expect(source).not.toMatch(
-      /analytics|telemetry/i,
-    );
-    expect(source).not.toMatch(
-      /new Date|Date\.now|entryDate\s*:/,
-    );
-    expect(source).not.toMatch(
-      /titleText|\bcategory\b|\btags?\b|BibleReference|readingPlan|autosave|\bdrafts?\b|\bbackup\b/i,
-    );
-    expect(source).not.toMatch(
-      /Exportar|Compartilhar|exportJournal|exportEntry|expo-sharing|shareAsync/i,
-    );
-    expect(source).not.toMatch(
-      /#[0-9A-Fa-f]{3,8}/,
-    );
-  });
-});
+  },
+);

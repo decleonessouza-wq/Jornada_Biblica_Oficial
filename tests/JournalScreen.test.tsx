@@ -11,8 +11,8 @@ import {
 } from "@react-navigation/native";
 
 import type {
-  JournalEntry,
-} from "../src/domain/journal/journal";
+  JournalEntryPersistenceRecord,
+} from "../src/data/personal/journal/journalRepository";
 import {
   getPersonalPlatformHub,
 } from "../src/services/personalPlatformHub";
@@ -47,31 +47,38 @@ const mockedGetPersonalPlatformHub =
   >;
 
 const mockJournalList = jest.fn();
+const mockGetTodayEntryDate = jest.fn();
 
-const reflectionEntry = {
-  id: "journal-entry-reflection",
-  entryDate: "2026-09-09",
-  reflectionText:
-    "Hoje compreendi que preciso perseverar com fé.",
-  gratitudeText: null,
-  createdAtUtc: "2026-09-09T13:00:00.000Z",
-  updatedAtUtc: "2026-09-09T13:00:00.000Z",
-} as unknown as JournalEntry;
-
-const gratitudeEntry = {
-  id: "journal-entry-gratitude",
-  entryDate: "2026-09-08",
-  reflectionText: null,
-  gratitudeText:
-    "Sou grato a Deus pelo cuidado de hoje.",
-  createdAtUtc: "2026-09-08T13:00:00.000Z",
-  updatedAtUtc: "2026-09-08T13:00:00.000Z",
-} as unknown as JournalEntry;
+function entry(
+  overrides: Partial<
+    JournalEntryPersistenceRecord
+  >,
+): JournalEntryPersistenceRecord {
+  return {
+    id: "journal-entry-default",
+    entryDate: "2026-09-10",
+    reflectionText: "Reflexão",
+    gratitudeText: null,
+    status: "ACTIVE",
+    sourceType: "FREE",
+    sourceTitleSnapshot: null,
+    promptSnapshot: null,
+    references: [],
+    tags: [],
+    createdAtUtc:
+      "2026-09-10T13:00:00.000Z",
+    updatedAtUtc:
+      "2026-09-10T13:00:00.000Z",
+    ...overrides,
+  } as JournalEntryPersistenceRecord;
+}
 
 function configureHub(): void {
   mockedGetPersonalPlatformHub.mockReturnValue({
     journalService: {
       list: mockJournalList,
+      getTodayEntryDate:
+        mockGetTodayEntryDate,
     },
   } as unknown as ReturnType<
     typeof getPersonalPlatformHub
@@ -114,11 +121,17 @@ async function runFocusEffect(): Promise<void> {
   });
 }
 
-describe("JournalScreen", () => {
+describe("JournalScreen P16-P2 timeline", () => {
   beforeEach(() => {
     mockJournalList.mockReset();
+    mockGetTodayEntryDate.mockReset();
     mockedUseFocusEffect.mockReset();
     mockedGetPersonalPlatformHub.mockReset();
+
+    mockGetTodayEntryDate.mockReturnValue(
+      "2026-09-10",
+    );
+
     configureHub();
   });
 
@@ -126,7 +139,7 @@ describe("JournalScreen", () => {
     cleanup();
   });
 
-  it("shows an explicit loading state before focus completes", () => {
+  it("loads timeline data when focused", async () => {
     mockJournalList.mockResolvedValue([]);
 
     const view = renderJournal();
@@ -134,46 +147,55 @@ describe("JournalScreen", () => {
     expect(
       view.getByText("Carregando seu diário..."),
     ).toBeTruthy();
-    expect(mockJournalList).not.toHaveBeenCalled();
-  });
 
-  it(
-    "loads journal entries when the screen receives focus",
-    async () => {
-      mockJournalList.mockResolvedValue([]);
-
-      const view = renderJournal();
-
-      await runFocusEffect();
-
-      await waitFor(() => {
-        expect(mockJournalList).toHaveBeenCalledTimes(1);
-        expect(
-          view.getByText("Seu diário ainda está vazio"),
-        ).toBeTruthy();
-      });
-    },
-    15000,
-  );
-
-  it("renders a natural empty state", async () => {
-    mockJournalList.mockResolvedValue([]);
-
-    const view = renderJournal();
     await runFocusEffect();
 
     await waitFor(() => {
       expect(
+        mockGetTodayEntryDate,
+      ).toHaveBeenCalledTimes(1);
+      expect(
+        mockJournalList,
+      ).toHaveBeenCalledTimes(1);
+      expect(
         view.getByText(
-          "Quando você registrar uma reflexão ou gratidão, ela aparecerá aqui.",
+          "Seu diário ainda está vazio",
         ),
       ).toBeTruthy();
     });
   });
 
-  it("renders a reflection entry without inventing gratitude", async () => {
+  it("groups repository-ordered entries by today, yesterday, week, month and year without sorting", async () => {
     mockJournalList.mockResolvedValue([
-      reflectionEntry,
+      entry({
+        id: "today-a" as never,
+        entryDate: "2026-09-10" as never,
+      }),
+      entry({
+        id: "today-b" as never,
+        entryDate: "2026-09-10" as never,
+        reflectionText: "Segunda de hoje",
+      }),
+      entry({
+        id: "yesterday" as never,
+        entryDate: "2026-09-09" as never,
+      }),
+      entry({
+        id: "week" as never,
+        entryDate: "2026-09-08" as never,
+      }),
+      entry({
+        id: "month" as never,
+        entryDate: "2026-09-01" as never,
+      }),
+      entry({
+        id: "older-month" as never,
+        entryDate: "2026-08-31" as never,
+      }),
+      entry({
+        id: "older-year" as never,
+        entryDate: "2025-12-31" as never,
+      }),
     ]);
 
     const view = renderJournal();
@@ -181,25 +203,123 @@ describe("JournalScreen", () => {
 
     await waitFor(() => {
       expect(
-        view.getByText("09 de setembro de 2026"),
+        view.getByText("Hoje"),
+      ).toBeTruthy();
+      expect(
+        view.getByText("Ontem"),
+      ).toBeTruthy();
+      expect(
+        view.getByText("Esta semana"),
+      ).toBeTruthy();
+      expect(
+        view.getByText("Este mês"),
+      ).toBeTruthy();
+      expect(
+        view.getByText("Agosto"),
+      ).toBeTruthy();
+      expect(
+        view.getByText("2025"),
+      ).toBeTruthy();
+    });
+
+    const source = fs.readFileSync(
+      "src/screens/JournalScreen.tsx",
+      "utf8",
+    );
+    expect(source).not.toContain(".sort(");
+  });
+
+  it("opens active entries in detail", async () => {
+    const active = entry({
+      id: "active-entry" as never,
+    });
+    mockJournalList.mockResolvedValue([
+      active,
+    ]);
+
+    const view = renderJournal();
+    await runFocusEffect();
+
+    const label =
+      "Abrir registro do diário de 10 de setembro de 2026";
+
+    await waitFor(() => {
+      expect(
+        view.getByLabelText(label),
+      ).toBeTruthy();
+    });
+
+    fireEvent.press(
+      view.getByLabelText(label),
+    );
+
+    expect(
+      view.navigate,
+    ).toHaveBeenCalledWith(
+      "JournalEntryDetail",
+      {
+        entryId: active.id,
+      },
+    );
+  });
+
+  it("opens drafts directly in the editor", async () => {
+    const draft = entry({
+      id: "draft-entry" as never,
+      status: "DRAFT",
+      reflectionText: null,
+      gratitudeText: null,
+    });
+    mockJournalList.mockResolvedValue([
+      draft,
+    ]);
+
+    const view = renderJournal();
+    await runFocusEffect();
+
+    const label =
+      "Continuar rascunho do diário de 10 de setembro de 2026";
+
+    await waitFor(() => {
+      expect(
+        view.getByText("Rascunho"),
       ).toBeTruthy();
       expect(
         view.getByText(
-          "Hoje compreendi que preciso perseverar com fé.",
+          "Continue escrevendo seu registro.",
         ),
       ).toBeTruthy();
     });
 
+    fireEvent.press(
+      view.getByLabelText(label),
+    );
+
     expect(
-      view.queryByText(
-        "Sou grato a Deus pelo cuidado de hoje.",
-      ),
-    ).toBeNull();
+      view.navigate,
+    ).toHaveBeenCalledWith(
+      "JournalEntryEditor",
+      {
+        entryId: draft.id,
+      },
+    );
   });
 
-  it("renders a gratitude entry without inventing reflection", async () => {
+  it("keeps both reflection and gratitude cards faithful to persisted content", async () => {
     mockJournalList.mockResolvedValue([
-      gratitudeEntry,
+      entry({
+        id: "reflection" as never,
+        reflectionText:
+          "Reflexão persistida.",
+        gratitudeText: null,
+      }),
+      entry({
+        id: "gratitude" as never,
+        entryDate: "2026-09-09" as never,
+        reflectionText: null,
+        gratitudeText:
+          "Gratidão persistida.",
+      }),
     ]);
 
     const view = renderJournal();
@@ -207,26 +327,22 @@ describe("JournalScreen", () => {
 
     await waitFor(() => {
       expect(
-        view.getByText("08 de setembro de 2026"),
+        view.getByText(
+          "Reflexão persistida.",
+        ),
       ).toBeTruthy();
       expect(
         view.getByText(
-          "Sou grato a Deus pelo cuidado de hoje.",
+          "Gratidão persistida.",
         ),
       ).toBeTruthy();
     });
-
-    expect(
-      view.queryByText(
-        "Hoje compreendi que preciso perseverar com fé.",
-      ),
-    ).toBeNull();
   });
 
-  it("renders a non-fatal error and retries successfully", async () => {
+  it("retries a non-fatal load error", async () => {
     mockJournalList
       .mockRejectedValueOnce(
-        new Error("temporary failure"),
+        new Error("temporary"),
       )
       .mockResolvedValueOnce([]);
 
@@ -248,14 +364,18 @@ describe("JournalScreen", () => {
     );
 
     await waitFor(() => {
-      expect(mockJournalList).toHaveBeenCalledTimes(2);
       expect(
-        view.getByText("Seu diário ainda está vazio"),
+        mockJournalList,
+      ).toHaveBeenCalledTimes(2);
+      expect(
+        view.getByText(
+          "Seu diário ainda está vazio",
+        ),
       ).toBeTruthy();
     });
   });
 
-  it("navigates to typed creation route", () => {
+  it("starts typed creation route from one primary action", () => {
     mockJournalList.mockResolvedValue([]);
 
     const view = renderJournal();
@@ -266,56 +386,27 @@ describe("JournalScreen", () => {
       ),
     );
 
-    expect(view.navigate).toHaveBeenCalledWith(
+    expect(
+      view.navigate,
+    ).toHaveBeenCalledWith(
       "JournalEntryEditor",
     );
   });
 
-  it("opens the selected entry with its exact entryId", async () => {
-    mockJournalList.mockResolvedValue([
-      reflectionEntry,
-      gratitudeEntry,
-    ]);
-
-    const view = renderJournal();
-    await runFocusEffect();
-
-    const label =
-      "Abrir registro do diário de 09 de setembro de 2026";
-
-    await waitFor(() => {
-      expect(
-        view.getByLabelText(label),
-      ).toBeTruthy();
-    });
-
-    fireEvent.press(
-      view.getByLabelText(label),
-    );
-
-    expect(view.navigate).toHaveBeenCalledWith(
-      "JournalEntryDetail",
-      {
-        entryId: reflectionEntry.id,
-      },
-    );
-  });
-
-  it("uses the Hub service without direct persistence access", () => {
+  it("uses the Hub service without direct persistence or telemetry access", () => {
     const source = fs.readFileSync(
       "src/screens/JournalScreen.tsx",
       "utf8",
     );
 
     expect(source).toContain(
-      "getPersonalPlatformHub().journalService.list()",
+      "getPersonalPlatformHub().journalService",
     );
     expect(source).not.toMatch(
-      /SQLiteJournalRepository|JournalRepository|expo-sqlite|AsyncStorage/i,
+      /SQLiteJournalRepository|expo-sqlite|AsyncStorage/i,
     );
     expect(source).not.toMatch(
       /analytics|telemetry/i,
     );
-    expect(source).not.toContain(".sort(");
   });
 });

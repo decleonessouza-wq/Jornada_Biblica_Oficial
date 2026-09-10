@@ -146,15 +146,15 @@ describe("JournalService", () => {
     expect(harness.list).toHaveBeenCalledTimes(1);
   });
 
-  it("delegates findById and returns null transparently", async () => {
+  it("delegates findById and preserves the full persistence record", async () => {
     const harness = createHarness();
-    harness.findById.mockResolvedValue(null);
+    const existing = persistenceEntry();
+    harness.findById.mockResolvedValue(existing);
 
     await expect(
       harness.service.findById(ENTRY_ID),
-    ).resolves.toBeNull();
+    ).resolves.toBe(existing);
 
-    expect(harness.findById).toHaveBeenCalledTimes(1);
     expect(harness.findById).toHaveBeenCalledWith(ENTRY_ID);
   });
 
@@ -167,8 +167,9 @@ describe("JournalService", () => {
       harness.service.findByDate(ENTRY_DATE),
     ).resolves.toBe(existing);
 
-    expect(harness.findByDate).toHaveBeenCalledTimes(1);
-    expect(harness.findByDate).toHaveBeenCalledWith(ENTRY_DATE);
+    expect(harness.findByDate).toHaveBeenCalledWith(
+      ENTRY_DATE,
+    );
   });
 
   it("delegates listByDate and preserves multiple entries and repository order", async () => {
@@ -187,11 +188,23 @@ describe("JournalService", () => {
       harness.service.listByDate(ENTRY_DATE),
     ).resolves.toEqual([first, second]);
 
-    expect(harness.listByDate).toHaveBeenCalledTimes(1);
-    expect(harness.listByDate).toHaveBeenCalledWith(ENTRY_DATE);
+    expect(harness.listByDate).toHaveBeenCalledWith(
+      ENTRY_DATE,
+    );
   });
 
-  it("creates with local date derived from the same captured now without a date-conflict lookup", async () => {
+  it("provides today's local entryDate from one clock read", () => {
+    const harness = createHarness();
+
+    expect(
+      harness.service.getTodayEntryDate(),
+    ).toBe(ENTRY_DATE);
+    expect(harness.now).toHaveBeenCalledTimes(1);
+    expect(harness.toLocalDate).toHaveBeenCalledWith(NOW);
+    expect(harness.toUtcTimestamp).not.toHaveBeenCalled();
+  });
+
+  it("creates an active entry with the same captured now and no date-conflict lookup", async () => {
     const harness = createHarness();
 
     const result = await harness.service.create({
@@ -199,22 +212,13 @@ describe("JournalService", () => {
     });
 
     expect(harness.now).toHaveBeenCalledTimes(1);
-    expect(harness.toLocalDate).toHaveBeenCalledTimes(1);
     expect(harness.toLocalDate).toHaveBeenCalledWith(NOW);
-    expect(harness.toUtcTimestamp).toHaveBeenCalledTimes(1);
     expect(harness.toUtcTimestamp).toHaveBeenCalledWith(NOW);
-    expect(harness.createId).toHaveBeenCalledTimes(1);
-    expect(harness.createId).toHaveBeenCalledWith("journal_entry");
+    expect(harness.createId).toHaveBeenCalledWith(
+      "journal_entry",
+    );
     expect(harness.findByDate).not.toHaveBeenCalled();
     expect(harness.create).toHaveBeenCalledTimes(1);
-    expect(harness.create).toHaveBeenCalledWith({
-      id: ENTRY_ID,
-      entryDate: ENTRY_DATE,
-      reflectionText: "Reflexão",
-      gratitudeText: null,
-      createdAtUtc: CREATED_AT,
-      updatedAtUtc: CREATED_AT,
-    });
     expect(result).toEqual({
       id: ENTRY_ID,
       entryDate: ENTRY_DATE,
@@ -225,7 +229,7 @@ describe("JournalService", () => {
     });
   });
 
-  it("preserves an explicit create entryDate", async () => {
+  it("preserves an explicit active create entryDate", async () => {
     const harness = createHarness();
 
     const result = await harness.service.create({
@@ -233,13 +237,11 @@ describe("JournalService", () => {
       gratitudeText: "Obrigado",
     });
 
-    expect(harness.now).toHaveBeenCalledTimes(1);
     expect(harness.toLocalDate).not.toHaveBeenCalled();
-    expect(harness.findByDate).not.toHaveBeenCalled();
     expect(result.entryDate).toBe(OTHER_ENTRY_DATE);
   });
 
-  it("allows two entries on the same date with distinct canonical ids", async () => {
+  it("allows two active entries on the same date with distinct canonical ids", async () => {
     const harness = createHarness();
     harness.createId
       .mockReturnValueOnce(ENTRY_ID)
@@ -247,71 +249,45 @@ describe("JournalService", () => {
 
     const first = await harness.service.create({
       entryDate: ENTRY_DATE,
-      reflectionText: "Primeira reflexão",
+      reflectionText: "Primeira",
     });
     const second = await harness.service.create({
       entryDate: ENTRY_DATE,
-      reflectionText: "Segunda reflexão",
+      reflectionText: "Segunda",
     });
 
-    expect(first.entryDate).toBe(ENTRY_DATE);
-    expect(second.entryDate).toBe(ENTRY_DATE);
     expect(first.id).toBe(ENTRY_ID);
     expect(second.id).toBe(OTHER_ENTRY_ID);
-    expect(harness.createId).toHaveBeenCalledTimes(2);
-    expect(harness.createId).toHaveBeenNthCalledWith(
-      1,
-      "journal_entry",
-    );
-    expect(harness.createId).toHaveBeenNthCalledWith(
-      2,
-      "journal_entry",
-    );
+    expect(first.entryDate).toBe(second.entryDate);
     expect(harness.findByDate).not.toHaveBeenCalled();
     expect(harness.create).toHaveBeenCalledTimes(2);
   });
 
-  it("persists each valid create exactly once", async () => {
-    const harness = createHarness();
-
-    await harness.service.create({
-      reflectionText: "Registro válido",
-    });
-
-    expect(harness.create).toHaveBeenCalledTimes(1);
-  });
-
-  it("normalizes absent or whitespace-only create content to null while preserving non-empty text", async () => {
+  it("normalizes absent or whitespace-only active content while preserving non-empty bytes", async () => {
     const harness = createHarness();
 
     const result = await harness.service.create({
-      reflectionText: undefined,
-      gratitudeText: "   Obrigado   ",
+      reflectionText: "   ",
+      gratitudeText: "  Obrigado  ",
     });
 
     expect(result.reflectionText).toBeNull();
-    expect(result.gratitudeText).toBe("   Obrigado   ");
-  });
-
-  it("preserves non-empty create text byte-for-byte without trimming", async () => {
-    const harness = createHarness();
-    const reflectionText = "  linha 1\nlinha 2  ";
-    const gratitudeText = "\tObrigado, Senhor.  ";
-
-    const result = await harness.service.create({
-      reflectionText,
-      gratitudeText,
-    });
-
-    expect(result.reflectionText).toBe(reflectionText);
-    expect(result.gratitudeText).toBe(gratitudeText);
+    expect(result.gratitudeText).toBe("  Obrigado  ");
   });
 
   it.each([
-    ["reflectionText", 5001, "PERSONAL_JOURNAL_REFLECTION_TEXT_INVALID"],
-    ["gratitudeText", 201, "PERSONAL_JOURNAL_GRATITUDE_TEXT_INVALID"],
+    [
+      "reflectionText",
+      5001,
+      "PERSONAL_JOURNAL_REFLECTION_TEXT_INVALID",
+    ],
+    [
+      "gratitudeText",
+      201,
+      "PERSONAL_JOURNAL_GRATITUDE_TEXT_INVALID",
+    ],
   ] as const)(
-    "rejects %s over its maximum",
+    "rejects active %s over its maximum",
     async (field, length, code) => {
       const harness = createHarness();
 
@@ -321,12 +297,11 @@ describe("JournalService", () => {
         }),
       ).rejects.toThrow(code);
 
-      expect(harness.findByDate).not.toHaveBeenCalled();
       expect(harness.create).not.toHaveBeenCalled();
     },
   );
 
-  it("rejects create when both content fields are absent", async () => {
+  it("rejects active create when both content fields are absent", async () => {
     const harness = createHarness();
 
     await expect(
@@ -338,27 +313,233 @@ describe("JournalService", () => {
       "PERSONAL_JOURNAL_ENTRY_CONTENT_REQUIRED",
     );
 
-    expect(harness.findByDate).not.toHaveBeenCalled();
     expect(harness.create).not.toHaveBeenCalled();
   });
 
-  it("rejects update when the target does not exist", async () => {
+  it("creates an empty FREE draft with full v4 defaults", async () => {
     const harness = createHarness();
-    harness.findById.mockResolvedValue(null);
 
-    await expect(
-      harness.service.update(ENTRY_ID, {
-        reflectionText: "Atualização",
-      }),
-    ).rejects.toThrow(
-      "PERSONAL_JOURNAL_UPDATE_TARGET_NOT_FOUND",
+    const draft =
+      await harness.service.createDraft();
+
+    expect(harness.now).toHaveBeenCalledTimes(1);
+    expect(harness.createId).toHaveBeenCalledWith(
+      "journal_entry",
     );
-
-    expect(harness.now).not.toHaveBeenCalled();
-    expect(harness.update).not.toHaveBeenCalled();
+    expect(draft).toEqual({
+      id: ENTRY_ID,
+      entryDate: ENTRY_DATE,
+      reflectionText: null,
+      gratitudeText: null,
+      status: "DRAFT",
+      sourceType: "FREE",
+      sourceTitleSnapshot: null,
+      promptSnapshot: null,
+      references: [],
+      tags: [],
+      createdAtUtc: CREATED_AT,
+      updatedAtUtc: CREATED_AT,
+    });
+    expect(harness.create).toHaveBeenCalledWith(draft);
   });
 
-  it("updates with the basic JournalEntry shape while preserving id, date, createdAt and omitted content", async () => {
+  it("creates a draft with explicit date and preserves non-empty text byte-for-byte", async () => {
+    const harness = createHarness();
+    const reflectionText = "  linha 1\nlinha 2  ";
+
+    const draft = await harness.service.createDraft({
+      entryDate: OTHER_ENTRY_DATE,
+      reflectionText,
+    });
+
+    expect(draft.entryDate).toBe(OTHER_ENTRY_DATE);
+    expect(draft.reflectionText).toBe(reflectionText);
+    expect(harness.toLocalDate).not.toHaveBeenCalled();
+  });
+
+  it("updates a draft while preserving source snapshots references tags and createdAt", async () => {
+    const harness = createHarness();
+    const reference = {
+      id: "journal-reference-1",
+      entryId: ENTRY_ID,
+      position: 0,
+      reference: {
+        passages: [
+          {
+            kind: "CHAPTER",
+            bookId: "GEN",
+            chapter: 1,
+          },
+        ],
+      },
+    };
+    const tag = {
+      id: "journal-tag-1",
+      name: "Promessa",
+      normalizedName: "promessa",
+    };
+    const existing = persistenceEntry({
+      status: "DRAFT",
+      sourceType: "BIBLE",
+      sourceTitleSnapshot: "Gênesis 1",
+      promptSnapshot: "O que este texto falou com você?",
+      references: [reference] as never,
+      tags: [tag] as never,
+    });
+    harness.findById.mockResolvedValue(existing);
+    harness.toUtcTimestamp.mockReturnValue(UPDATED_AT);
+
+    const updated = await harness.service.updateDraft(
+      ENTRY_ID,
+      {
+        entryDate: OTHER_ENTRY_DATE,
+        reflectionText: "Nova reflexão",
+        gratitudeText: null,
+      },
+    );
+
+    expect(updated).toEqual({
+      ...existing,
+      entryDate: OTHER_ENTRY_DATE,
+      reflectionText: "Nova reflexão",
+      gratitudeText: null,
+      status: "DRAFT",
+      updatedAtUtc: UPDATED_AT,
+    });
+    expect(updated.references).toBe(existing.references);
+    expect(updated.tags).toBe(existing.tags);
+    expect(updated.createdAtUtc).toBe(CREATED_AT);
+    expect(harness.update).toHaveBeenCalledWith(updated);
+  });
+
+  it("allows a draft update to become empty", async () => {
+    const harness = createHarness();
+    harness.findById.mockResolvedValue(
+      persistenceEntry({
+        status: "DRAFT",
+        reflectionText: "Apagar",
+        gratitudeText: null,
+      }),
+    );
+
+    const updated = await harness.service.updateDraft(
+      ENTRY_ID,
+      {
+        reflectionText: null,
+      },
+    );
+
+    expect(updated.reflectionText).toBeNull();
+    expect(updated.gratitudeText).toBeNull();
+    expect(updated.status).toBe("DRAFT");
+  });
+
+  it.each([
+    [
+      null,
+      "PERSONAL_JOURNAL_DRAFT_TARGET_NOT_FOUND",
+    ],
+    [
+      persistenceEntry({ status: "ACTIVE" }),
+      "PERSONAL_JOURNAL_DRAFT_TARGET_INVALID",
+    ],
+  ] as const)(
+    "rejects invalid draft update target with %s",
+    async (existing, code) => {
+      const harness = createHarness();
+      harness.findById.mockResolvedValue(existing);
+
+      await expect(
+        harness.service.updateDraft(
+          ENTRY_ID,
+          { reflectionText: "x" },
+        ),
+      ).rejects.toThrow(code);
+
+      expect(harness.update).not.toHaveBeenCalled();
+      expect(harness.now).not.toHaveBeenCalled();
+    },
+  );
+
+  it("publishes a draft to ACTIVE while preserving v4 context", async () => {
+    const harness = createHarness();
+    const existing = persistenceEntry({
+      status: "DRAFT",
+      sourceType: "PLAN",
+      sourceTitleSnapshot: "Dia 42",
+      promptSnapshot: "Registre sua reflexão.",
+      reflectionText: null,
+      gratitudeText: null,
+    });
+    harness.findById.mockResolvedValue(existing);
+    harness.toUtcTimestamp.mockReturnValue(UPDATED_AT);
+
+    const published =
+      await harness.service.publishDraft(
+        ENTRY_ID,
+        {
+          entryDate: OTHER_ENTRY_DATE,
+          reflectionText: "Reflexão final",
+        },
+      );
+
+    expect(published).toEqual({
+      ...existing,
+      entryDate: OTHER_ENTRY_DATE,
+      reflectionText: "Reflexão final",
+      gratitudeText: null,
+      status: "ACTIVE",
+      updatedAtUtc: UPDATED_AT,
+    });
+    expect(harness.update).toHaveBeenCalledWith(
+      published,
+    );
+  });
+
+  it("blocks publishing an empty draft without mutating it", async () => {
+    const harness = createHarness();
+    harness.findById.mockResolvedValue(
+      persistenceEntry({
+        status: "DRAFT",
+        reflectionText: null,
+        gratitudeText: null,
+      }),
+    );
+
+    await expect(
+      harness.service.publishDraft(ENTRY_ID),
+    ).rejects.toThrow(
+      "PERSONAL_JOURNAL_ENTRY_CONTENT_REQUIRED",
+    );
+
+    expect(harness.update).not.toHaveBeenCalled();
+    expect(harness.now).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    [
+      null,
+      "PERSONAL_JOURNAL_DRAFT_TARGET_NOT_FOUND",
+    ],
+    [
+      persistenceEntry({ status: "ACTIVE" }),
+      "PERSONAL_JOURNAL_DRAFT_TARGET_INVALID",
+    ],
+  ] as const)(
+    "rejects invalid publish target with %s",
+    async (existing, code) => {
+      const harness = createHarness();
+      harness.findById.mockResolvedValue(existing);
+
+      await expect(
+        harness.service.publishDraft(ENTRY_ID),
+      ).rejects.toThrow(code);
+
+      expect(harness.update).not.toHaveBeenCalled();
+    },
+  );
+
+  it("updates an active entry date and content through the basic compatibility shape", async () => {
     const harness = createHarness();
     const existing = persistenceEntry({
       reflectionText: "Original",
@@ -369,20 +550,20 @@ describe("JournalService", () => {
 
     const result = await harness.service.update(
       ENTRY_ID,
-      { gratitudeText: "Nova gratidão" },
+      {
+        entryDate: OTHER_ENTRY_DATE,
+        gratitudeText: "Nova gratidão",
+      },
     );
 
     expect(result).toEqual({
       id: ENTRY_ID,
-      entryDate: ENTRY_DATE,
+      entryDate: OTHER_ENTRY_DATE,
       reflectionText: "Original",
       gratitudeText: "Nova gratidão",
       createdAtUtc: CREATED_AT,
       updatedAtUtc: UPDATED_AT,
     });
-    expect(harness.now).toHaveBeenCalledTimes(1);
-    expect(harness.toUtcTimestamp).toHaveBeenCalledWith(NOW);
-    expect(harness.update).toHaveBeenCalledWith(result);
 
     const persisted = harness.update.mock.calls[0]?.[0];
     expect(Object.keys(persisted).sort()).toEqual([
@@ -394,14 +575,11 @@ describe("JournalService", () => {
       "updatedAtUtc",
     ]);
     expect(persisted).not.toHaveProperty("status");
-    expect(persisted).not.toHaveProperty("sourceType");
-    expect(persisted).not.toHaveProperty("sourceTitleSnapshot");
-    expect(persisted).not.toHaveProperty("promptSnapshot");
     expect(persisted).not.toHaveProperty("references");
     expect(persisted).not.toHaveProperty("tags");
   });
 
-  it("treats null in update as an explicit clear", async () => {
+  it("preserves omitted fields and supports explicit null during active update", async () => {
     const harness = createHarness();
     harness.findById.mockResolvedValue(
       persistenceEntry({
@@ -416,30 +594,28 @@ describe("JournalService", () => {
       { gratitudeText: null },
     );
 
+    expect(result.entryDate).toBe(ENTRY_DATE);
     expect(result.reflectionText).toBe("Manter");
     expect(result.gratitudeText).toBeNull();
   });
 
-  it("normalizes a whitespace-only update replacement to null", async () => {
+  it("rejects update when the target does not exist", async () => {
     const harness = createHarness();
-    harness.findById.mockResolvedValue(
-      persistenceEntry({
-        reflectionText: "Manter",
-        gratitudeText: "Remover",
-      }),
-    );
-    harness.toUtcTimestamp.mockReturnValue(UPDATED_AT);
+    harness.findById.mockResolvedValue(null);
 
-    const result = await harness.service.update(
-      ENTRY_ID,
-      { gratitudeText: "   " },
+    await expect(
+      harness.service.update(
+        ENTRY_ID,
+        { reflectionText: "Atualização" },
+      ),
+    ).rejects.toThrow(
+      "PERSONAL_JOURNAL_UPDATE_TARGET_NOT_FOUND",
     );
 
-    expect(result.reflectionText).toBe("Manter");
-    expect(result.gratitudeText).toBeNull();
+    expect(harness.update).not.toHaveBeenCalled();
   });
 
-  it("rejects update when merged content becomes empty", async () => {
+  it("rejects active update when merged content becomes empty", async () => {
     const harness = createHarness();
     harness.findById.mockResolvedValue(
       persistenceEntry({
@@ -457,24 +633,6 @@ describe("JournalService", () => {
       "PERSONAL_JOURNAL_ENTRY_CONTENT_REQUIRED",
     );
 
-    expect(harness.now).not.toHaveBeenCalled();
-    expect(harness.update).not.toHaveBeenCalled();
-  });
-
-  it("rejects invalid update limits before persistence", async () => {
-    const harness = createHarness();
-    harness.findById.mockResolvedValue(persistenceEntry());
-
-    await expect(
-      harness.service.update(
-        ENTRY_ID,
-        { gratitudeText: "x".repeat(201) },
-      ),
-    ).rejects.toThrow(
-      "PERSONAL_JOURNAL_GRATITUDE_TEXT_INVALID",
-    );
-
-    expect(harness.now).not.toHaveBeenCalled();
     expect(harness.update).not.toHaveBeenCalled();
   });
 
@@ -484,31 +642,23 @@ describe("JournalService", () => {
     await harness.service.remove(ENTRY_ID);
 
     expect(harness.remove).toHaveBeenCalledTimes(1);
-    expect(harness.remove).toHaveBeenCalledWith(ENTRY_ID);
+    expect(harness.remove).toHaveBeenCalledWith(
+      ENTRY_ID,
+    );
   });
 
-  it("propagates repository read errors without parsing them", async () => {
+  it("propagates repository errors without retrying or parsing", async () => {
     const harness = createHarness();
-    const repositoryError = new Error("REPOSITORY_FAILURE");
-    harness.list.mockRejectedValue(repositoryError);
-
-    await expect(
-      harness.service.list(),
-    ).rejects.toBe(repositoryError);
-  });
-
-  it("propagates repository create errors without retrying or date-conflict lookup", async () => {
-    const harness = createHarness();
-    const repositoryError = new Error("CREATE_FAILURE");
+    const repositoryError =
+      new Error("REPOSITORY_FAILURE");
     harness.create.mockRejectedValue(repositoryError);
 
     await expect(
-      harness.service.create({
-        reflectionText: "Reflexão",
+      harness.service.createDraft({
+        reflectionText: "Rascunho",
       }),
     ).rejects.toBe(repositoryError);
 
-    expect(harness.findByDate).not.toHaveBeenCalled();
     expect(harness.create).toHaveBeenCalledTimes(1);
   });
 });

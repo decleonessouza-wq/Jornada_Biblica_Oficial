@@ -17,7 +17,11 @@ import {
 import {
   JOURNAL_GRATITUDE_MAX_CHARS,
   JOURNAL_REFLECTION_MAX_CHARS,
+  type JournalEntryId,
 } from "../domain/journal/journal";
+import type {
+  PersonalLocalDate,
+} from "../domain/personal/personalTime";
 import type { JournalStackScreenProps } from "../navigation/types";
 import { getPersonalPlatformHub } from "../services/personalPlatformHub";
 import { colors } from "../theme/colors";
@@ -31,8 +35,25 @@ type LoadStatus =
   | "error"
   | "not-found";
 
+type AutosaveStatus =
+  | "idle"
+  | "saving"
+  | "saved"
+  | "error";
+
+type DraftSnapshot = Readonly<{
+  entryDate: PersonalLocalDate;
+  reflectionText: string;
+  gratitudeText: string;
+}>;
+
 const CONTENT_REQUIRED_MESSAGE =
   "Escreva uma reflexão ou gratidão antes de salvar.";
+
+const DATE_INVALID_MESSAGE =
+  "Informe uma data válida no formato DD/MM/AAAA.";
+
+const AUTOSAVE_DELAY_MS = 800;
 
 function getJournalErrorMessage(error: unknown): string {
   const code =
@@ -47,15 +68,16 @@ function getJournalErrorMessage(error: unknown): string {
       return "A reflexão ultrapassa o limite permitido.";
     case "PERSONAL_JOURNAL_GRATITUDE_TEXT_INVALID":
       return "A gratidão ultrapassa o limite permitido.";
-    case "PERSONAL_JOURNAL_ENTRY_DATE_CONFLICT":
-      return (
-        "Já existe um registro para hoje. " +
-        "Abra o registro existente para editar."
-      );
     case "PERSONAL_JOURNAL_UPDATE_TARGET_NOT_FOUND":
+    case "PERSONAL_JOURNAL_DRAFT_TARGET_NOT_FOUND":
       return (
         "Este registro não foi encontrado. " +
         "Volte ao diário e tente novamente."
+      );
+    case "PERSONAL_JOURNAL_DRAFT_TARGET_INVALID":
+      return (
+        "Este registro já foi concluído. " +
+        "Volte ao diário e abra-o novamente."
       );
     default:
       return (
@@ -65,44 +87,162 @@ function getJournalErrorMessage(error: unknown): string {
   }
 }
 
+function formatEntryDateInput(
+  entryDate: string,
+): string {
+  const match =
+    /^(\d{4})-(\d{2})-(\d{2})$/.exec(
+      entryDate,
+    );
+
+  if (!match) {
+    return entryDate;
+  }
+
+  return `${match[3]}/${match[2]}/${match[1]}`;
+}
+
+function isLeapYear(year: number): boolean {
+  return (
+    year % 400 === 0 ||
+    (year % 4 === 0 && year % 100 !== 0)
+  );
+}
+
+function getDaysInMonth(
+  year: number,
+  month: number,
+): number {
+  const days = [
+    31,
+    isLeapYear(year) ? 29 : 28,
+    31,
+    30,
+    31,
+    30,
+    31,
+    31,
+    30,
+    31,
+    30,
+    31,
+  ];
+
+  return days[month - 1] ?? 0;
+}
+
+function parseEntryDateInput(
+  value: string,
+): PersonalLocalDate | null {
+  const match =
+    /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(
+      value,
+    );
+
+  if (!match) {
+    return null;
+  }
+
+  const day = Number(match[1]);
+  const month = Number(match[2]);
+  const year = Number(match[3]);
+
+  if (
+    year < 1 ||
+    month < 1 ||
+    month > 12 ||
+    day < 1 ||
+    day > getDaysInMonth(year, month)
+  ) {
+    return null;
+  }
+
+  return (
+    `${String(year).padStart(4, "0")}-` +
+    `${String(month).padStart(2, "0")}-` +
+    `${String(day).padStart(2, "0")}`
+  ) as PersonalLocalDate;
+}
+
 export default function JournalEntryEditorScreen({
   navigation,
   route,
 }: JournalEntryEditorScreenProps) {
-  const entryId = route.params?.entryId;
-  const isEditing = entryId !== undefined;
+  const routeEntryId = route.params?.entryId;
   const loadGenerationRef = useRef(0);
   const submitLockRef = useRef(false);
+  const mountedRef = useRef(true);
+  const hasUserEditedRef = useRef(false);
+  const draftEntryIdRef =
+    useRef<JournalEntryId | null>(null);
+  const autosaveTimerRef =
+    useRef<ReturnType<typeof setTimeout> | null>(
+      null,
+    );
+  const autosaveQueueRef =
+    useRef<Promise<void>>(Promise.resolve());
 
   const [reflectionText, setReflectionText] =
     useState("");
   const [gratitudeText, setGratitudeText] =
     useState("");
+  const [entryDateInput, setEntryDateInput] =
+    useState("");
+  const [loadedStatus, setLoadedStatus] =
+    useState<"ACTIVE" | "DRAFT" | null>(null);
   const [loadStatus, setLoadStatus] =
     useState<LoadStatus>(
-      isEditing ? "loading" : "ready",
+      routeEntryId !== undefined
+        ? "loading"
+        : "ready",
     );
   const [saving, setSaving] = useState(false);
+  const [autosaveStatus, setAutosaveStatus] =
+    useState<AutosaveStatus>("idle");
   const [formMessage, setFormMessage] =
     useState<string | null>(null);
 
+  const clearAutosaveTimer = useCallback(() => {
+    if (autosaveTimerRef.current !== null) {
+      clearTimeout(autosaveTimerRef.current);
+      autosaveTimerRef.current = null;
+    }
+  }, []);
+
   const loadEntry = useCallback(async () => {
-    if (entryId === undefined) {
+    const journalService =
+      getPersonalPlatformHub().journalService;
+
+    if (routeEntryId === undefined) {
+      hasUserEditedRef.current = false;
+      draftEntryIdRef.current = null;
+      setLoadedStatus(null);
+      setEntryDateInput(
+        formatEntryDateInput(
+          journalService.getTodayEntryDate(),
+        ),
+      );
       setLoadStatus("ready");
       return;
     }
 
-    const generation = ++loadGenerationRef.current;
+    const generation =
+      ++loadGenerationRef.current;
+
     setLoadStatus("loading");
     setFormMessage(null);
+    setAutosaveStatus("idle");
 
     try {
       const entry =
-        await getPersonalPlatformHub().journalService.findById(
-          entryId,
+        await journalService.findById(
+          routeEntryId,
         );
 
-      if (generation !== loadGenerationRef.current) {
+      if (
+        generation !==
+        loadGenerationRef.current
+      ) {
         return;
       }
 
@@ -111,25 +251,164 @@ export default function JournalEntryEditorScreen({
         return;
       }
 
-      setReflectionText(entry.reflectionText ?? "");
-      setGratitudeText(entry.gratitudeText ?? "");
+      if (entry.status === "TRASHED") {
+        setLoadStatus("not-found");
+        return;
+      }
+
+      hasUserEditedRef.current = false;
+      draftEntryIdRef.current =
+        entry.status === "DRAFT"
+          ? entry.id
+          : null;
+
+      setLoadedStatus(entry.status);
+      setEntryDateInput(
+        formatEntryDateInput(
+          entry.entryDate,
+        ),
+      );
+      setReflectionText(
+        entry.reflectionText ?? "",
+      );
+      setGratitudeText(
+        entry.gratitudeText ?? "",
+      );
       setLoadStatus("ready");
     } catch {
-      if (generation !== loadGenerationRef.current) {
+      if (
+        generation !==
+        loadGenerationRef.current
+      ) {
         return;
       }
 
       setLoadStatus("error");
     }
-  }, [entryId]);
+  }, [routeEntryId]);
 
   useEffect(() => {
+    mountedRef.current = true;
     void loadEntry();
 
     return () => {
+      mountedRef.current = false;
       loadGenerationRef.current += 1;
+      clearAutosaveTimer();
     };
-  }, [loadEntry]);
+  }, [
+    clearAutosaveTimer,
+    loadEntry,
+  ]);
+
+  const persistDraft = useCallback(
+    (snapshot: DraftSnapshot): Promise<void> => {
+      const run =
+        autosaveQueueRef.current.then(
+          async () => {
+            if (
+              !mountedRef.current ||
+              saving ||
+              loadedStatus === "ACTIVE"
+            ) {
+              return;
+            }
+
+            if (mountedRef.current) {
+              setAutosaveStatus("saving");
+            }
+
+            try {
+              const journalService =
+                getPersonalPlatformHub()
+                  .journalService;
+
+              if (
+                draftEntryIdRef.current === null
+              ) {
+                const draft =
+                  await journalService.createDraft(
+                    snapshot,
+                  );
+
+                draftEntryIdRef.current =
+                  draft.id;
+              } else {
+                await journalService.updateDraft(
+                  draftEntryIdRef.current,
+                  snapshot,
+                );
+              }
+
+              if (mountedRef.current) {
+                setAutosaveStatus("saved");
+              }
+            } catch {
+              if (mountedRef.current) {
+                setAutosaveStatus("error");
+              }
+            }
+          },
+        );
+
+      autosaveQueueRef.current = run;
+      return run;
+    },
+    [loadedStatus, saving],
+  );
+
+  useEffect(() => {
+    if (
+      loadStatus !== "ready" ||
+      saving ||
+      loadedStatus === "ACTIVE" ||
+      !hasUserEditedRef.current
+    ) {
+      return;
+    }
+
+    const entryDate =
+      parseEntryDateInput(entryDateInput);
+
+    if (entryDate === null) {
+      setAutosaveStatus("idle");
+      clearAutosaveTimer();
+      return;
+    }
+
+    clearAutosaveTimer();
+
+    const snapshot: DraftSnapshot = {
+      entryDate,
+      reflectionText,
+      gratitudeText,
+    };
+
+    autosaveTimerRef.current = setTimeout(
+      () => {
+        autosaveTimerRef.current = null;
+        void persistDraft(snapshot);
+      },
+      AUTOSAVE_DELAY_MS,
+    );
+
+    return clearAutosaveTimer;
+  }, [
+    clearAutosaveTimer,
+    entryDateInput,
+    gratitudeText,
+    loadStatus,
+    loadedStatus,
+    persistDraft,
+    reflectionText,
+    saving,
+  ]);
+
+  const markEdited = useCallback(() => {
+    hasUserEditedRef.current = true;
+    setAutosaveStatus("idle");
+    setFormMessage(null);
+  }, []);
 
   const saveEntry = useCallback(async () => {
     if (
@@ -139,34 +418,63 @@ export default function JournalEntryEditorScreen({
       return;
     }
 
+    const entryDate =
+      parseEntryDateInput(entryDateInput);
+
+    if (entryDate === null) {
+      setFormMessage(DATE_INVALID_MESSAGE);
+      return;
+    }
+
     if (
       reflectionText.trim().length === 0 &&
       gratitudeText.trim().length === 0
     ) {
-      setFormMessage(CONTENT_REQUIRED_MESSAGE);
+      setFormMessage(
+        CONTENT_REQUIRED_MESSAGE,
+      );
       return;
     }
 
     submitLockRef.current = true;
     setSaving(true);
     setFormMessage(null);
+    clearAutosaveTimer();
 
     try {
+      await autosaveQueueRef.current;
+
       const journalService =
         getPersonalPlatformHub().journalService;
+      const input = {
+        entryDate,
+        reflectionText,
+        gratitudeText,
+      };
 
-      if (entryId === undefined) {
-        await journalService.create({
-          reflectionText,
-          gratitudeText,
-        });
+      if (loadedStatus === "ACTIVE") {
+        if (routeEntryId === undefined) {
+          throw new Error(
+            "PERSONAL_JOURNAL_UPDATE_TARGET_NOT_FOUND",
+          );
+        }
+
+        await journalService.update(
+          routeEntryId,
+          input,
+        );
+      } else if (
+        draftEntryIdRef.current !== null
+      ) {
+        await journalService.publishDraft(
+          draftEntryIdRef.current,
+          input,
+        );
       } else {
-        await journalService.update(entryId, {
-          reflectionText,
-          gratitudeText,
-        });
+        await journalService.create(input);
       }
 
+      hasUserEditedRef.current = false;
       navigation.goBack();
     } catch (error) {
       setFormMessage(
@@ -174,15 +482,26 @@ export default function JournalEntryEditorScreen({
       );
     } finally {
       submitLockRef.current = false;
-      setSaving(false);
+
+      if (mountedRef.current) {
+        setSaving(false);
+      }
     }
   }, [
-    entryId,
+    clearAutosaveTimer,
+    entryDateInput,
     gratitudeText,
     loadStatus,
+    loadedStatus,
     navigation,
     reflectionText,
+    routeEntryId,
   ]);
+
+  const isEditingActive =
+    loadedStatus === "ACTIVE";
+  const isEditingDraft =
+    loadedStatus === "DRAFT";
 
   const canUseForm =
     loadStatus === "ready" && !saving;
@@ -196,15 +515,19 @@ export default function JournalEntryEditorScreen({
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
-          <Text style={styles.eyebrow}>DIÁRIO</Text>
+          <Text style={styles.eyebrow}>
+            DIÁRIO
+          </Text>
           <Text style={styles.title}>
-            {isEditing
+            {isEditingActive
               ? "Editar registro"
-              : "Novo registro"}
+              : isEditingDraft
+                ? "Continuar rascunho"
+                : "Novo registro"}
           </Text>
           <Text style={styles.subtitle}>
-            {isEditing
-              ? "Revise sua reflexão e gratidão com calma."
+            {isEditingActive
+              ? "Revise seu registro com calma."
               : "Registre o que marcou seu dia diante de Deus."}
           </Text>
         </View>
@@ -261,6 +584,31 @@ export default function JournalEntryEditorScreen({
         {loadStatus === "ready" && (
           <View style={styles.formCard}>
             <View style={styles.field}>
+              <Text style={styles.fieldLabel}>
+                Data do registro
+              </Text>
+              <TextInput
+                accessibilityLabel="Data do registro"
+                value={entryDateInput}
+                onChangeText={(value) => {
+                  markEdited();
+                  setEntryDateInput(value);
+                }}
+                editable={!saving}
+                keyboardType="number-pad"
+                maxLength={10}
+                placeholder="DD/MM/AAAA"
+                placeholderTextColor={
+                  colors.textMuted
+                }
+                style={styles.dateInput}
+              />
+              <Text style={styles.fieldHelp}>
+                Use o dia em que esta reflexão aconteceu.
+              </Text>
+            </View>
+
+            <View style={styles.field}>
               <View style={styles.fieldHeading}>
                 <Text style={styles.fieldLabel}>
                   Reflexão
@@ -274,15 +622,20 @@ export default function JournalEntryEditorScreen({
               <TextInput
                 accessibilityLabel="Reflexão"
                 value={reflectionText}
-                onChangeText={setReflectionText}
+                onChangeText={(value) => {
+                  markEdited();
+                  setReflectionText(value);
+                }}
                 editable={!saving}
                 maxLength={
                   JOURNAL_REFLECTION_MAX_CHARS
                 }
                 multiline
                 textAlignVertical="top"
-                placeholder="O que você aprendeu, sentiu ou percebeu hoje?"
-                placeholderTextColor={colors.textMuted}
+                placeholder="O que você aprendeu, sentiu ou percebeu?"
+                placeholderTextColor={
+                  colors.textMuted
+                }
                 style={[
                   styles.textInput,
                   styles.reflectionInput,
@@ -304,21 +657,50 @@ export default function JournalEntryEditorScreen({
               <TextInput
                 accessibilityLabel="Gratidão"
                 value={gratitudeText}
-                onChangeText={setGratitudeText}
+                onChangeText={(value) => {
+                  markEdited();
+                  setGratitudeText(value);
+                }}
                 editable={!saving}
                 maxLength={
                   JOURNAL_GRATITUDE_MAX_CHARS
                 }
                 multiline
                 textAlignVertical="top"
-                placeholder="Por que você é grato hoje?"
-                placeholderTextColor={colors.textMuted}
+                placeholder="Por que você é grato neste dia?"
+                placeholderTextColor={
+                  colors.textMuted
+                }
                 style={[
                   styles.textInput,
                   styles.gratitudeInput,
                 ]}
               />
             </View>
+
+            {!isEditingActive && (
+              <View
+                accessibilityLiveRegion="polite"
+                style={styles.autosaveRow}
+              >
+                <View
+                  style={[
+                    styles.autosaveDot,
+                    autosaveStatus === "error" &&
+                      styles.autosaveDotError,
+                  ]}
+                />
+                <Text style={styles.autosaveText}>
+                  {autosaveStatus === "saving"
+                    ? "Salvando rascunho..."
+                    : autosaveStatus === "saved"
+                      ? "Rascunho salvo"
+                      : autosaveStatus === "error"
+                        ? "Não foi possível salvar o rascunho agora."
+                        : "Seu rascunho será salvo automaticamente."}
+                </Text>
+              </View>
+            )}
 
             {formMessage !== null && (
               <View
@@ -477,10 +859,26 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "800",
   },
+  fieldHelp: {
+    color: colors.textMuted,
+    fontSize: 12,
+    lineHeight: 17,
+  },
   counterText: {
     color: colors.textMuted,
     fontSize: 12,
     fontWeight: "700",
+  },
+  dateInput: {
+    minHeight: 48,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 16,
+    backgroundColor: colors.surfaceAlt,
+    color: colors.text,
+    fontSize: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
   },
   textInput: {
     borderWidth: 1,
@@ -498,6 +896,27 @@ const styles = StyleSheet.create({
   },
   gratitudeInput: {
     minHeight: 104,
+  },
+  autosaveRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    minHeight: 24,
+  },
+  autosaveDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 999,
+    backgroundColor: colors.primary,
+  },
+  autosaveDotError: {
+    backgroundColor: colors.warning,
+  },
+  autosaveText: {
+    flex: 1,
+    color: colors.textMuted,
+    fontSize: 12,
+    lineHeight: 17,
   },
   messageCard: {
     borderWidth: 1,
