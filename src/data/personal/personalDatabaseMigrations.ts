@@ -65,6 +65,126 @@ ON personal_journal_entries (entry_date DESC, id DESC);
 `);
     },
   },
+  {
+    version: 4,
+    up: async (database) => {
+      await database.execAsync(`
+ALTER TABLE personal_journal_entries
+RENAME TO personal_journal_entries_v3;
+
+CREATE TABLE personal_journal_entries (
+  id TEXT PRIMARY KEY NOT NULL,
+  entry_date TEXT NOT NULL,
+  reflection_text TEXT NULL,
+  gratitude_text TEXT NULL,
+  status TEXT NOT NULL DEFAULT 'ACTIVE'
+    CHECK (status IN ('ACTIVE', 'DRAFT', 'TRASHED')),
+  source_type TEXT NOT NULL DEFAULT 'FREE'
+    CHECK (
+      source_type IN (
+        'FREE',
+        'BIBLE',
+        'PLAN',
+        'STUDY',
+        'HYMN',
+        'HOME_GRATITUDE'
+      )
+    ),
+  source_title_snapshot TEXT NULL,
+  prompt_snapshot TEXT NULL,
+  created_at_utc TEXT NOT NULL,
+  updated_at_utc TEXT NOT NULL,
+  CHECK (
+    status = 'DRAFT'
+    OR length(trim(coalesce(reflection_text, ''))) > 0
+    OR length(trim(coalesce(gratitude_text, ''))) > 0
+  )
+);
+
+INSERT INTO personal_journal_entries (
+  id,
+  entry_date,
+  reflection_text,
+  gratitude_text,
+  status,
+  source_type,
+  source_title_snapshot,
+  prompt_snapshot,
+  created_at_utc,
+  updated_at_utc
+)
+SELECT
+  id,
+  entry_date,
+  reflection_text,
+  gratitude_text,
+  'ACTIVE',
+  'FREE',
+  NULL,
+  NULL,
+  created_at_utc,
+  updated_at_utc
+FROM personal_journal_entries_v3;
+
+DROP TABLE personal_journal_entries_v3;
+
+CREATE INDEX idx_personal_journal_entries_entry_date_id
+ON personal_journal_entries (entry_date DESC, id DESC);
+
+CREATE TABLE personal_journal_entry_references (
+  id TEXT PRIMARY KEY NOT NULL,
+  entry_id TEXT NOT NULL,
+  position INTEGER NOT NULL CHECK (position >= 0),
+  UNIQUE (entry_id, position),
+  FOREIGN KEY (entry_id)
+    REFERENCES personal_journal_entries (id)
+    ON DELETE CASCADE
+);
+
+CREATE TABLE personal_journal_reference_passages (
+  reference_id TEXT NOT NULL,
+  position INTEGER NOT NULL CHECK (position >= 0),
+  kind TEXT NOT NULL
+    CHECK (
+      kind IN (
+        'WHOLE_BOOK',
+        'CHAPTER',
+        'CHAPTER_RANGE',
+        'VERSE',
+        'VERSE_RANGE'
+      )
+    ),
+  book_id TEXT NOT NULL,
+  start_chapter INTEGER NULL,
+  start_verse INTEGER NULL,
+  end_chapter INTEGER NULL,
+  end_verse INTEGER NULL,
+  PRIMARY KEY (reference_id, position),
+  FOREIGN KEY (reference_id)
+    REFERENCES personal_journal_entry_references (id)
+    ON DELETE CASCADE
+);
+
+CREATE TABLE personal_journal_tags (
+  id TEXT PRIMARY KEY NOT NULL,
+  name TEXT NOT NULL,
+  normalized_name TEXT NOT NULL UNIQUE
+);
+
+CREATE TABLE personal_journal_entry_tags (
+  entry_id TEXT NOT NULL,
+  tag_id TEXT NOT NULL,
+  PRIMARY KEY (entry_id, tag_id),
+  FOREIGN KEY (entry_id)
+    REFERENCES personal_journal_entries (id)
+    ON DELETE CASCADE,
+  FOREIGN KEY (tag_id)
+    REFERENCES personal_journal_tags (id)
+    ON DELETE CASCADE
+);
+`);
+    },
+  },
 ] as const;
 
 export async function getPersonalDatabaseUserVersion(

@@ -105,6 +105,12 @@ export class JournalService {
     return this.repository.findByDate(entryDate);
   }
 
+  async listByDate(
+    entryDate: PersonalLocalDate,
+  ): Promise<readonly JournalEntry[]> {
+    return this.repository.listByDate(entryDate);
+  }
+
   async create(
     input: CreateJournalEntryInput,
   ): Promise<JournalEntry> {
@@ -123,15 +129,6 @@ export class JournalService {
       reflectionText,
       gratitudeText,
     );
-
-    const existing =
-      await this.repository.findByDate(entryDate);
-
-    if (existing !== null) {
-      throw new Error(
-        "PERSONAL_JOURNAL_ENTRY_DATE_CONFLICT",
-      );
-    }
 
     const timestamp =
       this.datePolicy.toUtcTimestamp(now);

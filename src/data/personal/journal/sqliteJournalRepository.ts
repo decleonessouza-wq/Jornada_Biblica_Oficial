@@ -1,8 +1,25 @@
+import type {
+  SQLiteDatabase,
+} from "expo-sqlite";
+
+import type {
+  BibleBookId,
+  BiblePassage,
+  BibleReference,
+} from "../../../domain/bible/bibleReference";
 import {
+  JOURNAL_ENTRY_STATUSES,
   JOURNAL_GRATITUDE_MAX_CHARS,
   JOURNAL_REFLECTION_MAX_CHARS,
+  JOURNAL_SOURCE_TYPES,
   type JournalEntry,
   type JournalEntryId,
+  type JournalEntryReference,
+  type JournalEntryReferenceId,
+  type JournalEntryStatus,
+  type JournalSourceType,
+  type JournalTag,
+  type JournalTagId,
 } from "../../../domain/journal/journal";
 import type {
   PersonalLocalDate,
@@ -15,6 +32,7 @@ import {
   PersonalRepositoryBase,
 } from "../personalRepositoryBase";
 import type {
+  JournalEntryPersistenceRecord,
   JournalRepository,
 } from "./journalRepository";
 
@@ -23,8 +41,35 @@ type JournalEntryRow = Readonly<{
   entry_date: unknown;
   reflection_text: unknown;
   gratitude_text: unknown;
+  status: unknown;
+  source_type: unknown;
+  source_title_snapshot: unknown;
+  prompt_snapshot: unknown;
   created_at_utc: unknown;
   updated_at_utc: unknown;
+}>;
+
+type JournalReferenceRow = Readonly<{
+  id: unknown;
+  entry_id: unknown;
+  position: unknown;
+}>;
+
+type JournalPassageRow = Readonly<{
+  reference_id: unknown;
+  position: unknown;
+  kind: unknown;
+  book_id: unknown;
+  start_chapter: unknown;
+  start_verse: unknown;
+  end_chapter: unknown;
+  end_verse: unknown;
+}>;
+
+type JournalTagRow = Readonly<{
+  id: unknown;
+  name: unknown;
+  normalized_name: unknown;
 }>;
 
 function assertNonEmptyString(
@@ -35,6 +80,15 @@ function assertNonEmptyString(
     typeof value !== "string" ||
     value.trim().length === 0
   ) {
+    throw new Error(errorCode);
+  }
+}
+
+function assertNullableString(
+  value: unknown,
+  errorCode: string,
+): asserts value is string | null {
+  if (value !== null && typeof value !== "string") {
     throw new Error(errorCode);
   }
 }
@@ -93,8 +147,60 @@ function assertValidOptionalText(
   }
 }
 
-function assertValidJournalEntry(
+function isJournalEntryStatus(
+  value: unknown,
+): value is JournalEntryStatus {
+  return JOURNAL_ENTRY_STATUSES.some(
+    (status) => status === value,
+  );
+}
+
+function isJournalSourceType(
+  value: unknown,
+): value is JournalSourceType {
+  return JOURNAL_SOURCE_TYPES.some(
+    (sourceType) => sourceType === value,
+  );
+}
+
+function assertNonNegativeInteger(
+  value: unknown,
+  errorCode: string,
+): asserts value is number {
+  if (
+    typeof value !== "number" ||
+    !Number.isInteger(value) ||
+    value < 0
+  ) {
+    throw new Error(errorCode);
+  }
+}
+
+function assertPositiveInteger(
+  value: unknown,
+  errorCode: string,
+): asserts value is number {
+  if (
+    typeof value !== "number" ||
+    !Number.isInteger(value) ||
+    value <= 0
+  ) {
+    throw new Error(errorCode);
+  }
+}
+
+function assertNull(
+  value: unknown,
+  errorCode: string,
+): asserts value is null {
+  if (value !== null) {
+    throw new Error(errorCode);
+  }
+}
+
+function assertJournalEntryCore(
   entry: JournalEntry,
+  allowEmptyContent: boolean,
 ): void {
   assertNonEmptyString(
     entry.id,
@@ -124,6 +230,7 @@ function assertValidJournalEntry(
   );
 
   if (
+    !allowEmptyContent &&
     entry.reflectionText === null &&
     entry.gratitudeText === null
   ) {
@@ -133,9 +240,245 @@ function assertValidJournalEntry(
   }
 }
 
-function mapJournalEntryRow(
+function hasAnyV4Field(
+  entry: JournalEntry | JournalEntryPersistenceRecord,
+): boolean {
+  return (
+    "status" in entry ||
+    "sourceType" in entry ||
+    "sourceTitleSnapshot" in entry ||
+    "promptSnapshot" in entry ||
+    "references" in entry ||
+    "tags" in entry
+  );
+}
+
+function assertValidBiblePassage(
+  passage: BiblePassage,
+): void {
+  assertNonEmptyString(
+    passage.bookId,
+    "PERSONAL_JOURNAL_REFERENCE_BOOK_ID_INVALID",
+  );
+
+  switch (passage.kind) {
+    case "WHOLE_BOOK":
+      return;
+
+    case "CHAPTER":
+      assertPositiveInteger(
+        passage.chapter,
+        "PERSONAL_JOURNAL_REFERENCE_CHAPTER_INVALID",
+      );
+      return;
+
+    case "CHAPTER_RANGE":
+      assertPositiveInteger(
+        passage.startChapter,
+        "PERSONAL_JOURNAL_REFERENCE_START_CHAPTER_INVALID",
+      );
+      assertPositiveInteger(
+        passage.endChapter,
+        "PERSONAL_JOURNAL_REFERENCE_END_CHAPTER_INVALID",
+      );
+
+      if (passage.endChapter < passage.startChapter) {
+        throw new Error(
+          "PERSONAL_JOURNAL_REFERENCE_CHAPTER_RANGE_INVALID",
+        );
+      }
+      return;
+
+    case "VERSE":
+      assertPositiveInteger(
+        passage.chapter,
+        "PERSONAL_JOURNAL_REFERENCE_CHAPTER_INVALID",
+      );
+      assertPositiveInteger(
+        passage.verse,
+        "PERSONAL_JOURNAL_REFERENCE_VERSE_INVALID",
+      );
+      return;
+
+    case "VERSE_RANGE":
+      assertPositiveInteger(
+        passage.start.chapter,
+        "PERSONAL_JOURNAL_REFERENCE_START_CHAPTER_INVALID",
+      );
+      assertPositiveInteger(
+        passage.start.verse,
+        "PERSONAL_JOURNAL_REFERENCE_START_VERSE_INVALID",
+      );
+      assertPositiveInteger(
+        passage.end.chapter,
+        "PERSONAL_JOURNAL_REFERENCE_END_CHAPTER_INVALID",
+      );
+      assertPositiveInteger(
+        passage.end.verse,
+        "PERSONAL_JOURNAL_REFERENCE_END_VERSE_INVALID",
+      );
+
+      if (
+        passage.end.chapter < passage.start.chapter ||
+        (
+          passage.end.chapter === passage.start.chapter &&
+          passage.end.verse < passage.start.verse
+        )
+      ) {
+        throw new Error(
+          "PERSONAL_JOURNAL_REFERENCE_VERSE_RANGE_INVALID",
+        );
+      }
+      return;
+  }
+}
+
+function assertValidJournalReference(
+  reference: JournalEntryReference,
+  entryId: JournalEntryId,
+): void {
+  assertNonEmptyString(
+    reference.id,
+    "PERSONAL_JOURNAL_REFERENCE_ID_INVALID",
+  );
+
+  if (reference.entryId !== entryId) {
+    throw new Error(
+      "PERSONAL_JOURNAL_REFERENCE_ENTRY_ID_MISMATCH",
+    );
+  }
+
+  assertNonNegativeInteger(
+    reference.position,
+    "PERSONAL_JOURNAL_REFERENCE_POSITION_INVALID",
+  );
+
+  if (
+    !Array.isArray(reference.reference.passages) ||
+    reference.reference.passages.length === 0
+  ) {
+    throw new Error(
+      "PERSONAL_JOURNAL_REFERENCE_PASSAGES_REQUIRED",
+    );
+  }
+
+  for (const passage of reference.reference.passages) {
+    assertValidBiblePassage(passage);
+  }
+}
+
+function assertValidJournalTag(
+  tag: JournalTag,
+): void {
+  assertNonEmptyString(
+    tag.id,
+    "PERSONAL_JOURNAL_TAG_ID_INVALID",
+  );
+  assertNonEmptyString(
+    tag.name,
+    "PERSONAL_JOURNAL_TAG_NAME_INVALID",
+  );
+  assertNonEmptyString(
+    tag.normalizedName,
+    "PERSONAL_JOURNAL_TAG_NORMALIZED_NAME_INVALID",
+  );
+}
+
+function assertValidPersistenceRecord(
+  entry: JournalEntry | JournalEntryPersistenceRecord,
+): asserts entry is JournalEntryPersistenceRecord {
+  const candidate =
+    entry as Partial<JournalEntryPersistenceRecord>;
+
+  if (!isJournalEntryStatus(candidate.status)) {
+    throw new Error(
+      "PERSONAL_JOURNAL_ENTRY_STATUS_INVALID",
+    );
+  }
+
+  if (!isJournalSourceType(candidate.sourceType)) {
+    throw new Error(
+      "PERSONAL_JOURNAL_ENTRY_SOURCE_TYPE_INVALID",
+    );
+  }
+
+  assertNullableString(
+    candidate.sourceTitleSnapshot,
+    "PERSONAL_JOURNAL_SOURCE_TITLE_SNAPSHOT_INVALID",
+  );
+  assertNullableString(
+    candidate.promptSnapshot,
+    "PERSONAL_JOURNAL_PROMPT_SNAPSHOT_INVALID",
+  );
+
+  if (!Array.isArray(candidate.references)) {
+    throw new Error(
+      "PERSONAL_JOURNAL_REFERENCES_INVALID",
+    );
+  }
+
+  if (!Array.isArray(candidate.tags)) {
+    throw new Error(
+      "PERSONAL_JOURNAL_TAGS_INVALID",
+    );
+  }
+
+  assertJournalEntryCore(
+    entry,
+    candidate.status === "DRAFT",
+  );
+
+  const referenceIds = new Set<string>();
+  const referencePositions = new Set<number>();
+
+  for (const reference of candidate.references) {
+    assertValidJournalReference(reference, entry.id);
+
+    if (referenceIds.has(reference.id)) {
+      throw new Error(
+        "PERSONAL_JOURNAL_REFERENCE_ID_DUPLICATE",
+      );
+    }
+
+    if (referencePositions.has(reference.position)) {
+      throw new Error(
+        "PERSONAL_JOURNAL_REFERENCE_POSITION_DUPLICATE",
+      );
+    }
+
+    referenceIds.add(reference.id);
+    referencePositions.add(reference.position);
+  }
+
+  const tagIds = new Set<string>();
+  const normalizedNames = new Set<string>();
+
+  for (const tag of candidate.tags) {
+    assertValidJournalTag(tag);
+
+    if (tagIds.has(tag.id)) {
+      throw new Error(
+        "PERSONAL_JOURNAL_TAG_ID_DUPLICATE",
+      );
+    }
+
+    if (normalizedNames.has(tag.normalizedName)) {
+      throw new Error(
+        "PERSONAL_JOURNAL_TAG_NORMALIZED_NAME_DUPLICATE",
+      );
+    }
+
+    tagIds.add(tag.id);
+    normalizedNames.add(tag.normalizedName);
+  }
+}
+
+function mapJournalEntryRowBase(
   row: JournalEntryRow,
-): JournalEntry {
+): Omit<
+  JournalEntryPersistenceRecord,
+  "references" | "tags"
+> {
   assertNonEmptyString(
     row.id,
     "PERSONAL_JOURNAL_ROW_ID_INVALID",
@@ -154,6 +497,27 @@ function mapJournalEntryRow(
     JOURNAL_GRATITUDE_MAX_CHARS,
     "PERSONAL_JOURNAL_ROW_GRATITUDE_TEXT_INVALID",
   );
+
+  if (!isJournalEntryStatus(row.status)) {
+    throw new Error(
+      "PERSONAL_JOURNAL_ROW_STATUS_INVALID",
+    );
+  }
+
+  if (!isJournalSourceType(row.source_type)) {
+    throw new Error(
+      "PERSONAL_JOURNAL_ROW_SOURCE_TYPE_INVALID",
+    );
+  }
+
+  assertNullableString(
+    row.source_title_snapshot,
+    "PERSONAL_JOURNAL_ROW_SOURCE_TITLE_SNAPSHOT_INVALID",
+  );
+  assertNullableString(
+    row.prompt_snapshot,
+    "PERSONAL_JOURNAL_ROW_PROMPT_SNAPSHOT_INVALID",
+  );
   assertValidUtcTimestamp(
     row.created_at_utc,
     "PERSONAL_JOURNAL_ROW_CREATED_AT_UTC_INVALID",
@@ -164,6 +528,7 @@ function mapJournalEntryRow(
   );
 
   if (
+    row.status !== "DRAFT" &&
     row.reflection_text === null &&
     row.gratitude_text === null
   ) {
@@ -177,10 +542,668 @@ function mapJournalEntryRow(
     entryDate: row.entry_date,
     reflectionText: row.reflection_text,
     gratitudeText: row.gratitude_text,
+    status: row.status,
+    sourceType: row.source_type,
+    sourceTitleSnapshot: row.source_title_snapshot,
+    promptSnapshot: row.prompt_snapshot,
     createdAtUtc: row.created_at_utc,
     updatedAtUtc: row.updated_at_utc,
   };
 }
+
+function mapPassageRow(
+  row: JournalPassageRow,
+  expectedReferenceId: JournalEntryReferenceId,
+): BiblePassage {
+  assertNonEmptyString(
+    row.reference_id,
+    "PERSONAL_JOURNAL_PASSAGE_REFERENCE_ID_INVALID",
+  );
+
+  if (row.reference_id !== expectedReferenceId) {
+    throw new Error(
+      "PERSONAL_JOURNAL_PASSAGE_REFERENCE_ID_MISMATCH",
+    );
+  }
+
+  assertNonNegativeInteger(
+    row.position,
+    "PERSONAL_JOURNAL_PASSAGE_POSITION_INVALID",
+  );
+  assertNonEmptyString(
+    row.book_id,
+    "PERSONAL_JOURNAL_PASSAGE_BOOK_ID_INVALID",
+  );
+
+  const bookId = row.book_id as BibleBookId;
+
+  switch (row.kind) {
+    case "WHOLE_BOOK":
+      assertNull(
+        row.start_chapter,
+        "PERSONAL_JOURNAL_PASSAGE_WHOLE_BOOK_INVALID",
+      );
+      assertNull(
+        row.start_verse,
+        "PERSONAL_JOURNAL_PASSAGE_WHOLE_BOOK_INVALID",
+      );
+      assertNull(
+        row.end_chapter,
+        "PERSONAL_JOURNAL_PASSAGE_WHOLE_BOOK_INVALID",
+      );
+      assertNull(
+        row.end_verse,
+        "PERSONAL_JOURNAL_PASSAGE_WHOLE_BOOK_INVALID",
+      );
+
+      return {
+        kind: "WHOLE_BOOK",
+        bookId,
+      };
+
+    case "CHAPTER":
+      assertPositiveInteger(
+        row.start_chapter,
+        "PERSONAL_JOURNAL_PASSAGE_CHAPTER_INVALID",
+      );
+      assertNull(
+        row.start_verse,
+        "PERSONAL_JOURNAL_PASSAGE_CHAPTER_INVALID",
+      );
+      assertNull(
+        row.end_chapter,
+        "PERSONAL_JOURNAL_PASSAGE_CHAPTER_INVALID",
+      );
+      assertNull(
+        row.end_verse,
+        "PERSONAL_JOURNAL_PASSAGE_CHAPTER_INVALID",
+      );
+
+      return {
+        kind: "CHAPTER",
+        bookId,
+        chapter: row.start_chapter,
+      };
+
+    case "CHAPTER_RANGE":
+      assertPositiveInteger(
+        row.start_chapter,
+        "PERSONAL_JOURNAL_PASSAGE_CHAPTER_RANGE_INVALID",
+      );
+      assertPositiveInteger(
+        row.end_chapter,
+        "PERSONAL_JOURNAL_PASSAGE_CHAPTER_RANGE_INVALID",
+      );
+      assertNull(
+        row.start_verse,
+        "PERSONAL_JOURNAL_PASSAGE_CHAPTER_RANGE_INVALID",
+      );
+      assertNull(
+        row.end_verse,
+        "PERSONAL_JOURNAL_PASSAGE_CHAPTER_RANGE_INVALID",
+      );
+
+      if (row.end_chapter < row.start_chapter) {
+        throw new Error(
+          "PERSONAL_JOURNAL_PASSAGE_CHAPTER_RANGE_INVALID",
+        );
+      }
+
+      return {
+        kind: "CHAPTER_RANGE",
+        bookId,
+        startChapter: row.start_chapter,
+        endChapter: row.end_chapter,
+      };
+
+    case "VERSE":
+      assertPositiveInteger(
+        row.start_chapter,
+        "PERSONAL_JOURNAL_PASSAGE_VERSE_INVALID",
+      );
+      assertPositiveInteger(
+        row.start_verse,
+        "PERSONAL_JOURNAL_PASSAGE_VERSE_INVALID",
+      );
+      assertNull(
+        row.end_chapter,
+        "PERSONAL_JOURNAL_PASSAGE_VERSE_INVALID",
+      );
+      assertNull(
+        row.end_verse,
+        "PERSONAL_JOURNAL_PASSAGE_VERSE_INVALID",
+      );
+
+      return {
+        kind: "VERSE",
+        bookId,
+        chapter: row.start_chapter,
+        verse: row.start_verse,
+      };
+
+    case "VERSE_RANGE":
+      assertPositiveInteger(
+        row.start_chapter,
+        "PERSONAL_JOURNAL_PASSAGE_VERSE_RANGE_INVALID",
+      );
+      assertPositiveInteger(
+        row.start_verse,
+        "PERSONAL_JOURNAL_PASSAGE_VERSE_RANGE_INVALID",
+      );
+      assertPositiveInteger(
+        row.end_chapter,
+        "PERSONAL_JOURNAL_PASSAGE_VERSE_RANGE_INVALID",
+      );
+      assertPositiveInteger(
+        row.end_verse,
+        "PERSONAL_JOURNAL_PASSAGE_VERSE_RANGE_INVALID",
+      );
+
+      if (
+        row.end_chapter < row.start_chapter ||
+        (
+          row.end_chapter === row.start_chapter &&
+          row.end_verse < row.start_verse
+        )
+      ) {
+        throw new Error(
+          "PERSONAL_JOURNAL_PASSAGE_VERSE_RANGE_INVALID",
+        );
+      }
+
+      return {
+        kind: "VERSE_RANGE",
+        bookId,
+        start: {
+          chapter: row.start_chapter,
+          verse: row.start_verse,
+        },
+        end: {
+          chapter: row.end_chapter,
+          verse: row.end_verse,
+        },
+      };
+
+    default:
+      throw new Error(
+        "PERSONAL_JOURNAL_PASSAGE_KIND_INVALID",
+      );
+  }
+}
+
+function toPassageColumns(
+  passage: BiblePassage,
+): readonly [
+  BiblePassage["kind"],
+  BibleBookId,
+  number | null,
+  number | null,
+  number | null,
+  number | null,
+] {
+  assertValidBiblePassage(passage);
+
+  switch (passage.kind) {
+    case "WHOLE_BOOK":
+      return [
+        passage.kind,
+        passage.bookId,
+        null,
+        null,
+        null,
+        null,
+      ];
+
+    case "CHAPTER":
+      return [
+        passage.kind,
+        passage.bookId,
+        passage.chapter,
+        null,
+        null,
+        null,
+      ];
+
+    case "CHAPTER_RANGE":
+      return [
+        passage.kind,
+        passage.bookId,
+        passage.startChapter,
+        null,
+        passage.endChapter,
+        null,
+      ];
+
+    case "VERSE":
+      return [
+        passage.kind,
+        passage.bookId,
+        passage.chapter,
+        passage.verse,
+        null,
+        null,
+      ];
+
+    case "VERSE_RANGE":
+      return [
+        passage.kind,
+        passage.bookId,
+        passage.start.chapter,
+        passage.start.verse,
+        passage.end.chapter,
+        passage.end.verse,
+      ];
+  }
+}
+
+function mapJournalTagRow(
+  row: JournalTagRow,
+): JournalTag {
+  assertNonEmptyString(
+    row.id,
+    "PERSONAL_JOURNAL_TAG_ROW_ID_INVALID",
+  );
+  assertNonEmptyString(
+    row.name,
+    "PERSONAL_JOURNAL_TAG_ROW_NAME_INVALID",
+  );
+  assertNonEmptyString(
+    row.normalized_name,
+    "PERSONAL_JOURNAL_TAG_ROW_NORMALIZED_NAME_INVALID",
+  );
+
+  return {
+    id: row.id as JournalTagId,
+    name: row.name,
+    normalizedName: row.normalized_name,
+  };
+}
+
+async function loadReferences(
+  database: SQLiteDatabase,
+  entryId: JournalEntryId,
+): Promise<readonly JournalEntryReference[]> {
+  const rows =
+    await database.getAllAsync<JournalReferenceRow>(
+      `
+SELECT
+  id,
+  entry_id,
+  position
+FROM personal_journal_entry_references
+WHERE entry_id = ?
+ORDER BY position ASC, id ASC
+`,
+      entryId,
+    );
+
+  const result: JournalEntryReference[] = [];
+  const positions = new Set<number>();
+  const ids = new Set<string>();
+
+  for (const row of rows) {
+    assertNonEmptyString(
+      row.id,
+      "PERSONAL_JOURNAL_REFERENCE_ROW_ID_INVALID",
+    );
+    assertNonEmptyString(
+      row.entry_id,
+      "PERSONAL_JOURNAL_REFERENCE_ROW_ENTRY_ID_INVALID",
+    );
+
+    if (row.entry_id !== entryId) {
+      throw new Error(
+        "PERSONAL_JOURNAL_REFERENCE_ROW_ENTRY_ID_MISMATCH",
+      );
+    }
+
+    assertNonNegativeInteger(
+      row.position,
+      "PERSONAL_JOURNAL_REFERENCE_ROW_POSITION_INVALID",
+    );
+
+    if (ids.has(row.id)) {
+      throw new Error(
+        "PERSONAL_JOURNAL_REFERENCE_ROW_ID_DUPLICATE",
+      );
+    }
+
+    if (positions.has(row.position)) {
+      throw new Error(
+        "PERSONAL_JOURNAL_REFERENCE_ROW_POSITION_DUPLICATE",
+      );
+    }
+
+    ids.add(row.id);
+    positions.add(row.position);
+
+    const referenceId =
+      row.id as JournalEntryReferenceId;
+
+    const passageRows =
+      await database.getAllAsync<JournalPassageRow>(
+        `
+SELECT
+  reference_id,
+  position,
+  kind,
+  book_id,
+  start_chapter,
+  start_verse,
+  end_chapter,
+  end_verse
+FROM personal_journal_reference_passages
+WHERE reference_id = ?
+ORDER BY position ASC
+`,
+        referenceId,
+      );
+
+    if (passageRows.length === 0) {
+      throw new Error(
+        "PERSONAL_JOURNAL_REFERENCE_ROW_PASSAGES_REQUIRED",
+      );
+    }
+
+    const passagePositions = new Set<number>();
+    const passages: BiblePassage[] = [];
+
+    for (const passageRow of passageRows) {
+      assertNonNegativeInteger(
+        passageRow.position,
+        "PERSONAL_JOURNAL_PASSAGE_POSITION_INVALID",
+      );
+
+      if (passagePositions.has(passageRow.position)) {
+        throw new Error(
+          "PERSONAL_JOURNAL_PASSAGE_POSITION_DUPLICATE",
+        );
+      }
+
+      passagePositions.add(passageRow.position);
+      passages.push(
+        mapPassageRow(
+          passageRow,
+          referenceId,
+        ),
+      );
+    }
+
+    const reference: BibleReference = {
+      passages: passages as [
+        BiblePassage,
+        ...BiblePassage[],
+      ],
+    };
+
+    result.push({
+      id: referenceId,
+      entryId,
+      position: row.position,
+      reference,
+    });
+  }
+
+  return result;
+}
+
+async function loadTags(
+  database: SQLiteDatabase,
+  entryId: JournalEntryId,
+): Promise<readonly JournalTag[]> {
+  const rows =
+    await database.getAllAsync<JournalTagRow>(
+      `
+SELECT
+  tag.id,
+  tag.name,
+  tag.normalized_name
+FROM personal_journal_entry_tags AS entry_tag
+INNER JOIN personal_journal_tags AS tag
+  ON tag.id = entry_tag.tag_id
+WHERE entry_tag.entry_id = ?
+ORDER BY tag.normalized_name ASC, tag.id ASC
+`,
+      entryId,
+    );
+
+  const tags = rows.map(mapJournalTagRow);
+  const ids = new Set<string>();
+  const normalizedNames = new Set<string>();
+
+  for (const tag of tags) {
+    if (ids.has(tag.id)) {
+      throw new Error(
+        "PERSONAL_JOURNAL_TAG_ROW_ID_DUPLICATE",
+      );
+    }
+
+    if (normalizedNames.has(tag.normalizedName)) {
+      throw new Error(
+        "PERSONAL_JOURNAL_TAG_ROW_NORMALIZED_NAME_DUPLICATE",
+      );
+    }
+
+    ids.add(tag.id);
+    normalizedNames.add(tag.normalizedName);
+  }
+
+  return tags;
+}
+
+async function loadPersistenceRecord(
+  database: SQLiteDatabase,
+  row: JournalEntryRow,
+): Promise<JournalEntryPersistenceRecord> {
+  const base = mapJournalEntryRowBase(row);
+  const references = await loadReferences(
+    database,
+    base.id,
+  );
+  const tags = await loadTags(
+    database,
+    base.id,
+  );
+
+  return {
+    ...base,
+    references,
+    tags,
+  };
+}
+
+async function insertEntry(
+  database: SQLiteDatabase,
+  entry: JournalEntry,
+  status: JournalEntryStatus,
+  sourceType: JournalSourceType,
+  sourceTitleSnapshot: string | null,
+  promptSnapshot: string | null,
+): Promise<void> {
+  await database.runAsync(
+    `
+INSERT INTO personal_journal_entries (
+  id,
+  entry_date,
+  reflection_text,
+  gratitude_text,
+  status,
+  source_type,
+  source_title_snapshot,
+  prompt_snapshot,
+  created_at_utc,
+  updated_at_utc
+)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+`,
+    entry.id,
+    entry.entryDate,
+    entry.reflectionText,
+    entry.gratitudeText,
+    status,
+    sourceType,
+    sourceTitleSnapshot,
+    promptSnapshot,
+    entry.createdAtUtc,
+    entry.updatedAtUtc,
+  );
+}
+
+async function persistReferences(
+  database: SQLiteDatabase,
+  entry: JournalEntryPersistenceRecord,
+): Promise<void> {
+  const references = [...entry.references].sort(
+    (left, right) => left.position - right.position,
+  );
+
+  for (const reference of references) {
+    await database.runAsync(
+      `
+INSERT INTO personal_journal_entry_references (
+  id,
+  entry_id,
+  position
+)
+VALUES (?, ?, ?)
+`,
+      reference.id,
+      entry.id,
+      reference.position,
+    );
+
+    for (
+      let passagePosition = 0;
+      passagePosition < reference.reference.passages.length;
+      passagePosition += 1
+    ) {
+      const passage =
+        reference.reference.passages[passagePosition];
+
+      const [
+        kind,
+        bookId,
+        startChapter,
+        startVerse,
+        endChapter,
+        endVerse,
+      ] = toPassageColumns(passage);
+
+      await database.runAsync(
+        `
+INSERT INTO personal_journal_reference_passages (
+  reference_id,
+  position,
+  kind,
+  book_id,
+  start_chapter,
+  start_verse,
+  end_chapter,
+  end_verse
+)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+`,
+        reference.id,
+        passagePosition,
+        kind,
+        bookId,
+        startChapter,
+        startVerse,
+        endChapter,
+        endVerse,
+      );
+    }
+  }
+}
+
+async function ensureTagCanonical(
+  database: SQLiteDatabase,
+  tag: JournalTag,
+): Promise<void> {
+  const existing =
+    await database.getFirstAsync<JournalTagRow>(
+      `
+SELECT
+  id,
+  name,
+  normalized_name
+FROM personal_journal_tags
+WHERE id = ? OR normalized_name = ?
+ORDER BY
+  CASE WHEN id = ? THEN 0 ELSE 1 END,
+  id ASC
+LIMIT 1
+`,
+      tag.id,
+      tag.normalizedName,
+      tag.id,
+    );
+
+  if (existing === null) {
+    await database.runAsync(
+      `
+INSERT INTO personal_journal_tags (
+  id,
+  name,
+  normalized_name
+)
+VALUES (?, ?, ?)
+`,
+      tag.id,
+      tag.name,
+      tag.normalizedName,
+    );
+    return;
+  }
+
+  const mapped = mapJournalTagRow(existing);
+
+  if (
+    mapped.id !== tag.id ||
+    mapped.name !== tag.name ||
+    mapped.normalizedName !== tag.normalizedName
+  ) {
+    throw new Error(
+      "PERSONAL_JOURNAL_TAG_CANONICAL_CONFLICT",
+    );
+  }
+}
+
+async function persistTags(
+  database: SQLiteDatabase,
+  entry: JournalEntryPersistenceRecord,
+): Promise<void> {
+  for (const tag of entry.tags) {
+    await ensureTagCanonical(database, tag);
+
+    await database.runAsync(
+      `
+INSERT INTO personal_journal_entry_tags (
+  entry_id,
+  tag_id
+)
+VALUES (?, ?)
+`,
+      entry.id,
+      tag.id,
+    );
+  }
+}
+
+const ENTRY_COLUMNS_SQL = `
+SELECT
+  id,
+  entry_date,
+  reflection_text,
+  gratitude_text,
+  status,
+  source_type,
+  source_title_snapshot,
+  prompt_snapshot,
+  created_at_utc,
+  updated_at_utc
+FROM personal_journal_entries
+`;
 
 export class SQLiteJournalRepository
   extends PersonalRepositoryBase
@@ -195,33 +1218,33 @@ export class SQLiteJournalRepository
   }
 
   async list(): Promise<
-    readonly JournalEntry[]
+    readonly JournalEntryPersistenceRecord[]
   > {
     return this.personalDatabase.withConnection(
       async (database) => {
         const rows =
           await database.getAllAsync<JournalEntryRow>(
-            `
-SELECT
-  id,
-  entry_date,
-  reflection_text,
-  gratitude_text,
-  created_at_utc,
-  updated_at_utc
-FROM personal_journal_entries
+            `${ENTRY_COLUMNS_SQL}
 ORDER BY entry_date DESC, id DESC
 `,
           );
 
-        return rows.map(mapJournalEntryRow);
+        return Promise.all(
+          rows.map(
+            (row) =>
+              loadPersistenceRecord(
+                database,
+                row,
+              ),
+          ),
+        );
       },
     );
   }
 
   async findById(
     id: JournalEntryId,
-  ): Promise<JournalEntry | null> {
+  ): Promise<JournalEntryPersistenceRecord | null> {
     assertNonEmptyString(
       id,
       "PERSONAL_JOURNAL_ENTRY_ID_INVALID",
@@ -231,15 +1254,7 @@ ORDER BY entry_date DESC, id DESC
       async (database) => {
         const row =
           await database.getFirstAsync<JournalEntryRow>(
-            `
-SELECT
-  id,
-  entry_date,
-  reflection_text,
-  gratitude_text,
-  created_at_utc,
-  updated_at_utc
-FROM personal_journal_entries
+            `${ENTRY_COLUMNS_SQL}
 WHERE id = ?
 LIMIT 1
 `,
@@ -248,14 +1263,17 @@ LIMIT 1
 
         return row === null
           ? null
-          : mapJournalEntryRow(row);
+          : loadPersistenceRecord(
+              database,
+              row,
+            );
       },
     );
   }
 
   async findByDate(
     entryDate: PersonalLocalDate,
-  ): Promise<JournalEntry | null> {
+  ): Promise<JournalEntryPersistenceRecord | null> {
     assertValidLocalDate(
       entryDate,
       "PERSONAL_JOURNAL_ENTRY_DATE_INVALID",
@@ -265,16 +1283,9 @@ LIMIT 1
       async (database) => {
         const row =
           await database.getFirstAsync<JournalEntryRow>(
-            `
-SELECT
-  id,
-  entry_date,
-  reflection_text,
-  gratitude_text,
-  created_at_utc,
-  updated_at_utc
-FROM personal_journal_entries
+            `${ENTRY_COLUMNS_SQL}
 WHERE entry_date = ?
+ORDER BY id DESC
 LIMIT 1
 `,
             entryDate,
@@ -282,50 +1293,107 @@ LIMIT 1
 
         return row === null
           ? null
-          : mapJournalEntryRow(row);
+          : loadPersistenceRecord(
+              database,
+              row,
+            );
+      },
+    );
+  }
+
+  async listByDate(
+    entryDate: PersonalLocalDate,
+  ): Promise<
+    readonly JournalEntryPersistenceRecord[]
+  > {
+    assertValidLocalDate(
+      entryDate,
+      "PERSONAL_JOURNAL_ENTRY_DATE_INVALID",
+    );
+
+    return this.personalDatabase.withConnection(
+      async (database) => {
+        const rows =
+          await database.getAllAsync<JournalEntryRow>(
+            `${ENTRY_COLUMNS_SQL}
+WHERE entry_date = ?
+ORDER BY id DESC
+`,
+            entryDate,
+          );
+
+        return Promise.all(
+          rows.map(
+            (row) =>
+              loadPersistenceRecord(
+                database,
+                row,
+              ),
+          ),
+        );
       },
     );
   }
 
   async create(
-    entry: JournalEntry,
+    entry: JournalEntry | JournalEntryPersistenceRecord,
   ): Promise<void> {
-    assertValidJournalEntry(entry);
+    if (!hasAnyV4Field(entry)) {
+      assertJournalEntryCore(entry, false);
+
+      await this.personalDatabase.withConnection(
+        async (database) => {
+          await insertEntry(
+            database,
+            entry,
+            "ACTIVE",
+            "FREE",
+            null,
+            null,
+          );
+        },
+      );
+      return;
+    }
+
+    assertValidPersistenceRecord(entry);
 
     await this.personalDatabase.withConnection(
       async (database) => {
-        await database.runAsync(
-          `
-INSERT INTO personal_journal_entries (
-  id,
-  entry_date,
-  reflection_text,
-  gratitude_text,
-  created_at_utc,
-  updated_at_utc
-)
-VALUES (?, ?, ?, ?, ?, ?)
-`,
-          entry.id,
-          entry.entryDate,
-          entry.reflectionText,
-          entry.gratitudeText,
-          entry.createdAtUtc,
-          entry.updatedAtUtc,
+        await database.withTransactionAsync(
+          async () => {
+            await insertEntry(
+              database,
+              entry,
+              entry.status,
+              entry.sourceType,
+              entry.sourceTitleSnapshot,
+              entry.promptSnapshot,
+            );
+            await persistReferences(
+              database,
+              entry,
+            );
+            await persistTags(
+              database,
+              entry,
+            );
+          },
         );
       },
     );
   }
 
   async update(
-    entry: JournalEntry,
+    entry: JournalEntry | JournalEntryPersistenceRecord,
   ): Promise<void> {
-    assertValidJournalEntry(entry);
+    if (!hasAnyV4Field(entry)) {
+      assertJournalEntryCore(entry, false);
 
-    await this.personalDatabase.withConnection(
-      async (database) => {
-        const result = await database.runAsync(
-          `
+      await this.personalDatabase.withConnection(
+        async (database) => {
+          const result = await database.runAsync(
+            `
 UPDATE personal_journal_entries
 SET
   entry_date = ?,
@@ -334,18 +1402,86 @@ SET
   updated_at_utc = ?
 WHERE id = ?
 `,
-          entry.entryDate,
-          entry.reflectionText,
-          entry.gratitudeText,
-          entry.updatedAtUtc,
-          entry.id,
-        );
-
-        if (result.changes !== 1) {
-          throw new Error(
-            "PERSONAL_JOURNAL_UPDATE_TARGET_NOT_FOUND",
+            entry.entryDate,
+            entry.reflectionText,
+            entry.gratitudeText,
+            entry.updatedAtUtc,
+            entry.id,
           );
-        }
+
+          if (result.changes !== 1) {
+            throw new Error(
+              "PERSONAL_JOURNAL_UPDATE_TARGET_NOT_FOUND",
+            );
+          }
+        },
+      );
+      return;
+    }
+
+    assertValidPersistenceRecord(entry);
+
+    await this.personalDatabase.withConnection(
+      async (database) => {
+        await database.withTransactionAsync(
+          async () => {
+            const result = await database.runAsync(
+              `
+UPDATE personal_journal_entries
+SET
+  entry_date = ?,
+  reflection_text = ?,
+  gratitude_text = ?,
+  status = ?,
+  source_type = ?,
+  source_title_snapshot = ?,
+  prompt_snapshot = ?,
+  updated_at_utc = ?
+WHERE id = ?
+`,
+              entry.entryDate,
+              entry.reflectionText,
+              entry.gratitudeText,
+              entry.status,
+              entry.sourceType,
+              entry.sourceTitleSnapshot,
+              entry.promptSnapshot,
+              entry.updatedAtUtc,
+              entry.id,
+            );
+
+            if (result.changes !== 1) {
+              throw new Error(
+                "PERSONAL_JOURNAL_UPDATE_TARGET_NOT_FOUND",
+              );
+            }
+
+            await database.runAsync(
+              `
+DELETE FROM personal_journal_entry_references
+WHERE entry_id = ?
+`,
+              entry.id,
+            );
+
+            await database.runAsync(
+              `
+DELETE FROM personal_journal_entry_tags
+WHERE entry_id = ?
+`,
+              entry.id,
+            );
+
+            await persistReferences(
+              database,
+              entry,
+            );
+            await persistTags(
+              database,
+              entry,
+            );
+          },
+        );
       },
     );
   }

@@ -12,6 +12,7 @@ import type {
   PersonalUtcTimestamp,
 } from "../src/domain/personal/personalTime";
 import type {
+  JournalEntryPersistenceRecord,
   JournalRepository,
 } from "../src/data/personal/journal/journalRepository";
 import {
@@ -50,10 +51,26 @@ function journalEntry(
   };
 }
 
+function persistenceEntry(
+  overrides: Partial<JournalEntryPersistenceRecord> = {},
+): JournalEntryPersistenceRecord {
+  return {
+    ...journalEntry(),
+    status: "ACTIVE",
+    sourceType: "FREE",
+    sourceTitleSnapshot: "Contexto preservado",
+    promptSnapshot: "Prompt preservado",
+    references: [],
+    tags: [],
+    ...overrides,
+  } as JournalEntryPersistenceRecord;
+}
+
 function createHarness() {
   const list = jest.fn();
   const findById = jest.fn();
   const findByDate = jest.fn();
+  const listByDate = jest.fn();
   const create = jest.fn();
   const update = jest.fn();
   const remove = jest.fn();
@@ -62,6 +79,7 @@ function createHarness() {
     list,
     findById,
     findByDate,
+    listByDate,
     create,
     update,
     remove,
@@ -96,6 +114,7 @@ function createHarness() {
     list,
     findById,
     findByDate,
+    listByDate,
     create,
     update,
     remove,
@@ -109,34 +128,26 @@ function createHarness() {
 describe("JournalService", () => {
   it("delegates list without reordering repository results", async () => {
     const harness = createHarness();
-
-    const first = journalEntry({
+    const first = persistenceEntry({
       id: ENTRY_ID,
       entryDate: ENTRY_DATE,
     });
-    const second = journalEntry({
+    const second = persistenceEntry({
       id: OTHER_ENTRY_ID,
       entryDate: OTHER_ENTRY_DATE,
     });
 
-    harness.list.mockResolvedValue([
-      first,
-      second,
-    ]);
+    harness.list.mockResolvedValue([first, second]);
 
     await expect(
       harness.service.list(),
-    ).resolves.toEqual([
-      first,
-      second,
-    ]);
+    ).resolves.toEqual([first, second]);
 
     expect(harness.list).toHaveBeenCalledTimes(1);
   });
 
   it("delegates findById and returns null transparently", async () => {
     const harness = createHarness();
-
     harness.findById.mockResolvedValue(null);
 
     await expect(
@@ -144,30 +155,44 @@ describe("JournalService", () => {
     ).resolves.toBeNull();
 
     expect(harness.findById).toHaveBeenCalledTimes(1);
-    expect(harness.findById).toHaveBeenCalledWith(
-      ENTRY_ID,
-    );
+    expect(harness.findById).toHaveBeenCalledWith(ENTRY_ID);
   });
 
-  it("delegates findByDate and returns null transparently", async () => {
+  it("keeps findByDate as a compatibility bridge", async () => {
     const harness = createHarness();
-
-    harness.findByDate.mockResolvedValue(null);
+    const existing = persistenceEntry();
+    harness.findByDate.mockResolvedValue(existing);
 
     await expect(
       harness.service.findByDate(ENTRY_DATE),
-    ).resolves.toBeNull();
+    ).resolves.toBe(existing);
 
     expect(harness.findByDate).toHaveBeenCalledTimes(1);
-    expect(harness.findByDate).toHaveBeenCalledWith(
-      ENTRY_DATE,
-    );
+    expect(harness.findByDate).toHaveBeenCalledWith(ENTRY_DATE);
   });
 
-  it("creates with local date derived from the same captured now", async () => {
+  it("delegates listByDate and preserves multiple entries and repository order", async () => {
     const harness = createHarness();
+    const first = persistenceEntry({
+      id: OTHER_ENTRY_ID,
+      entryDate: ENTRY_DATE,
+    });
+    const second = persistenceEntry({
+      id: ENTRY_ID,
+      entryDate: ENTRY_DATE,
+    });
+    harness.listByDate.mockResolvedValue([first, second]);
 
-    harness.findByDate.mockResolvedValue(null);
+    await expect(
+      harness.service.listByDate(ENTRY_DATE),
+    ).resolves.toEqual([first, second]);
+
+    expect(harness.listByDate).toHaveBeenCalledTimes(1);
+    expect(harness.listByDate).toHaveBeenCalledWith(ENTRY_DATE);
+  });
+
+  it("creates with local date derived from the same captured now without a date-conflict lookup", async () => {
+    const harness = createHarness();
 
     const result = await harness.service.create({
       reflectionText: "Reflexão",
@@ -175,20 +200,13 @@ describe("JournalService", () => {
 
     expect(harness.now).toHaveBeenCalledTimes(1);
     expect(harness.toLocalDate).toHaveBeenCalledTimes(1);
-    expect(harness.toLocalDate).toHaveBeenCalledWith(
-      NOW,
-    );
+    expect(harness.toLocalDate).toHaveBeenCalledWith(NOW);
     expect(harness.toUtcTimestamp).toHaveBeenCalledTimes(1);
-    expect(harness.toUtcTimestamp).toHaveBeenCalledWith(
-      NOW,
-    );
+    expect(harness.toUtcTimestamp).toHaveBeenCalledWith(NOW);
     expect(harness.createId).toHaveBeenCalledTimes(1);
-    expect(harness.createId).toHaveBeenCalledWith(
-      "journal_entry",
-    );
-    expect(harness.findByDate).toHaveBeenCalledWith(
-      ENTRY_DATE,
-    );
+    expect(harness.createId).toHaveBeenCalledWith("journal_entry");
+    expect(harness.findByDate).not.toHaveBeenCalled();
+    expect(harness.create).toHaveBeenCalledTimes(1);
     expect(harness.create).toHaveBeenCalledWith({
       id: ENTRY_ID,
       entryDate: ENTRY_DATE,
@@ -210,8 +228,6 @@ describe("JournalService", () => {
   it("preserves an explicit create entryDate", async () => {
     const harness = createHarness();
 
-    harness.findByDate.mockResolvedValue(null);
-
     const result = await harness.service.create({
       entryDate: OTHER_ENTRY_DATE,
       gratitudeText: "Obrigado",
@@ -219,18 +235,54 @@ describe("JournalService", () => {
 
     expect(harness.now).toHaveBeenCalledTimes(1);
     expect(harness.toLocalDate).not.toHaveBeenCalled();
-    expect(harness.findByDate).toHaveBeenCalledWith(
-      OTHER_ENTRY_DATE,
-    );
-    expect(result.entryDate).toBe(
-      OTHER_ENTRY_DATE,
-    );
+    expect(harness.findByDate).not.toHaveBeenCalled();
+    expect(result.entryDate).toBe(OTHER_ENTRY_DATE);
   });
 
-  it("normalizes undefined and whitespace-only create content to null", async () => {
+  it("allows two entries on the same date with distinct canonical ids", async () => {
+    const harness = createHarness();
+    harness.createId
+      .mockReturnValueOnce(ENTRY_ID)
+      .mockReturnValueOnce(OTHER_ENTRY_ID);
+
+    const first = await harness.service.create({
+      entryDate: ENTRY_DATE,
+      reflectionText: "Primeira reflexão",
+    });
+    const second = await harness.service.create({
+      entryDate: ENTRY_DATE,
+      reflectionText: "Segunda reflexão",
+    });
+
+    expect(first.entryDate).toBe(ENTRY_DATE);
+    expect(second.entryDate).toBe(ENTRY_DATE);
+    expect(first.id).toBe(ENTRY_ID);
+    expect(second.id).toBe(OTHER_ENTRY_ID);
+    expect(harness.createId).toHaveBeenCalledTimes(2);
+    expect(harness.createId).toHaveBeenNthCalledWith(
+      1,
+      "journal_entry",
+    );
+    expect(harness.createId).toHaveBeenNthCalledWith(
+      2,
+      "journal_entry",
+    );
+    expect(harness.findByDate).not.toHaveBeenCalled();
+    expect(harness.create).toHaveBeenCalledTimes(2);
+  });
+
+  it("persists each valid create exactly once", async () => {
     const harness = createHarness();
 
-    harness.findByDate.mockResolvedValue(null);
+    await harness.service.create({
+      reflectionText: "Registro válido",
+    });
+
+    expect(harness.create).toHaveBeenCalledTimes(1);
+  });
+
+  it("normalizes absent or whitespace-only create content to null while preserving non-empty text", async () => {
+    const harness = createHarness();
 
     const result = await harness.service.create({
       reflectionText: undefined,
@@ -238,69 +290,41 @@ describe("JournalService", () => {
     });
 
     expect(result.reflectionText).toBeNull();
-    expect(result.gratitudeText).toBe(
-      "   Obrigado   ",
-    );
-    expect(harness.create).toHaveBeenCalledWith(
-      expect.objectContaining({
-        reflectionText: null,
-        gratitudeText: "   Obrigado   ",
-      }),
-    );
+    expect(result.gratitudeText).toBe("   Obrigado   ");
   });
 
   it("preserves non-empty create text byte-for-byte without trimming", async () => {
     const harness = createHarness();
-
-    harness.findByDate.mockResolvedValue(null);
-
-    const reflectionText =
-      "  linha 1\nlinha 2  ";
-    const gratitudeText =
-      "\tObrigado, Senhor.  ";
+    const reflectionText = "  linha 1\nlinha 2  ";
+    const gratitudeText = "\tObrigado, Senhor.  ";
 
     const result = await harness.service.create({
       reflectionText,
       gratitudeText,
     });
 
-    expect(result.reflectionText).toBe(
-      reflectionText,
-    );
-    expect(result.gratitudeText).toBe(
-      gratitudeText,
-    );
+    expect(result.reflectionText).toBe(reflectionText);
+    expect(result.gratitudeText).toBe(gratitudeText);
   });
 
-  it("rejects reflection text over the maximum", async () => {
-    const harness = createHarness();
+  it.each([
+    ["reflectionText", 5001, "PERSONAL_JOURNAL_REFLECTION_TEXT_INVALID"],
+    ["gratitudeText", 201, "PERSONAL_JOURNAL_GRATITUDE_TEXT_INVALID"],
+  ] as const)(
+    "rejects %s over its maximum",
+    async (field, length, code) => {
+      const harness = createHarness();
 
-    await expect(
-      harness.service.create({
-        reflectionText: "x".repeat(5001),
-      }),
-    ).rejects.toThrow(
-      "PERSONAL_JOURNAL_REFLECTION_TEXT_INVALID",
-    );
+      await expect(
+        harness.service.create({
+          [field]: "x".repeat(length),
+        }),
+      ).rejects.toThrow(code);
 
-    expect(harness.findByDate).not.toHaveBeenCalled();
-    expect(harness.create).not.toHaveBeenCalled();
-  });
-
-  it("rejects gratitude text over the maximum", async () => {
-    const harness = createHarness();
-
-    await expect(
-      harness.service.create({
-        gratitudeText: "x".repeat(201),
-      }),
-    ).rejects.toThrow(
-      "PERSONAL_JOURNAL_GRATITUDE_TEXT_INVALID",
-    );
-
-    expect(harness.findByDate).not.toHaveBeenCalled();
-    expect(harness.create).not.toHaveBeenCalled();
-  });
+      expect(harness.findByDate).not.toHaveBeenCalled();
+      expect(harness.create).not.toHaveBeenCalled();
+    },
+  );
 
   it("rejects create when both content fields are absent", async () => {
     const harness = createHarness();
@@ -318,41 +342,14 @@ describe("JournalService", () => {
     expect(harness.create).not.toHaveBeenCalled();
   });
 
-  it("rejects duplicate entryDate before repository create", async () => {
-    const harness = createHarness();
-
-    harness.findByDate.mockResolvedValue(
-      journalEntry(),
-    );
-
-    await expect(
-      harness.service.create({
-        reflectionText: "Nova reflexão",
-      }),
-    ).rejects.toThrow(
-      "PERSONAL_JOURNAL_ENTRY_DATE_CONFLICT",
-    );
-
-    expect(harness.findByDate).toHaveBeenCalledWith(
-      ENTRY_DATE,
-    );
-    expect(harness.createId).not.toHaveBeenCalled();
-    expect(harness.toUtcTimestamp).not.toHaveBeenCalled();
-    expect(harness.create).not.toHaveBeenCalled();
-  });
-
   it("rejects update when the target does not exist", async () => {
     const harness = createHarness();
-
     harness.findById.mockResolvedValue(null);
 
     await expect(
-      harness.service.update(
-        ENTRY_ID,
-        {
-          reflectionText: "Atualização",
-        },
-      ),
+      harness.service.update(ENTRY_ID, {
+        reflectionText: "Atualização",
+      }),
     ).rejects.toThrow(
       "PERSONAL_JOURNAL_UPDATE_TARGET_NOT_FOUND",
     );
@@ -361,31 +358,20 @@ describe("JournalService", () => {
     expect(harness.update).not.toHaveBeenCalled();
   });
 
-  it("updates while preserving id, entryDate, createdAtUtc and undefined fields", async () => {
+  it("updates with the basic JournalEntry shape while preserving id, date, createdAt and omitted content", async () => {
     const harness = createHarness();
-
-    const existing = journalEntry({
+    const existing = persistenceEntry({
       reflectionText: "Original",
       gratitudeText: "Obrigado",
     });
-
     harness.findById.mockResolvedValue(existing);
-    harness.toUtcTimestamp.mockReturnValue(
-      UPDATED_AT,
-    );
+    harness.toUtcTimestamp.mockReturnValue(UPDATED_AT);
 
     const result = await harness.service.update(
       ENTRY_ID,
-      {
-        gratitudeText: "Nova gratidão",
-      },
+      { gratitudeText: "Nova gratidão" },
     );
 
-    expect(harness.now).toHaveBeenCalledTimes(1);
-    expect(harness.toUtcTimestamp).toHaveBeenCalledTimes(1);
-    expect(harness.toUtcTimestamp).toHaveBeenCalledWith(
-      NOW,
-    );
     expect(result).toEqual({
       id: ENTRY_ID,
       entryDate: ENTRY_DATE,
@@ -394,68 +380,69 @@ describe("JournalService", () => {
       createdAtUtc: CREATED_AT,
       updatedAtUtc: UPDATED_AT,
     });
-    expect(harness.update).toHaveBeenCalledWith(
-      result,
-    );
+    expect(harness.now).toHaveBeenCalledTimes(1);
+    expect(harness.toUtcTimestamp).toHaveBeenCalledWith(NOW);
+    expect(harness.update).toHaveBeenCalledWith(result);
+
+    const persisted = harness.update.mock.calls[0]?.[0];
+    expect(Object.keys(persisted).sort()).toEqual([
+      "createdAtUtc",
+      "entryDate",
+      "gratitudeText",
+      "id",
+      "reflectionText",
+      "updatedAtUtc",
+    ]);
+    expect(persisted).not.toHaveProperty("status");
+    expect(persisted).not.toHaveProperty("sourceType");
+    expect(persisted).not.toHaveProperty("sourceTitleSnapshot");
+    expect(persisted).not.toHaveProperty("promptSnapshot");
+    expect(persisted).not.toHaveProperty("references");
+    expect(persisted).not.toHaveProperty("tags");
   });
 
   it("treats null in update as an explicit clear", async () => {
     const harness = createHarness();
-
     harness.findById.mockResolvedValue(
-      journalEntry({
+      persistenceEntry({
         reflectionText: "Manter",
         gratitudeText: "Remover",
       }),
     );
-    harness.toUtcTimestamp.mockReturnValue(
-      UPDATED_AT,
-    );
+    harness.toUtcTimestamp.mockReturnValue(UPDATED_AT);
 
     const result = await harness.service.update(
       ENTRY_ID,
-      {
-        gratitudeText: null,
-      },
+      { gratitudeText: null },
     );
 
-    expect(result.reflectionText).toBe(
-      "Manter",
-    );
+    expect(result.reflectionText).toBe("Manter");
     expect(result.gratitudeText).toBeNull();
   });
 
-  it("normalizes whitespace-only update replacement to null", async () => {
+  it("normalizes a whitespace-only update replacement to null", async () => {
     const harness = createHarness();
-
     harness.findById.mockResolvedValue(
-      journalEntry({
+      persistenceEntry({
         reflectionText: "Manter",
         gratitudeText: "Remover",
       }),
     );
-    harness.toUtcTimestamp.mockReturnValue(
-      UPDATED_AT,
-    );
+    harness.toUtcTimestamp.mockReturnValue(UPDATED_AT);
 
     const result = await harness.service.update(
       ENTRY_ID,
-      {
-        gratitudeText: "   ",
-      },
+      { gratitudeText: "   " },
     );
 
-    expect(result.reflectionText).toBe(
-      "Manter",
-    );
+    expect(result.reflectionText).toBe("Manter");
     expect(result.gratitudeText).toBeNull();
   });
 
-  it("rejects update when the merged content becomes empty", async () => {
+  it("rejects update when merged content becomes empty", async () => {
     const harness = createHarness();
-
     harness.findById.mockResolvedValue(
-      journalEntry({
+      persistenceEntry({
         reflectionText: "Reflexão",
         gratitudeText: null,
       }),
@@ -464,9 +451,7 @@ describe("JournalService", () => {
     await expect(
       harness.service.update(
         ENTRY_ID,
-        {
-          reflectionText: null,
-        },
+        { reflectionText: null },
       ),
     ).rejects.toThrow(
       "PERSONAL_JOURNAL_ENTRY_CONTENT_REQUIRED",
@@ -476,19 +461,14 @@ describe("JournalService", () => {
     expect(harness.update).not.toHaveBeenCalled();
   });
 
-  it("rejects invalid replacement limits before updating", async () => {
+  it("rejects invalid update limits before persistence", async () => {
     const harness = createHarness();
-
-    harness.findById.mockResolvedValue(
-      journalEntry(),
-    );
+    harness.findById.mockResolvedValue(persistenceEntry());
 
     await expect(
       harness.service.update(
         ENTRY_ID,
-        {
-          gratitudeText: "x".repeat(201),
-        },
+        { gratitudeText: "x".repeat(201) },
       ),
     ).rejects.toThrow(
       "PERSONAL_JOURNAL_GRATITUDE_TEXT_INVALID",
@@ -504,35 +484,23 @@ describe("JournalService", () => {
     await harness.service.remove(ENTRY_ID);
 
     expect(harness.remove).toHaveBeenCalledTimes(1);
-    expect(harness.remove).toHaveBeenCalledWith(
-      ENTRY_ID,
-    );
+    expect(harness.remove).toHaveBeenCalledWith(ENTRY_ID);
   });
 
-  it("propagates repository errors without parsing them", async () => {
+  it("propagates repository read errors without parsing them", async () => {
     const harness = createHarness();
-
-    const repositoryError =
-      new Error("REPOSITORY_FAILURE");
-
-    harness.list.mockRejectedValue(
-      repositoryError,
-    );
+    const repositoryError = new Error("REPOSITORY_FAILURE");
+    harness.list.mockRejectedValue(repositoryError);
 
     await expect(
       harness.service.list(),
     ).rejects.toBe(repositoryError);
   });
 
-  it("propagates create lookup repository errors without side effects", async () => {
+  it("propagates repository create errors without retrying or date-conflict lookup", async () => {
     const harness = createHarness();
-
-    const repositoryError =
-      new Error("LOOKUP_FAILURE");
-
-    harness.findByDate.mockRejectedValue(
-      repositoryError,
-    );
+    const repositoryError = new Error("CREATE_FAILURE");
+    harness.create.mockRejectedValue(repositoryError);
 
     await expect(
       harness.service.create({
@@ -540,8 +508,7 @@ describe("JournalService", () => {
       }),
     ).rejects.toBe(repositoryError);
 
-    expect(harness.createId).not.toHaveBeenCalled();
-    expect(harness.toUtcTimestamp).not.toHaveBeenCalled();
-    expect(harness.create).not.toHaveBeenCalled();
+    expect(harness.findByDate).not.toHaveBeenCalled();
+    expect(harness.create).toHaveBeenCalledTimes(1);
   });
 });

@@ -1,28 +1,43 @@
 import type {
   JournalEntry,
   JournalEntryId,
+  JournalEntryPlatformAttributes,
+  JournalEntryReference,
+  JournalTag,
 } from "../../../domain/journal/journal";
 import type {
   PersonalLocalDate,
 } from "../../../domain/personal/personalTime";
 
+export type JournalEntryPersistenceRecord =
+  JournalEntry &
+  JournalEntryPlatformAttributes &
+  Readonly<{
+    references: readonly JournalEntryReference[];
+    tags: readonly JournalTag[];
+  }>;
+
 export interface JournalRepository {
-  list(): Promise<readonly JournalEntry[]>;
+  list(): Promise<readonly JournalEntryPersistenceRecord[]>;
 
   findById(
     id: JournalEntryId,
-  ): Promise<JournalEntry | null>;
+  ): Promise<JournalEntryPersistenceRecord | null>;
 
   findByDate(
     entryDate: PersonalLocalDate,
-  ): Promise<JournalEntry | null>;
+  ): Promise<JournalEntryPersistenceRecord | null>;
+
+  listByDate(
+    entryDate: PersonalLocalDate,
+  ): Promise<readonly JournalEntryPersistenceRecord[]>;
 
   create(
-    entry: JournalEntry,
+    entry: JournalEntry | JournalEntryPersistenceRecord,
   ): Promise<void>;
 
   update(
-    entry: JournalEntry,
+    entry: JournalEntry | JournalEntryPersistenceRecord,
   ): Promise<void>;
 
   remove(
