@@ -14,6 +14,13 @@ import {
   View,
 } from "react-native";
 
+import {
+  getBibleBookById,
+} from "../domain/bible/bibleBooks";
+import type {
+  BiblePassage,
+  BibleReference,
+} from "../domain/bible/bibleReference";
 import type {
   JournalCategory,
 } from "../domain/journal/journal";
@@ -25,7 +32,12 @@ import { getPersonalPlatformHub } from "../services/personalPlatformHub";
 import { colors } from "../theme/colors";
 
 type JournalEntryDetailScreenProps =
-  JournalStackScreenProps<"JournalEntryDetail">;
+  JournalStackScreenProps<"JournalEntryDetail"> &
+  Readonly<{
+    onOpenBibleReference: (
+      reference: BibleReference,
+    ) => void | Promise<void>;
+  }>;
 
 type LoadStatus =
   | "loading"
@@ -96,6 +108,60 @@ function formatEntryDate(entryDate: string): string {
   );
 }
 
+function formatBiblePassage(
+  passage: BiblePassage,
+): string {
+  const bookName =
+    getBibleBookById(passage.bookId).canonicalName;
+
+  switch (passage.kind) {
+    case "WHOLE_BOOK":
+      return bookName;
+
+    case "CHAPTER":
+      return `${bookName} ${passage.chapter}`;
+
+    case "CHAPTER_RANGE":
+      return (
+        `${bookName} ${passage.startChapter}-` +
+        `${passage.endChapter}`
+      );
+
+    case "VERSE":
+      return (
+        `${bookName} ${passage.chapter}:` +
+        `${passage.verse}`
+      );
+
+    case "VERSE_RANGE":
+      if (
+        passage.start.chapter ===
+        passage.end.chapter
+      ) {
+        return (
+          `${bookName} ${passage.start.chapter}:` +
+          `${passage.start.verse}-` +
+          `${passage.end.verse}`
+        );
+      }
+
+      return (
+        `${bookName} ${passage.start.chapter}:` +
+        `${passage.start.verse}-` +
+        `${passage.end.chapter}:` +
+        `${passage.end.verse}`
+      );
+  }
+}
+
+function formatBibleReference(
+  reference: BibleReference,
+): string {
+  return reference.passages
+    .map(formatBiblePassage)
+    .join("; ");
+}
+
 function getActionErrorMessage(
   action: Exclude<ActionBusy, null>,
 ): string {
@@ -122,6 +188,7 @@ function getActionErrorMessage(
 export default function JournalEntryDetailScreen({
   navigation,
   route,
+  onOpenBibleReference,
 }: JournalEntryDetailScreenProps) {
   const { entryId } = route.params;
   const loadGenerationRef = useRef(0);
@@ -442,6 +509,58 @@ export default function JournalEntryDetailScreen({
                 </View>
               )}
 
+              {entry.references.length > 0 && (
+                <View style={styles.referencesSection}>
+                  <Text style={styles.entryLabel}>
+                    Referências bíblicas
+                  </Text>
+
+                  <View style={styles.referenceList}>
+                    {entry.references.map(
+                      (entryReference) => {
+                        const referenceLabel =
+                          formatBibleReference(
+                            entryReference.reference,
+                          );
+
+                        return (
+                          <Pressable
+                            key={entryReference.id}
+                            accessibilityRole="button"
+                            accessibilityLabel={`Abrir ${referenceLabel} na Bíblia`}
+                            onPress={() => {
+                              void onOpenBibleReference(
+                                entryReference.reference,
+                              );
+                            }}
+                            style={({ pressed }) => [
+                              styles.referenceButton,
+                              pressed &&
+                                styles.pressed,
+                            ]}
+                          >
+                            <Text
+                              style={
+                                styles.referenceText
+                              }
+                            >
+                              {referenceLabel}
+                            </Text>
+                            <Text
+                              style={
+                                styles.referenceHint
+                              }
+                            >
+                              Abrir na Bíblia
+                            </Text>
+                          </Pressable>
+                        );
+                      },
+                    )}
+                  </View>
+                </View>
+              )}
+
               {entry.reflectionText !== null && (
                 <View style={styles.entrySection}>
                   <Text style={styles.entryLabel}>
@@ -747,6 +866,32 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: 11,
     fontWeight: "700",
+  },
+  referencesSection: {
+    gap: 8,
+  },
+  referenceList: {
+    gap: 8,
+  },
+  referenceButton: {
+    minHeight: 48,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 14,
+    backgroundColor: colors.surfaceAlt,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  referenceText: {
+    color: colors.primary,
+    fontSize: 14,
+    fontWeight: "800",
+  },
+  referenceHint: {
+    color: colors.textMuted,
+    fontSize: 11,
+    fontWeight: "700",
+    marginTop: 2,
   },
   entrySection: {
     gap: 6,

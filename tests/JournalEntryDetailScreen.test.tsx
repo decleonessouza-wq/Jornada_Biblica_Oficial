@@ -46,6 +46,17 @@ const mockRestoreFromTrash = jest.fn();
 const entryId =
   "journal-entry-detail" as JournalEntryId;
 
+const bibleReference = {
+  passages: [
+    {
+      kind: "VERSE",
+      bookId: "JHN",
+      chapter: 3,
+      verse: 16,
+    },
+  ],
+} as const;
+
 const completeEntry = {
   id: entryId,
   entryDate: "2026-09-09",
@@ -87,6 +98,7 @@ function configureHub(): void {
 function renderDetail() {
   const navigate = jest.fn();
   const goBack = jest.fn();
+  const openBibleReference = jest.fn();
 
   const view = render(
     <JournalEntryDetailScreen
@@ -99,6 +111,9 @@ function renderDetail() {
         name: "JournalEntryDetail",
         params: { entryId },
       } as never}
+      onOpenBibleReference={
+        openBibleReference
+      }
     />,
   );
 
@@ -106,6 +121,7 @@ function renderDetail() {
     ...view,
     navigate,
     goBack,
+    openBibleReference,
   };
 }
 
@@ -225,6 +241,54 @@ describe(
           "Sou grato pelo cuidado de Deus.",
         ),
       ).toBeTruthy();
+    });
+
+    it("keeps the Bible reference section hidden for entries without references", async () => {
+      const view = await renderLoadedDetail();
+
+      expect(
+        view.queryByText("Referências bíblicas"),
+      ).toBeNull();
+      expect(
+        view.openBibleReference,
+      ).not.toHaveBeenCalled();
+    });
+
+    it("renders a canonical Bible reference and opens the exact structured reference", async () => {
+      const view = await renderLoadedDetail({
+        ...completeEntry,
+        sourceType: "BIBLE",
+        references: [
+          {
+            id: "journal-reference-detail" as never,
+            entryId,
+            position: 0,
+            reference: bibleReference,
+          },
+        ],
+      });
+
+      expect(
+        view.getByText("Referências bíblicas"),
+      ).toBeTruthy();
+      expect(
+        view.getByText("João 3:16"),
+      ).toBeTruthy();
+
+      fireEvent.press(
+        view.getByLabelText(
+          "Abrir João 3:16 na Bíblia",
+        ),
+      );
+
+      expect(
+        view.openBibleReference,
+      ).toHaveBeenCalledTimes(1);
+      expect(
+        view.openBibleReference,
+      ).toHaveBeenCalledWith(
+        bibleReference,
+      );
     });
 
     it("does not expose creation or update timestamps", async () => {

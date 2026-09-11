@@ -1,18 +1,64 @@
+import { useCallback } from "react";
+
 import { DrawerActions } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 
+import {
+  getOfflineBibleReaderRouteParamsForReference,
+} from "../bible/reader/bibleReaderContracts";
+import {
+  loadPreferredOfflineBibleVersion,
+} from "../bible/state/bibleReaderPreferencesStore";
+import type {
+  BibleReference,
+} from "../domain/bible/bibleReference";
 import JournalEntryDetailScreen from "../screens/JournalEntryDetailScreen";
 import JournalEntryEditorScreen from "../screens/JournalEntryEditorScreen";
 import JournalScreen from "../screens/JournalScreen";
 import { colors } from "../theme/colors";
 
 import { AppHeaderMenuButton } from "./AppHeader";
-import type { JournalStackParamList } from "./types";
+import type {
+  AppDrawerScreenProps,
+  JournalStackParamList,
+} from "./types";
 
 const JournalStack =
   createNativeStackNavigator<JournalStackParamList>();
 
-export default function JournalNavigator() {
+export default function JournalNavigator({
+  navigation,
+}: AppDrawerScreenProps<"Journal">) {
+  const handleOpenBibleReference =
+    useCallback(
+      async (reference: BibleReference) => {
+        try {
+          const versionId =
+            await loadPreferredOfflineBibleVersion();
+          const readerParams =
+            getOfflineBibleReaderRouteParamsForReference(
+              reference,
+              versionId,
+            );
+
+          if (readerParams === null) {
+            return;
+          }
+
+          navigation.navigate("MainTabs", {
+            screen: "BibleTab",
+            params: {
+              screen: "BibleReader",
+              params: readerParams,
+            },
+          });
+        } catch {
+          return;
+        }
+      },
+      [navigation],
+    );
+
   return (
     <JournalStack.Navigator
       initialRouteName="JournalHome"
@@ -58,11 +104,19 @@ export default function JournalNavigator() {
 
       <JournalStack.Screen
         name="JournalEntryDetail"
-        component={JournalEntryDetailScreen}
         options={{
           title: "Registro do dia",
         }}
-      />
+      >
+        {(screenProps) => (
+          <JournalEntryDetailScreen
+            {...screenProps}
+            onOpenBibleReference={
+              handleOpenBibleReference
+            }
+          />
+        )}
+      </JournalStack.Screen>
     </JournalStack.Navigator>
   );
 }

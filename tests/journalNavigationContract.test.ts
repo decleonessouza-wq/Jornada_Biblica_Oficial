@@ -66,8 +66,14 @@ describe("journal navigation contract", () => {
     expect(journalNavigator).toMatch(
       /name="JournalEntryEditor"\s+component=\{JournalEntryEditorScreen\}/,
     );
-    expect(journalNavigator).toMatch(
-      /name="JournalEntryDetail"\s+component=\{JournalEntryDetailScreen\}/,
+    expect(journalNavigator).toContain(
+      'name="JournalEntryDetail"',
+    );
+    expect(journalNavigator).toContain(
+      "<JournalEntryDetailScreen",
+    );
+    expect(journalNavigator).toContain(
+      "onOpenBibleReference={",
     );
   });
 
@@ -196,6 +202,33 @@ describe("journal navigation contract", () => {
     );
     expect(bibleNavigator).toContain(
       "onRequestJournalReference={",
+    );
+  });
+
+  it("returns a Journal Bible reference to the Reader using the preferred offline version", () => {
+    expect(journalNavigator).toContain(
+      'AppDrawerScreenProps<"Journal">',
+    );
+    expect(journalNavigator).toContain(
+      "loadPreferredOfflineBibleVersion()",
+    );
+    expect(journalNavigator).toContain(
+      "getOfflineBibleReaderRouteParamsForReference(",
+    );
+    expect(journalNavigator).toContain(
+      'navigation.navigate("MainTabs", {',
+    );
+    expect(journalNavigator).toContain(
+      'screen: "BibleTab"',
+    );
+    expect(journalNavigator).toContain(
+      'screen: "BibleReader"',
+    );
+    expect(journalNavigator).toContain(
+      "params: readerParams",
+    );
+    expect(journalNavigator).not.toMatch(
+      /sourceTitleSnapshot.*versionId|promptSnapshot.*versionId/,
     );
   });
 
