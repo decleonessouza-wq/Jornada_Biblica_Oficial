@@ -265,6 +265,10 @@ export default function JournalEntryEditorScreen({
     routeSourceContext?.sourceType === "BIBLE"
       ? routeSourceContext.reference
       : null;
+  const routePlanContext =
+    routeSourceContext?.sourceType === "PLAN"
+      ? routeSourceContext
+      : null;
   const loadGenerationRef = useRef(0);
   const submitLockRef = useRef(false);
   const mountedRef = useRef(true);
@@ -297,6 +301,28 @@ export default function JournalEntryEditorScreen({
     setBibleContextReference,
   ] = useState<BibleReference | null>(
     routeBibleReference,
+  );
+  const [
+    planSourceActive,
+    setPlanSourceActive,
+  ] = useState(routePlanContext !== null);
+  const [
+    planSourceTitleSnapshot,
+    setPlanSourceTitleSnapshot,
+  ] = useState<string | null>(
+    routePlanContext?.sourceTitleSnapshot ?? null,
+  );
+  const [
+    planPromptSnapshot,
+    setPlanPromptSnapshot,
+  ] = useState<string | null>(
+    routePlanContext?.promptSnapshot ?? null,
+  );
+  const [
+    planContextReference,
+    setPlanContextReference,
+  ] = useState<BibleReference | null>(
+    routePlanContext?.reference ?? null,
   );
   const [loadedStatus, setLoadedStatus] =
     useState<"ACTIVE" | "DRAFT" | null>(null);
@@ -334,10 +360,26 @@ export default function JournalEntryEditorScreen({
       setBibleContextReference(
         routeBibleReference,
       );
+      setPlanSourceActive(
+        routePlanContext !== null,
+      );
+      setPlanSourceTitleSnapshot(
+        routePlanContext?.sourceTitleSnapshot ??
+          null,
+      );
+      setPlanPromptSnapshot(
+        routePlanContext?.promptSnapshot ?? null,
+      );
+      setPlanContextReference(
+        routePlanContext?.reference ?? null,
+      );
+
+      const initialEntryDate =
+        routePlanContext?.entryDate ??
+        journalService.getTodayEntryDate();
+
       setEntryDateInput(
-        formatEntryDateInput(
-          journalService.getTodayEntryDate(),
-        ),
+        formatEntryDateInput(initialEntryDate),
       );
       setLoadStatus("ready");
       return;
@@ -391,6 +433,25 @@ export default function JournalEntryEditorScreen({
           ? entry.references[0].reference
           : null,
       );
+      setPlanSourceActive(
+        entry.sourceType === "PLAN",
+      );
+      setPlanSourceTitleSnapshot(
+        entry.sourceType === "PLAN"
+          ? entry.sourceTitleSnapshot
+          : null,
+      );
+      setPlanPromptSnapshot(
+        entry.sourceType === "PLAN"
+          ? entry.promptSnapshot
+          : null,
+      );
+      setPlanContextReference(
+        entry.sourceType === "PLAN" &&
+          entry.references.length > 0
+          ? entry.references[0].reference
+          : null,
+      );
       setTagsInput(
         formatTagNames(entry.tags),
       );
@@ -420,6 +481,7 @@ export default function JournalEntryEditorScreen({
   }, [
     routeBibleReference,
     routeEntryId,
+    routePlanContext,
   ]);
 
   useEffect(() => {
@@ -471,17 +533,29 @@ export default function JournalEntryEditorScreen({
 
               if (draftId === null) {
                 const draft =
-                  bibleContextReference === null
-                    ? await journalService.createDraft(
-                        contentSnapshot,
-                      )
-                    : await journalService.createBibleDraft(
+                  routePlanContext !== null
+                    ? await journalService.createPlanDraft(
                         {
                           ...contentSnapshot,
+                          sourceTitleSnapshot:
+                            routePlanContext.sourceTitleSnapshot,
+                          promptSnapshot:
+                            routePlanContext.promptSnapshot,
                           reference:
-                            bibleContextReference,
+                            routePlanContext.reference,
                         },
-                      );
+                      )
+                    : bibleContextReference === null
+                      ? await journalService.createDraft(
+                          contentSnapshot,
+                        )
+                      : await journalService.createBibleDraft(
+                          {
+                            ...contentSnapshot,
+                            reference:
+                              bibleContextReference,
+                          },
+                        );
 
                 draftId = draft.id;
                 draftEntryIdRef.current =
@@ -518,6 +592,7 @@ export default function JournalEntryEditorScreen({
     [
       bibleContextReference,
       loadedStatus,
+      routePlanContext,
       saving,
     ],
   );
@@ -659,6 +734,35 @@ export default function JournalEntryEditorScreen({
           setLoadedStatus("ACTIVE");
         }
       } else if (
+        routePlanContext !== null
+      ) {
+        const draft =
+          await journalService.createPlanDraft({
+            ...input,
+            sourceTitleSnapshot:
+              routePlanContext.sourceTitleSnapshot,
+            promptSnapshot:
+              routePlanContext.promptSnapshot,
+            reference:
+              routePlanContext.reference,
+          });
+
+        savedEntryId = draft.id;
+        draftEntryIdRef.current = draft.id;
+
+        await journalService.publishDraft(
+          savedEntryId,
+          input,
+        );
+
+        draftEntryIdRef.current = null;
+        activeEntryIdRef.current =
+          savedEntryId;
+
+        if (mountedRef.current) {
+          setLoadedStatus("ACTIVE");
+        }
+      } else if (
         bibleContextReference !== null
       ) {
         const draft =
@@ -729,6 +833,7 @@ export default function JournalEntryEditorScreen({
     navigation,
     reflectionText,
     routeEntryId,
+    routePlanContext,
     tagsInput,
   ]);
 
@@ -817,6 +922,46 @@ export default function JournalEntryEditorScreen({
 
         {loadStatus === "ready" && (
           <View style={styles.formCard}>
+            {planSourceActive && (
+              <View
+                accessibilityLabel={`Origem do plano: ${
+                  planSourceTitleSnapshot ??
+                  "Plano de leitura"
+                }`}
+                style={styles.bibleContextCard}
+              >
+                <Text
+                  style={styles.bibleContextEyebrow}
+                >
+                  ORIGEM DO PLANO
+                </Text>
+                <Text
+                  style={styles.bibleContextTitle}
+                >
+                  {planSourceTitleSnapshot ??
+                    "Plano de leitura"}
+                </Text>
+
+                {planContextReference !== null && (
+                  <Text
+                    style={styles.bibleContextText}
+                  >
+                    {formatBibleReference(
+                      planContextReference,
+                    )}
+                  </Text>
+                )}
+
+                {planPromptSnapshot !== null && (
+                  <Text
+                    style={styles.bibleContextText}
+                  >
+                    {planPromptSnapshot}
+                  </Text>
+                )}
+              </View>
+            )}
+
             {bibleContextReference !== null && (
               <View
                 accessibilityLabel={`Referência bíblica vinculada: ${formatBibleReference(
@@ -849,7 +994,9 @@ export default function JournalEntryEditorScreen({
                   markEdited();
                   setEntryDateInput(value);
                 }}
-                editable={!saving}
+                editable={
+                  !saving && !planSourceActive
+                }
                 keyboardType="number-pad"
                 maxLength={10}
                 placeholder="DD/MM/AAAA"
@@ -859,7 +1006,9 @@ export default function JournalEntryEditorScreen({
                 style={styles.dateInput}
               />
               <Text style={styles.fieldHelp}>
-                Use o dia em que esta reflexão aconteceu.
+                {planSourceActive
+                  ? "Data vinculada ao dia desta leitura do plano."
+                  : "Use o dia em que esta reflexão aconteceu."}
               </Text>
             </View>
 

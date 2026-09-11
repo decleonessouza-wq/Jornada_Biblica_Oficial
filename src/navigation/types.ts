@@ -11,6 +11,9 @@ import type {
   BibleReference,
 } from "../domain/bible/bibleReference";
 import type { JournalEntryId } from "../domain/journal/journal";
+import type {
+  PersonalLocalDate,
+} from "../domain/personal/personalTime";
 import type { HymnId } from "../domain/hymnal/hymn";
 import type { HymnalEditionId } from "../domain/hymnal/hymnalEdition";
 
@@ -38,6 +41,13 @@ export type JournalEntryEditorSourceContext =
   | Readonly<{
       sourceType: "BIBLE";
       reference: BibleReference;
+    }>
+  | Readonly<{
+      sourceType: "PLAN";
+      entryDate: PersonalLocalDate;
+      sourceTitleSnapshot: string;
+      promptSnapshot: string;
+      reference: BibleReference | null;
     }>;
 
 export type JournalStackParamList = {

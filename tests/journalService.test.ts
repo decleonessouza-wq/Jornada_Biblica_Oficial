@@ -701,6 +701,164 @@ describe("JournalService", () => {
     );
   });
 
+  it("creates a PLAN draft with explicit plan date snapshots and one canonical structured reference", async () => {
+    const harness = createHarness();
+
+    const draft =
+      await harness.service.createPlanDraft({
+        entryDate: OTHER_ENTRY_DATE,
+        reflectionText:
+          "Reflexão a partir do plano.",
+        sourceTitleSnapshot:
+          "Plano de leitura • Evangelhos",
+        promptSnapshot:
+          "O que você precisa praticar hoje?",
+        reference: BIBLE_REFERENCE,
+      });
+
+    expect(harness.now).toHaveBeenCalledTimes(1);
+    expect(
+      harness.toLocalDate,
+    ).not.toHaveBeenCalled();
+    expect(
+      harness.toUtcTimestamp,
+    ).toHaveBeenCalledWith(NOW);
+    expect(
+      harness.createId,
+    ).toHaveBeenNthCalledWith(
+      1,
+      "journal_entry",
+    );
+    expect(
+      harness.createId,
+    ).toHaveBeenNthCalledWith(
+      2,
+      "journal_entry_reference",
+    );
+
+    expect(draft).toEqual({
+      id: ENTRY_ID,
+      entryDate: OTHER_ENTRY_DATE,
+      reflectionText:
+        "Reflexão a partir do plano.",
+      gratitudeText: null,
+      status: "DRAFT",
+      sourceType: "PLAN",
+      sourceTitleSnapshot:
+        "Plano de leitura • Evangelhos",
+      promptSnapshot:
+        "O que você precisa praticar hoje?",
+      category: null,
+      isPinned: false,
+      references: [
+        {
+          id: ENTRY_ID,
+          entryId: ENTRY_ID,
+          position: 0,
+          reference: BIBLE_REFERENCE,
+        },
+      ],
+      tags: [],
+      createdAtUtc: CREATED_AT,
+      updatedAtUtc: CREATED_AT,
+    });
+
+    expect(
+      harness.create,
+    ).toHaveBeenCalledTimes(1);
+    expect(
+      harness.create,
+    ).toHaveBeenCalledWith(draft);
+    expect(
+      harness.findByDate,
+    ).not.toHaveBeenCalled();
+  });
+
+  it("creates a PLAN special-day draft with zero Bible references and explicit editorial snapshots", async () => {
+    const harness = createHarness();
+
+    const draft =
+      await harness.service.createPlanDraft({
+        entryDate: OTHER_ENTRY_DATE,
+        sourceTitleSnapshot:
+          "Plano de leitura • Natal",
+        promptSnapshot:
+          "Contemple o nascimento de Cristo.",
+        reference: null,
+      });
+
+    expect(draft.sourceType).toBe("PLAN");
+    expect(draft.entryDate).toBe(
+      OTHER_ENTRY_DATE,
+    );
+    expect(draft.sourceTitleSnapshot).toBe(
+      "Plano de leitura • Natal",
+    );
+    expect(draft.promptSnapshot).toBe(
+      "Contemple o nascimento de Cristo.",
+    );
+    expect(draft.references).toEqual([]);
+    expect(
+      harness.createId,
+    ).toHaveBeenCalledTimes(1);
+    expect(
+      harness.createId,
+    ).toHaveBeenCalledWith(
+      "journal_entry",
+    );
+    expect(
+      harness.toLocalDate,
+    ).not.toHaveBeenCalled();
+    expect(
+      harness.create,
+    ).toHaveBeenCalledWith(draft);
+  });
+
+  it("publishes a PLAN draft without losing snapshots or its canonical Bible reference", async () => {
+    const harness = createHarness();
+
+    const draft =
+      await harness.service.createPlanDraft({
+        entryDate: OTHER_ENTRY_DATE,
+        sourceTitleSnapshot:
+          "Plano de leitura • Evangelhos",
+        promptSnapshot:
+          "Observe o caráter de Cristo.",
+        reference: BIBLE_REFERENCE,
+      });
+
+    harness.findById.mockResolvedValue(draft);
+
+    const published =
+      await harness.service.publishDraft(
+        draft.id,
+        {
+          reflectionText:
+            "Aplicação concluída.",
+        },
+      );
+
+    expect(published.status).toBe("ACTIVE");
+    expect(published.sourceType).toBe("PLAN");
+    expect(
+      published.sourceTitleSnapshot,
+    ).toBe(
+      "Plano de leitura • Evangelhos",
+    );
+    expect(published.promptSnapshot).toBe(
+      "Observe o caráter de Cristo.",
+    );
+    expect(published.references).toEqual(
+      draft.references,
+    );
+    expect(published.createdAtUtc).toBe(
+      draft.createdAtUtc,
+    );
+    expect(
+      harness.update,
+    ).toHaveBeenCalledWith(published);
+  });
+
   it("creates a draft with explicit date and preserves non-empty text byte-for-byte", async () => {
     const harness = createHarness();
     const reflectionText = "  linha 1\nlinha 2  ";

@@ -13,6 +13,7 @@ import type {
 import type {
   JournalEntryId,
 } from "../src/domain/journal/journal";
+import type { PersonalLocalDate } from "../src/domain/personal/personalTime";
 import type {
   JournalEntryEditorSourceContext,
 } from "../src/navigation/types";
@@ -48,6 +49,7 @@ const mockGetTodayEntryDate = jest.fn();
 const mockCreate = jest.fn();
 const mockCreateDraft = jest.fn();
 const mockCreateBibleDraft = jest.fn();
+const mockCreatePlanDraft = jest.fn();
 const mockUpdateDraft = jest.fn();
 const mockPublishDraft = jest.fn();
 const mockUpdate = jest.fn();
@@ -73,6 +75,28 @@ const bibleSourceContext:
   JournalEntryEditorSourceContext = {
     sourceType: "BIBLE",
     reference: bibleReference,
+  };
+
+const planSourceContext:
+  JournalEntryEditorSourceContext = {
+    sourceType: "PLAN",
+    entryDate: "2026-09-08" as PersonalLocalDate,
+    sourceTitleSnapshot:
+      "Plano de leitura • Evangelhos",
+    promptSnapshot:
+      "Observe o caráter de Cristo.",
+    reference: bibleReference,
+  };
+
+const planSpecialDaySourceContext:
+  JournalEntryEditorSourceContext = {
+    sourceType: "PLAN",
+    entryDate: "2026-12-25" as PersonalLocalDate,
+    sourceTitleSnapshot:
+      "Plano de leitura • Natal",
+    promptSnapshot:
+      "Contemple o nascimento de Cristo.",
+    reference: null,
   };
 
 const existingEntry = {
@@ -117,6 +141,24 @@ const bibleDraftEntry = {
   ],
 } as JournalEntryPersistenceRecord;
 
+const planDraftEntry = {
+  ...draftEntry,
+  entryDate: "2026-09-08" as PersonalLocalDate,
+  sourceType: "PLAN",
+  sourceTitleSnapshot:
+    "Plano de leitura • Evangelhos",
+  promptSnapshot:
+    "Observe o caráter de Cristo.",
+  references: [
+    {
+      id: "journal-plan-reference-test" as never,
+      entryId: draftId,
+      position: 0,
+      reference: bibleReference,
+    },
+  ],
+} as JournalEntryPersistenceRecord;
+
 function configureHub(): void {
   mockedGetPersonalPlatformHub.mockReturnValue({
     journalService: {
@@ -127,6 +169,8 @@ function configureHub(): void {
       createDraft: mockCreateDraft,
       createBibleDraft:
         mockCreateBibleDraft,
+      createPlanDraft:
+        mockCreatePlanDraft,
       updateDraft: mockUpdateDraft,
       publishDraft: mockPublishDraft,
       update: mockUpdate,
@@ -208,6 +252,7 @@ describe(
       mockCreate.mockReset();
       mockCreateDraft.mockReset();
       mockCreateBibleDraft.mockReset();
+      mockCreatePlanDraft.mockReset();
       mockUpdateDraft.mockReset();
       mockPublishDraft.mockReset();
       mockUpdate.mockReset();
@@ -222,6 +267,9 @@ describe(
       );
       mockCreateBibleDraft.mockResolvedValue(
         bibleDraftEntry,
+      );
+      mockCreatePlanDraft.mockResolvedValue(
+        planDraftEntry,
       );
       mockUpdateDraft.mockResolvedValue(
         draftEntry,
@@ -457,6 +505,230 @@ describe(
       ).toHaveBeenCalledTimes(1);
       expect(
         mockCreate,
+      ).not.toHaveBeenCalled();
+    });
+
+    it(
+      "opens Plan context on the plan date with snapshots and no persistence",
+      () => {
+        const view = renderEditor(
+          undefined,
+          planSourceContext,
+        );
+
+        expect(
+          view.getByLabelText(
+            "Origem do plano: Plano de leitura • Evangelhos",
+          ),
+        ).toBeTruthy();
+        expect(
+          view.getByText(
+            "Observe o caráter de Cristo.",
+          ),
+        ).toBeTruthy();
+        expect(
+          view.getByText("João 3:16"),
+        ).toBeTruthy();
+        expect(
+          view.getByLabelText("Data do registro")
+            .props.value,
+        ).toBe("08/09/2026");
+        expect(
+          view.getByLabelText("Data do registro")
+            .props.editable,
+        ).toBe(false);
+        expect(
+          mockGetTodayEntryDate,
+        ).not.toHaveBeenCalled();
+        expect(
+          mockCreatePlanDraft,
+        ).not.toHaveBeenCalled();
+        expect(
+          mockCreateDraft,
+        ).not.toHaveBeenCalled();
+        expect(
+          mockCreateBibleDraft,
+        ).not.toHaveBeenCalled();
+      },
+      10000,
+    );
+
+    it("autosaves Plan context through createPlanDraft without touching FREE or BIBLE creation", async () => {
+      const view = renderEditor(
+        undefined,
+        planSourceContext,
+      );
+
+      fireEvent.changeText(
+        view.getByLabelText("Reflexão"),
+        "Aplicação da leitura do plano.",
+      );
+
+      await advanceAutosave();
+
+      await waitFor(() => {
+        expect(
+          mockCreatePlanDraft,
+        ).toHaveBeenCalledWith({
+          entryDate: "2026-09-08",
+          reflectionText:
+            "Aplicação da leitura do plano.",
+          gratitudeText: "",
+          sourceTitleSnapshot:
+            "Plano de leitura • Evangelhos",
+          promptSnapshot:
+            "Observe o caráter de Cristo.",
+          reference: bibleReference,
+        });
+      });
+
+      expect(
+        mockCreatePlanDraft,
+      ).toHaveBeenCalledTimes(1);
+      expect(
+        mockCreateDraft,
+      ).not.toHaveBeenCalled();
+      expect(
+        mockCreateBibleDraft,
+      ).not.toHaveBeenCalled();
+    });
+
+    it("directly saves Plan context by publishing the same PLAN draft", async () => {
+      const view = renderEditor(
+        undefined,
+        planSourceContext,
+      );
+
+      fireEvent.changeText(
+        view.getByLabelText("Reflexão"),
+        "Guardar aplicação do plano.",
+      );
+
+      fireEvent.press(
+        view.getByLabelText(
+          "Salvar registro do diário",
+        ),
+      );
+
+      await waitFor(() => {
+        expect(
+          mockCreatePlanDraft,
+        ).toHaveBeenCalledWith({
+          entryDate: "2026-09-08",
+          reflectionText:
+            "Guardar aplicação do plano.",
+          gratitudeText: "",
+          sourceTitleSnapshot:
+            "Plano de leitura • Evangelhos",
+          promptSnapshot:
+            "Observe o caráter de Cristo.",
+          reference: bibleReference,
+        });
+        expect(
+          mockPublishDraft,
+        ).toHaveBeenCalledWith(
+          draftId,
+          {
+            entryDate: "2026-09-08",
+            reflectionText:
+              "Guardar aplicação do plano.",
+            gratitudeText: "",
+          },
+        );
+        expect(
+          view.goBack,
+        ).toHaveBeenCalledTimes(1);
+      });
+
+      expect(
+        mockCreatePlanDraft,
+      ).toHaveBeenCalledTimes(1);
+      expect(
+        mockCreateDraft,
+      ).not.toHaveBeenCalled();
+      expect(
+        mockCreateBibleDraft,
+      ).not.toHaveBeenCalled();
+    });
+
+    it("autosaves a Plan special day with zero Bible references", async () => {
+      const view = renderEditor(
+        undefined,
+        planSpecialDaySourceContext,
+      );
+
+      expect(
+        view.getByLabelText(
+          "Origem do plano: Plano de leitura • Natal",
+        ),
+      ).toBeTruthy();
+      expect(
+        view.queryByText("João 3:16"),
+      ).toBeNull();
+      expect(
+        view.getByLabelText("Data do registro")
+          .props.value,
+      ).toBe("25/12/2026");
+
+      fireEvent.changeText(
+        view.getByLabelText("Reflexão"),
+        "Natal aponta para Cristo.",
+      );
+
+      await advanceAutosave();
+
+      await waitFor(() => {
+        expect(
+          mockCreatePlanDraft,
+        ).toHaveBeenCalledWith({
+          entryDate: "2026-12-25",
+          reflectionText:
+            "Natal aponta para Cristo.",
+          gratitudeText: "",
+          sourceTitleSnapshot:
+            "Plano de leitura • Natal",
+          promptSnapshot:
+            "Contemple o nascimento de Cristo.",
+          reference: null,
+        });
+      });
+    });
+
+    it("loads an existing PLAN draft with its persisted source context", async () => {
+      mockFindById.mockResolvedValue(
+        planDraftEntry,
+      );
+
+      const view = renderEditor(draftId);
+
+      await waitFor(() => {
+        expect(
+          view.getByLabelText(
+            "Origem do plano: Plano de leitura • Evangelhos",
+          ),
+        ).toBeTruthy();
+        expect(
+          view.getByText(
+            "Observe o caráter de Cristo.",
+          ),
+        ).toBeTruthy();
+        expect(
+          view.getByText("João 3:16"),
+        ).toBeTruthy();
+        expect(
+          view.getByLabelText(
+            "Data do registro",
+          ).props.value,
+        ).toBe("08/09/2026");
+        expect(
+          view.getByLabelText(
+            "Data do registro",
+          ).props.editable,
+        ).toBe(false);
+      });
+
+      expect(
+        mockCreatePlanDraft,
       ).not.toHaveBeenCalled();
     });
 

@@ -26,6 +26,7 @@ import { getPlanPhaseForOffset } from "../domain/plan/planPhaseProjection";
 import { projectPlanCivilDate } from "../domain/plan/planCivilSchedule";
 import { resolvePlanCivilDayPolicy } from "../domain/plan/planSpecialDayPolicy";
 import type { RootStackParamList } from "../navigation/types";
+import type { PersonalLocalDate } from "../domain/personal/personalTime";
 import { addCompletedDay } from "../services/progressStore";
 import { projectCanonicalStructuredPlan } from "../domain/plan/canonicalStructuredPlanV2";
 import { buildBibleReadingProviderTarget } from "../services/bibleReadingProviderAdapter";
@@ -1090,6 +1091,39 @@ export default function ReadingScreen({ route }: Props) {
     version,
   ]);
 
+  function openPlanJournal() {
+    if (!date || !isIsoDateString(date)) {
+      Alert.alert(
+        "Não foi possível abrir o Diário",
+        "Esta leitura não possui uma data válida para o Diário.",
+      );
+      return;
+    }
+
+    const sourceTitleSnapshot = currentPhase?.title
+      ? `Plano de leitura • ${currentPhase.title}`
+      : `Plano de leitura • ${reference}`;
+
+    const planReference =
+      structuredReadingDay?.readingUnit.bibleReference ?? null;
+
+    navigation.navigate("AppShell", {
+      screen: "Journal",
+      params: {
+        screen: "JournalEntryEditor",
+        params: {
+          sourceContext: {
+            sourceType: "PLAN",
+            entryDate: date as PersonalLocalDate,
+            sourceTitleSnapshot,
+            promptSnapshot: spiritual.reflection,
+            reference: planReference,
+          },
+        },
+      },
+    });
+  }
+
   async function openInLocalBibleReader() {
     if (!usesLocalBibleReader) {
       Alert.alert(
@@ -1396,6 +1430,13 @@ export default function ReadingScreen({ route }: Props) {
                 </Pressable>
               </>
             )}
+
+            <View style={{ height: 10 }} />
+            <SecondaryButton
+              title="Registrar no Diário"
+              icon="📝"
+              onPress={openPlanJournal}
+            />
 
             {/* informações internas do plano não são exibidas em produção */}
           </Card>

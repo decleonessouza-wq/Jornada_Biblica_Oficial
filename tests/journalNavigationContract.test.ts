@@ -184,6 +184,38 @@ describe("journal navigation contract", () => {
     );
   });
 
+  it("accepts explicit PLAN source context without embedding completion or progress state", () => {
+    expect(navigationTypes).toContain(
+      'sourceType: "PLAN";',
+    );
+    expect(navigationTypes).toContain(
+      "entryDate: PersonalLocalDate;",
+    );
+    expect(navigationTypes).toContain(
+      "sourceTitleSnapshot: string;",
+    );
+    expect(navigationTypes).toContain(
+      "promptSnapshot: string;",
+    );
+    expect(navigationTypes).toContain(
+      "reference: BibleReference | null;",
+    );
+
+    const journalService = readSource(
+      "src/services/journal/journalService.ts",
+    );
+
+    expect(journalService).toContain(
+      "async createPlanDraft(",
+    );
+    expect(journalService).toContain(
+      'sourceType: "PLAN"',
+    );
+    expect(journalService).not.toMatch(
+      /progressStore|addCompletedDay|COMPLETED_DAYS_KEY/,
+    );
+  });
+
   it("routes a canonical Bible reference from BibleTab to the Journal editor", () => {
     expect(bibleNavigator).toContain(
       'MainTabScreenProps<"BibleTab">',

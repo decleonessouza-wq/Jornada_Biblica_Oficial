@@ -46,6 +46,15 @@ export type CreateBibleJournalDraftInput =
     reference: BibleReference;
   }>;
 
+export type CreatePlanJournalDraftInput =
+  Omit<CreateJournalDraftInput, "entryDate"> &
+  Readonly<{
+    entryDate: PersonalLocalDate;
+    sourceTitleSnapshot: string;
+    promptSnapshot: string;
+    reference: BibleReference | null;
+  }>;
+
 export type UpdateJournalDraftInput =
   UpdateJournalEntryInput;
 
@@ -552,6 +561,58 @@ export class JournalService {
           reference: input.reference,
         },
       ],
+      tags: [],
+      createdAtUtc: timestamp,
+      updatedAtUtc: timestamp,
+    };
+
+    await this.repository.create(draft);
+
+    return draft;
+  }
+
+  async createPlanDraft(
+    input: CreatePlanJournalDraftInput,
+  ): Promise<JournalEntryPersistenceRecord> {
+    const now = this.clock.now();
+    const timestamp =
+      this.datePolicy.toUtcTimestamp(now);
+    const entryId =
+      this.canonicalIdFactory.create(
+        "journal_entry",
+      );
+
+    const references =
+      input.reference === null
+        ? []
+        : [
+            {
+              id: this.canonicalIdFactory.create(
+                "journal_entry_reference",
+              ),
+              entryId,
+              position: 0,
+              reference: input.reference,
+            },
+          ];
+
+    const draft: JournalEntryPersistenceRecord = {
+      id: entryId,
+      entryDate: input.entryDate,
+      reflectionText: normalizeReflectionText(
+        input.reflectionText,
+      ),
+      gratitudeText: normalizeGratitudeText(
+        input.gratitudeText,
+      ),
+      status: "DRAFT",
+      sourceType: "PLAN",
+      sourceTitleSnapshot:
+        input.sourceTitleSnapshot,
+      promptSnapshot: input.promptSnapshot,
+      category: null,
+      isPinned: false,
+      references,
       tags: [],
       createdAtUtc: timestamp,
       updatedAtUtc: timestamp,
