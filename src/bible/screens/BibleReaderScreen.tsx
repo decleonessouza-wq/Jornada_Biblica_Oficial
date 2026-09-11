@@ -15,6 +15,9 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import type { BibleBook } from "../../domain/bible/bibleBooks";
+import type {
+  BibleReference,
+} from "../../domain/bible/bibleReference";
 import type { BibleVersionId } from "../../domain/bible/bibleVersion";
 import { getPersonalPlatformHub } from "../../services/personalPlatformHub";
 import { colors } from "../../theme/colors";
@@ -50,6 +53,9 @@ type BibleReaderScreenProps = Readonly<{
   onRequestReferenceChange?: (
     params: OfflineBibleReaderRouteParams,
   ) => void;
+  onRequestJournalReference?: (
+    reference: BibleReference,
+  ) => void;
 }>;
 
 type ReaderStatus =
@@ -79,6 +85,7 @@ export default function BibleReaderScreen({
   params,
   onRequestBack,
   onRequestReferenceChange,
+  onRequestJournalReference,
 }: BibleReaderScreenProps) {
   const insets = useSafeAreaInsets();
 
@@ -187,7 +194,12 @@ export default function BibleReaderScreen({
     favoriteBusyVersesRef.current.clear();
     setFavoriteVerses(new Set());
 
-    const parsedParams = parseOfflineBibleReaderRouteParams(params);
+    const parsedParams = parseOfflineBibleReaderRouteParams({
+      versionId: params.versionId,
+      bookId: params.bookId,
+      chapter: params.chapter,
+      verse: params.verse,
+    });
 
     if (!parsedParams) {
       setStatus("invalidParams");
@@ -483,6 +495,47 @@ export default function BibleReaderScreen({
     [],
   );
 
+  const handleRequestJournalVerse = useCallback(
+    (verse: number) => {
+      const reading = activeReadingRef.current;
+
+      if (
+        !reading ||
+        !onRequestJournalReference ||
+        !Number.isSafeInteger(verse) ||
+        verse <= 0 ||
+        !data ||
+        data.chapter.versionId !==
+          reading.versionId ||
+        data.chapter.bookId !==
+          reading.bookId ||
+        data.chapter.chapter !==
+          reading.chapter ||
+        !data.chapter.verses.some(
+          (candidate) =>
+            candidate.verse === verse,
+        )
+      ) {
+        return;
+      }
+
+      onRequestJournalReference({
+        passages: [
+          {
+            kind: "VERSE",
+            bookId: reading.bookId,
+            chapter: reading.chapter,
+            verse,
+          },
+        ],
+      });
+    },
+    [
+      data,
+      onRequestJournalReference,
+    ],
+  );
+
   const handleFirstVisibleVerseChange = useCallback(
     (verse: number) => {
       const reading = activeReadingRef.current;
@@ -769,6 +822,9 @@ export default function BibleReaderScreen({
         onScrollOffsetChange={handleReadingScrollOffsetChange}
         favoriteVerses={favoriteVerses}
         onToggleFavoriteVerse={handleToggleFavoriteVerse}
+        onRequestJournalVerse={
+          handleRequestJournalVerse
+        }
         contentTopInset={readerChromeHeight ?? 0}
       />
     </View>

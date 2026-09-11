@@ -1,4 +1,8 @@
-import React, { useEffect, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useState,
+} from "react";
 import {
   ActivityIndicator,
   StyleSheet,
@@ -21,7 +25,10 @@ import { loadOfflineBibleLastReading } from "../bible/state/bibleReaderPreferenc
 import { colors } from "../theme/colors";
 
 import { BibleStack } from "./navigationFactories";
-import type { BibleStackScreenProps } from "./types";
+import type {
+  BibleStackScreenProps,
+  MainTabScreenProps,
+} from "./types";
 
 type BootstrapState =
   | Readonly<{
@@ -108,10 +115,19 @@ function BibleSearchRoute({
   );
 }
 
+type BibleReaderRouteProps =
+  BibleStackScreenProps<"BibleReader"> &
+  Readonly<{
+    onRequestJournalReference: (
+      reference: BibleReference,
+    ) => void;
+  }>;
+
 function BibleReaderRoute({
   navigation,
   route,
-}: BibleStackScreenProps<"BibleReader">) {
+  onRequestJournalReference,
+}: BibleReaderRouteProps) {
   const handleRequestBack = () => {
     const state = navigation.getState();
     const hasLibraryBeforeReader = state.routes
@@ -136,12 +152,35 @@ function BibleReaderRoute({
     <BibleReaderScreen
       params={route.params}
       onRequestBack={handleRequestBack}
-      onRequestReferenceChange={handleRequestReferenceChange}
+      onRequestReferenceChange={
+        handleRequestReferenceChange
+      }
+      onRequestJournalReference={
+        onRequestJournalReference
+      }
     />
   );
 }
 
-export default function BibleNavigator() {
+export default function BibleNavigator({
+  navigation,
+}: MainTabScreenProps<"BibleTab">) {
+  const handleRequestJournalReference =
+    useCallback(
+      (reference: BibleReference) => {
+        navigation.navigate("Journal", {
+          screen: "JournalEntryEditor",
+          params: {
+            sourceContext: {
+              sourceType: "BIBLE",
+              reference,
+            },
+          },
+        });
+      },
+      [navigation],
+    );
+
   const [bootstrapState, setBootstrapState] = useState<BootstrapState>({
     status: "loading",
     initialReaderParams: null,
@@ -235,9 +274,20 @@ export default function BibleNavigator() {
       />
       <BibleStack.Screen
         name="BibleReader"
-        component={BibleReaderRoute}
-        initialParams={bootstrapState.initialReaderParams ?? undefined}
-      />
+        initialParams={
+          bootstrapState.initialReaderParams ??
+          undefined
+        }
+      >
+        {(screenProps) => (
+          <BibleReaderRoute
+            {...screenProps}
+            onRequestJournalReference={
+              handleRequestJournalReference
+            }
+          />
+        )}
+      </BibleStack.Screen>
     </BibleStack.Navigator>
   );
 }

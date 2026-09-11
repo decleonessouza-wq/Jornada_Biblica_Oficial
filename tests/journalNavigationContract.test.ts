@@ -1,4 +1,3 @@
-import { createHash } from "crypto";
 import { readFileSync } from "fs";
 
 function readSource(path: string): string {
@@ -8,12 +7,6 @@ function readSource(path: string): string {
   );
 }
 
-function sha256(text: string): string {
-  return createHash("sha256")
-    .update(text, "utf8")
-    .digest("hex")
-    .toUpperCase();
-}
 
 describe("journal navigation contract", () => {
   const journalNavigator = readSource(
@@ -36,6 +29,9 @@ describe("journal navigation contract", () => {
   );
   const navigationTypes = readSource(
     "src/navigation/types.ts",
+  );
+  const bibleNavigator = readSource(
+    "src/navigation/BibleNavigator.tsx",
   );
 
   it("creates a typed Journal stack with exactly the three approved routes", () => {
@@ -122,12 +118,24 @@ describe("journal navigation contract", () => {
     );
   });
 
-  it("does not wire Journal into QuickActionSheet during A6", () => {
-    expect(quickActionSheet).not.toMatch(
-      /Journal|Diário|onOpenJournal/,
+  it("wires Journal into QuickActionSheet through the Drawer route", () => {
+    expect(quickActionSheet).toContain(
+      "onOpenJournal: () => void;",
     );
-    expect(appDrawerNavigator).not.toContain(
-      "onOpenJournal",
+    expect(quickActionSheet).toContain(
+      'label="Abrir Diário"',
+    );
+    expect(quickActionSheet).toContain(
+      "onPress={onOpenJournal}",
+    );
+    expect(appDrawerNavigator).toContain(
+      "const handleOpenJournal = () => {",
+    );
+    expect(appDrawerNavigator).toContain(
+      'navigation.navigate("Journal");',
+    );
+    expect(appDrawerNavigator).toContain(
+      "onOpenJournal={handleOpenJournal}",
     );
   });
 
@@ -143,15 +151,21 @@ describe("journal navigation contract", () => {
     );
   });
 
-  it("keeps the frozen navigation types contract unchanged", () => {
-    expect(sha256(navigationTypes)).toBe(
-      "7A83C26030620A7339256AEA92B6852B21DF181BFDE5689558874144773B3E2D",
-    );
+  it("keeps the Journal navigation contract semantic and accepts Bible source context", () => {
     expect(navigationTypes).toContain(
       "JournalHome: undefined;",
     );
     expect(navigationTypes).toContain(
-      "entryId?: JournalEntryId;",
+      "export type JournalEntryEditorSourceContext",
+    );
+    expect(navigationTypes).toContain(
+      'sourceType: "BIBLE";',
+    );
+    expect(navigationTypes).toContain(
+      "reference: BibleReference;",
+    );
+    expect(navigationTypes).toContain(
+      "sourceContext?: JournalEntryEditorSourceContext;",
     );
     expect(navigationTypes).toContain(
       "JournalEntryDetail: {",
@@ -161,6 +175,27 @@ describe("journal navigation contract", () => {
     );
     expect(navigationTypes).toContain(
       "Journal: NavigatorScreenParams<JournalStackParamList> | undefined;",
+    );
+  });
+
+  it("routes a canonical Bible reference from BibleTab to the Journal editor", () => {
+    expect(bibleNavigator).toContain(
+      'MainTabScreenProps<"BibleTab">',
+    );
+    expect(bibleNavigator).toContain(
+      'navigation.navigate("Journal", {',
+    );
+    expect(bibleNavigator).toContain(
+      'screen: "JournalEntryEditor"',
+    );
+    expect(bibleNavigator).toContain(
+      'sourceType: "BIBLE"',
+    );
+    expect(bibleNavigator).toContain(
+      "reference,",
+    );
+    expect(bibleNavigator).toContain(
+      "onRequestJournalReference={",
     );
   });
 

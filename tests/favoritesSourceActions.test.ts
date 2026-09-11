@@ -88,6 +88,42 @@ describe("Favorites source actions", () => {
     );
   });
 
+  it("BibleVerseList exposes a per-verse Journal action without persisting anything", () => {
+    expect(bibleVerseListSource).toContain(
+      "onRequestJournalVerse?: (verse: number) => void;",
+    );
+    expect(bibleVerseListSource).toContain(
+      "Registrar versículo ${item.verse} no diário",
+    );
+    expect(bibleVerseListSource).toContain(
+      "onRequestJournalVerse(item.verse)",
+    );
+    expect(bibleVerseListSource).not.toMatch(
+      /journalService|SQLiteJournalRepository|personal_journal/i,
+    );
+  });
+
+  it("BibleReader converts the requested visible verse into a canonical version-agnostic BibleReference", () => {
+    expect(bibleReaderSource).toContain(
+      "onRequestJournalReference?: (",
+    );
+    expect(bibleReaderSource).toContain(
+      'kind: "VERSE"',
+    );
+    expect(bibleReaderSource).toContain(
+      "bookId: reading.bookId",
+    );
+    expect(bibleReaderSource).toContain(
+      "chapter: reading.chapter",
+    );
+    expect(bibleReaderSource).toContain(
+      "onRequestJournalReference({",
+    );
+    expect(bibleReaderSource).toContain(
+      "onRequestJournalVerse={",
+    );
+  });
+
   it("Hymnal loads favorite state through PersonalPlatformHub service", () => {
     expect(hymnalReaderSource).toContain(
       "await getPersonalPlatformHub().favoritesService.isFavorite({",
