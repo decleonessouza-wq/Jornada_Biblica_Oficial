@@ -18,6 +18,8 @@ import type {
 import type {
   JournalEntryPersistenceRecord,
   JournalRepository,
+  JournalSearchPage,
+  JournalSearchQuery,
 } from "../../data/personal/journal/journalRepository";
 
 export type CreateJournalEntryInput = Readonly<{
@@ -177,6 +179,184 @@ function normalizeJournalTagNames(
   return [...byNormalizedName.values()];
 }
 
+function assertJournalSearchDate(
+  value: unknown,
+  errorCode: string,
+): asserts value is PersonalLocalDate {
+  if (
+    typeof value !== "string" ||
+    !/^\d{4}-\d{2}-\d{2}$/.test(value)
+  ) {
+    throw new Error(errorCode);
+  }
+
+  const parsed = new Date(
+    `${value}T00:00:00.000Z`,
+  );
+
+  if (
+    Number.isNaN(parsed.getTime()) ||
+    parsed.toISOString().slice(0, 10) !== value
+  ) {
+    throw new Error(errorCode);
+  }
+}
+
+function assertJournalSearchNonNegativeInteger(
+  value: unknown,
+  errorCode: string,
+): asserts value is number {
+  if (
+    typeof value !== "number" ||
+    !Number.isInteger(value) ||
+    value < 0
+  ) {
+    throw new Error(errorCode);
+  }
+}
+
+function assertJournalSearchPositiveInteger(
+  value: unknown,
+  errorCode: string,
+): asserts value is number {
+  if (
+    typeof value !== "number" ||
+    !Number.isInteger(value) ||
+    value <= 0
+  ) {
+    throw new Error(errorCode);
+  }
+}
+
+function normalizeJournalSearchQuery(
+  query: JournalSearchQuery,
+): JournalSearchQuery {
+  if (
+    typeof query !== "object" ||
+    query === null
+  ) {
+    throw new Error(
+      "PERSONAL_JOURNAL_SEARCH_QUERY_INVALID",
+    );
+  }
+
+  assertJournalSearchNonNegativeInteger(
+    query.offset,
+    "PERSONAL_JOURNAL_SEARCH_OFFSET_INVALID",
+  );
+  assertJournalSearchPositiveInteger(
+    query.limit,
+    "PERSONAL_JOURNAL_SEARCH_LIMIT_INVALID",
+  );
+
+  let text: string | undefined;
+
+  if (query.text !== undefined) {
+    if (typeof query.text !== "string") {
+      throw new Error(
+        "PERSONAL_JOURNAL_SEARCH_TEXT_INVALID",
+      );
+    }
+
+    const trimmed = query.text.trim();
+    text = trimmed.length === 0
+      ? undefined
+      : trimmed;
+  }
+
+  if (
+    query.category !== undefined &&
+    query.category !== null &&
+    !isJournalCategory(query.category)
+  ) {
+    throw new Error(
+      "PERSONAL_JOURNAL_SEARCH_CATEGORY_INVALID",
+    );
+  }
+
+  if (
+    query.tagId !== undefined &&
+    (
+      typeof query.tagId !== "string" ||
+      query.tagId.trim().length === 0
+    )
+  ) {
+    throw new Error(
+      "PERSONAL_JOURNAL_SEARCH_TAG_ID_INVALID",
+    );
+  }
+
+  if (query.dateFrom !== undefined) {
+    assertJournalSearchDate(
+      query.dateFrom,
+      "PERSONAL_JOURNAL_SEARCH_DATE_FROM_INVALID",
+    );
+  }
+
+  if (query.dateTo !== undefined) {
+    assertJournalSearchDate(
+      query.dateTo,
+      "PERSONAL_JOURNAL_SEARCH_DATE_TO_INVALID",
+    );
+  }
+
+  if (
+    query.dateFrom !== undefined &&
+    query.dateTo !== undefined &&
+    query.dateFrom > query.dateTo
+  ) {
+    throw new Error(
+      "PERSONAL_JOURNAL_SEARCH_DATE_RANGE_INVALID",
+    );
+  }
+
+  if (
+    query.isPinned !== undefined &&
+    typeof query.isPinned !== "boolean"
+  ) {
+    throw new Error(
+      "PERSONAL_JOURNAL_SEARCH_PIN_INVALID",
+    );
+  }
+
+  if (query.passage !== undefined) {
+    if (
+      typeof query.passage !== "object" ||
+      query.passage === null ||
+      typeof query.passage.bookId !== "string" ||
+      query.passage.bookId.trim().length === 0
+    ) {
+      throw new Error(
+        "PERSONAL_JOURNAL_SEARCH_PASSAGE_BOOK_ID_INVALID",
+      );
+    }
+
+    if (query.passage.chapter !== undefined) {
+      assertJournalSearchPositiveInteger(
+        query.passage.chapter,
+        "PERSONAL_JOURNAL_SEARCH_PASSAGE_CHAPTER_INVALID",
+      );
+    }
+
+    if (query.passage.verse !== undefined) {
+      assertJournalSearchPositiveInteger(
+        query.passage.verse,
+        "PERSONAL_JOURNAL_SEARCH_PASSAGE_VERSE_INVALID",
+      );
+
+      if (query.passage.chapter === undefined) {
+        throw new Error(
+          "PERSONAL_JOURNAL_SEARCH_PASSAGE_CHAPTER_REQUIRED",
+        );
+      }
+    }
+  }
+
+  return {
+    ...query,
+    text,
+  };
+}
 export class JournalService {
   constructor(
     private readonly repository: JournalRepository,
@@ -207,6 +387,15 @@ export class JournalService {
 
   async listTags(): Promise<readonly JournalTag[]> {
     return this.repository.listTags();
+  }
+
+  async search(
+    query: JournalSearchQuery,
+  ): Promise<JournalSearchPage> {
+    const normalized =
+      normalizeJournalSearchQuery(query);
+
+    return this.repository.search(normalized);
   }
 
   async findById(

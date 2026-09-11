@@ -47,6 +47,8 @@ const mockedGetPersonalPlatformHub =
   >;
 
 const mockJournalList = jest.fn();
+const mockJournalSearch = jest.fn();
+const mockJournalListTags = jest.fn();
 const mockJournalListTrash = jest.fn();
 const mockGetTodayEntryDate = jest.fn();
 
@@ -80,6 +82,8 @@ function configureHub(): void {
   mockedGetPersonalPlatformHub.mockReturnValue({
     journalService: {
       list: mockJournalList,
+      search: mockJournalSearch,
+      listTags: mockJournalListTags,
       listTrash: mockJournalListTrash,
       getTodayEntryDate:
         mockGetTodayEntryDate,
@@ -130,6 +134,8 @@ describe(
   () => {
     beforeEach(() => {
       mockJournalList.mockReset();
+      mockJournalSearch.mockReset();
+      mockJournalListTags.mockReset();
       mockJournalListTrash.mockReset();
       mockGetTodayEntryDate.mockReset();
       mockedUseFocusEffect.mockReset();
@@ -139,6 +145,13 @@ describe(
         "2026-09-10",
       );
       mockJournalListTrash.mockResolvedValue([]);
+      mockJournalListTags.mockResolvedValue([]);
+      mockJournalSearch.mockImplementation(
+        async () => ({
+          items: await mockJournalList(),
+          nextOffset: null,
+        }),
+      );
 
       configureHub();
     });
@@ -162,7 +175,16 @@ describe(
 
         await waitFor(() => {
           expect(
+            mockJournalSearch,
+          ).toHaveBeenCalledWith({
+            offset: 0,
+            limit: 20,
+          });
+          expect(
             mockJournalList,
+          ).toHaveBeenCalledTimes(1);
+          expect(
+            mockJournalListTags,
           ).toHaveBeenCalledTimes(1);
           expect(
             mockJournalListTrash,
@@ -206,8 +228,8 @@ describe(
           view.getByText("Fixados"),
         ).toBeTruthy();
         expect(
-          view.getByText("Promessa"),
-        ).toBeTruthy();
+          view.getAllByText("Promessa"),
+        ).toHaveLength(2);
         expect(
           view.getByText("#Fé"),
         ).toBeTruthy();
@@ -551,6 +573,277 @@ describe(
       );
     });
 
+    it("applies text category tag period passage and pinned filters through the journal service", async () => {
+      mockJournalList.mockResolvedValue([]);
+      mockJournalListTags.mockResolvedValue([
+        {
+          id: "tag-faith" as never,
+          name: "Fé",
+          normalizedName: "fe",
+        },
+      ]);
+
+      const view = renderJournal();
+      await runFocusEffect();
+
+      await waitFor(() => {
+        expect(
+          view.getByLabelText(
+            "Filtrar pela etiqueta Fé",
+          ),
+        ).toBeTruthy();
+      });
+
+      fireEvent.changeText(
+        view.getByLabelText("Buscar no diário"),
+        "  promessa para família  ",
+      );
+      fireEvent.press(
+        view.getByLabelText(
+          "Filtrar por categoria Promessa",
+        ),
+      );
+      fireEvent.press(
+        view.getByLabelText(
+          "Filtrar pela etiqueta Fé",
+        ),
+      );
+      fireEvent.changeText(
+        view.getByLabelText(
+          "Data inicial do filtro",
+        ),
+        "2026-09-01",
+      );
+      fireEvent.changeText(
+        view.getByLabelText(
+          "Data final do filtro",
+        ),
+        "2026-09-30",
+      );
+      fireEvent.changeText(
+        view.getByLabelText(
+          "Livro bíblico do filtro",
+        ),
+        "João",
+      );
+      fireEvent.changeText(
+        view.getByLabelText(
+          "Capítulo bíblico do filtro",
+        ),
+        "3",
+      );
+      fireEvent.changeText(
+        view.getByLabelText(
+          "Versículo bíblico do filtro",
+        ),
+        "16",
+      );
+      fireEvent.press(
+        view.getByLabelText(
+          "Mostrar somente registros fixados",
+        ),
+      );
+      fireEvent.press(
+        view.getByLabelText(
+          "Aplicar busca e filtros do diário",
+        ),
+      );
+
+      await waitFor(() => {
+        expect(
+          mockJournalSearch,
+        ).toHaveBeenLastCalledWith({
+          offset: 0,
+          limit: 20,
+          text: "promessa para família",
+          category: "PROMISE",
+          tagId: "tag-faith",
+          dateFrom: "2026-09-01",
+          dateTo: "2026-09-30",
+          passage: {
+            bookId: "JHN",
+            chapter: 3,
+            verse: 16,
+          },
+          isPinned: true,
+        });
+      });
+    });
+
+    it("rejects an unknown Bible book in the UI without sending personal search text to the repository", async () => {
+      mockJournalList.mockResolvedValue([]);
+
+      const view = renderJournal();
+      await runFocusEffect();
+
+      expect(
+        mockJournalSearch,
+      ).toHaveBeenCalledTimes(1);
+
+      fireEvent.changeText(
+        view.getByLabelText("Buscar no diário"),
+        "conteúdo privado",
+      );
+      fireEvent.changeText(
+        view.getByLabelText(
+          "Livro bíblico do filtro",
+        ),
+        "Livro inexistente",
+      );
+      fireEvent.press(
+        view.getByLabelText(
+          "Aplicar busca e filtros do diário",
+        ),
+      );
+
+      expect(
+        view.getByText(
+          "Livro bíblico não reconhecido.",
+        ),
+      ).toBeTruthy();
+      expect(
+        mockJournalSearch,
+      ).toHaveBeenCalledTimes(1);
+    });
+
+    it("loads the next search page and appends records in repository order", async () => {
+      const first = entry({
+        id: "page-one" as never,
+        reflectionText: "Primeira página",
+      });
+      const second = entry({
+        id: "page-two" as never,
+        entryDate: "2026-09-09" as never,
+        reflectionText: "Segunda página",
+      });
+
+      mockJournalSearch
+        .mockResolvedValueOnce({
+          items: [first],
+          nextOffset: 20,
+        })
+        .mockResolvedValueOnce({
+          items: [second],
+          nextOffset: null,
+        });
+
+      const view = renderJournal();
+      await runFocusEffect();
+
+      await waitFor(() => {
+        expect(
+          view.getByLabelText(
+            "Carregar mais registros do diário",
+          ),
+        ).toBeTruthy();
+      });
+
+      fireEvent.press(
+        view.getByLabelText(
+          "Carregar mais registros do diário",
+        ),
+      );
+
+      await waitFor(() => {
+        expect(
+          mockJournalSearch,
+        ).toHaveBeenNthCalledWith(2, {
+          offset: 20,
+          limit: 20,
+        });
+        expect(
+          view.getByText("Primeira página"),
+        ).toBeTruthy();
+        expect(
+          view.getByText("Segunda página"),
+        ).toBeTruthy();
+        expect(
+          view.queryByLabelText(
+            "Carregar mais registros do diário",
+          ),
+        ).toBeNull();
+      });
+    });
+
+    it("shows a specific empty state for applied filters and clears back to the base query", async () => {
+      mockJournalList.mockResolvedValue([]);
+
+      const view = renderJournal();
+      await runFocusEffect();
+
+      fireEvent.changeText(
+        view.getByLabelText("Buscar no diário"),
+        "esperança",
+      );
+      fireEvent.press(
+        view.getByLabelText(
+          "Aplicar busca e filtros do diário",
+        ),
+      );
+
+      await waitFor(() => {
+        expect(
+          view.getByText(
+            "Nenhum registro encontrado",
+          ),
+        ).toBeTruthy();
+        expect(
+          mockJournalSearch,
+        ).toHaveBeenLastCalledWith({
+          offset: 0,
+          limit: 20,
+          text: "esperança",
+        });
+      });
+
+      fireEvent.press(
+        view.getByLabelText(
+          "Limpar busca e filtros do diário",
+        ),
+      );
+
+      await waitFor(() => {
+        expect(
+          mockJournalSearch,
+        ).toHaveBeenLastCalledWith({
+          offset: 0,
+          limit: 20,
+        });
+        expect(
+          view.getByText(
+            "Seu diário ainda está vazio",
+          ),
+        ).toBeTruthy();
+      });
+    });
+
+    it("supports the explicit uncategorized filter", async () => {
+      mockJournalList.mockResolvedValue([]);
+
+      const view = renderJournal();
+      await runFocusEffect();
+
+      fireEvent.press(
+        view.getByLabelText(
+          "Filtrar registros sem categoria",
+        ),
+      );
+      fireEvent.press(
+        view.getByLabelText(
+          "Aplicar busca e filtros do diário",
+        ),
+      );
+
+      await waitFor(() => {
+        expect(
+          mockJournalSearch,
+        ).toHaveBeenLastCalledWith({
+          offset: 0,
+          limit: 20,
+          category: null,
+        });
+      });
+    });
     it("uses only the Hub journal service and keeps search telemetry and direct persistence out", () => {
       const source = fs.readFileSync(
         "src/screens/JournalScreen.tsx",
@@ -563,14 +856,20 @@ describe(
       expect(source).toContain(
         "journalService.listTrash()",
       );
+      expect(source).toContain(
+        "journalService.search(query)",
+      );
+      expect(source).toContain(
+        "journalService.listTags()",
+      );
+      expect(source).toContain(
+        "resolveBibleBookAlias",
+      );
       expect(source).not.toMatch(
         /SQLiteJournalRepository|expo-sqlite|AsyncStorage/i,
       );
       expect(source).not.toMatch(
         /analytics|telemetry/i,
-      );
-      expect(source).not.toMatch(
-        /\bsearch(Query)?\b|pagination|pageSize/i,
       );
       expect(source).not.toContain(".sort(");
       expect(source).not.toMatch(

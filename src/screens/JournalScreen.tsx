@@ -10,15 +10,23 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from "react-native";
 
 import type {
   JournalEntryPersistenceRecord,
+  JournalSearchQuery,
 } from "../data/personal/journal/journalRepository";
-import type {
-  JournalCategory,
+import {
+  JOURNAL_CATEGORIES,
+  type JournalCategory,
+  type JournalTag,
+  type JournalTagId,
 } from "../domain/journal/journal";
+import {
+  resolveBibleBookAlias,
+} from "../domain/bible/bibleBooks";
 import type { JournalStackScreenProps } from "../navigation/types";
 import { getPersonalPlatformHub } from "../services/personalPlatformHub";
 import { colors } from "../theme/colors";
@@ -41,6 +49,25 @@ type TimelineSection = Readonly<{
   entries: readonly JournalEntryPersistenceRecord[];
 }>;
 
+type CategoryFilter =
+  | JournalCategory
+  | "UNCATEGORIZED"
+  | null;
+
+type SearchFormState = Readonly<{
+  text: string;
+  category: CategoryFilter;
+  tagId: JournalTagId | null;
+  dateFrom: string;
+  dateTo: string;
+  passageBook: string;
+  passageChapter: string;
+  passageVerse: string;
+  pinnedOnly: boolean;
+}>;
+
+const PAGE_SIZE = 20;
+
 const CATEGORY_LABELS: Record<
   JournalCategory,
   string
@@ -55,6 +82,190 @@ const CATEGORY_LABELS: Record<
   TESTIMONY: "Testemunho",
 };
 
+function isValidLocalDateInput(
+  value: string,
+): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return false;
+  }
+
+  const parsed =
+    new Date(`${value}T00:00:00.000Z`);
+
+  return (
+    !Number.isNaN(parsed.getTime()) &&
+    parsed.toISOString().slice(0, 10) === value
+  );
+}
+
+function parsePositiveFilterNumber(
+  value: string,
+  errorMessage: string,
+): number | undefined {
+  const trimmed = value.trim();
+
+  if (trimmed.length === 0) {
+    return undefined;
+  }
+
+  if (!/^\d+$/.test(trimmed)) {
+    throw new Error(errorMessage);
+  }
+
+  const parsed = Number(trimmed);
+
+  if (
+    !Number.isInteger(parsed) ||
+    parsed <= 0
+  ) {
+    throw new Error(errorMessage);
+  }
+
+  return parsed;
+}
+
+function buildSearchQuery(
+  form: SearchFormState,
+): JournalSearchQuery {
+  const text = form.text.trim();
+  const dateFrom = form.dateFrom.trim();
+  const dateTo = form.dateTo.trim();
+  const passageBook =
+    form.passageBook.trim();
+
+  if (
+    dateFrom.length > 0 &&
+    !isValidLocalDateInput(dateFrom)
+  ) {
+    throw new Error(
+      "Informe a data inicial no formato AAAA-MM-DD.",
+    );
+  }
+
+  if (
+    dateTo.length > 0 &&
+    !isValidLocalDateInput(dateTo)
+  ) {
+    throw new Error(
+      "Informe a data final no formato AAAA-MM-DD.",
+    );
+  }
+
+  if (
+    dateFrom.length > 0 &&
+    dateTo.length > 0 &&
+    dateFrom > dateTo
+  ) {
+    throw new Error(
+      "A data inicial não pode ser posterior à data final.",
+    );
+  }
+
+  const chapter =
+    parsePositiveFilterNumber(
+      form.passageChapter,
+      "Informe um capítulo bíblico válido.",
+    );
+  const verse =
+    parsePositiveFilterNumber(
+      form.passageVerse,
+      "Informe um versículo bíblico válido.",
+    );
+
+  let passage:
+    JournalSearchQuery["passage"];
+
+  if (
+    passageBook.length > 0 ||
+    chapter !== undefined ||
+    verse !== undefined
+  ) {
+    if (passageBook.length === 0) {
+      throw new Error(
+        "Informe o livro bíblico da passagem.",
+      );
+    }
+
+    const book =
+      resolveBibleBookAlias(passageBook);
+
+    if (book === null) {
+      throw new Error(
+        "Livro bíblico não reconhecido.",
+      );
+    }
+
+    if (chapter === undefined && verse !== undefined) {
+      throw new Error(
+        "Informe o capítulo antes do versículo.",
+      );
+    }
+
+    if (
+      chapter !== undefined &&
+      chapter > book.chapterCount
+    ) {
+      throw new Error(
+        `${book.canonicalName} possui ${book.chapterCount} capítulos.`,
+      );
+    }
+
+    passage = {
+      bookId: book.id,
+      ...(chapter === undefined
+        ? {}
+        : { chapter }),
+      ...(verse === undefined
+        ? {}
+        : { verse }),
+    };
+  }
+
+  return {
+    offset: 0,
+    limit: PAGE_SIZE,
+    ...(text.length === 0
+      ? {}
+      : { text }),
+    ...(form.category === null
+      ? {}
+      : {
+          category:
+            form.category === "UNCATEGORIZED"
+              ? null
+              : form.category,
+        }),
+    ...(form.tagId === null
+      ? {}
+      : { tagId: form.tagId }),
+    ...(dateFrom.length === 0
+      ? {}
+      : { dateFrom: dateFrom as never }),
+    ...(dateTo.length === 0
+      ? {}
+      : { dateTo: dateTo as never }),
+    ...(passage === undefined
+      ? {}
+      : { passage }),
+    ...(form.pinnedOnly
+      ? { isPinned: true }
+      : {}),
+  };
+}
+
+function hasActiveSearchFilters(
+  query: JournalSearchQuery,
+): boolean {
+  return (
+    query.text !== undefined ||
+    query.category !== undefined ||
+    query.tagId !== undefined ||
+    query.dateFrom !== undefined ||
+    query.dateTo !== undefined ||
+    query.passage !== undefined ||
+    query.isPinned !== undefined
+  );
+}
 const MONTH_NAMES = [
   "janeiro",
   "fevereiro",
@@ -446,23 +657,96 @@ export default function JournalScreen({
     useState<LoadStatus>("loading");
   const [viewMode, setViewMode] =
     useState<ViewMode>("journal");
+  const [availableTags, setAvailableTags] =
+    useState<readonly JournalTag[]>([]);
+  const [nextOffset, setNextOffset] =
+    useState<number | null>(null);
+  const [isLoadingMore, setIsLoadingMore] =
+    useState(false);
+  const [hasAppliedFilters, setHasAppliedFilters] =
+    useState(false);
+  const [filterError, setFilterError] =
+    useState<string | null>(null);
+  const [searchText, setSearchText] =
+    useState("");
+  const [categoryFilter, setCategoryFilter] =
+    useState<CategoryFilter>(null);
+  const [tagFilter, setTagFilter] =
+    useState<JournalTagId | null>(null);
+  const [dateFrom, setDateFrom] =
+    useState("");
+  const [dateTo, setDateTo] =
+    useState("");
+  const [passageBook, setPassageBook] =
+    useState("");
+  const [passageChapter, setPassageChapter] =
+    useState("");
+  const [passageVerse, setPassageVerse] =
+    useState("");
+  const [pinnedOnly, setPinnedOnly] =
+    useState(false);
+  const appliedQueryRef =
+    useRef<JournalSearchQuery>({
+      offset: 0,
+      limit: PAGE_SIZE,
+    });
 
   const loadEntries = useCallback(
-    async (mode: ViewMode) => {
+    async (
+      mode: ViewMode,
+      offset = 0,
+      append = false,
+    ) => {
       const generation =
         ++loadGenerationRef.current;
 
-      setStatus("loading");
+      if (append) {
+        setIsLoadingMore(true);
+      } else {
+        setStatus("loading");
+      }
 
       try {
         const journalService =
           getPersonalPlatformHub().journalService;
         const today =
           journalService.getTodayEntryDate();
-        const nextEntries =
-          mode === "trash"
-            ? await journalService.listTrash()
-            : await journalService.list();
+
+        if (mode === "trash") {
+          const nextEntries =
+            await journalService.listTrash();
+
+          if (
+            generation !==
+            loadGenerationRef.current
+          ) {
+            return;
+          }
+
+          setTodayEntryDate(today);
+          setEntries(nextEntries);
+          setNextOffset(null);
+          setStatus("ready");
+          return;
+        }
+
+        const query: JournalSearchQuery = {
+          ...appliedQueryRef.current,
+          offset,
+          limit: PAGE_SIZE,
+        };
+
+        const tagRequest:
+          Promise<readonly JournalTag[] | null> =
+          append
+            ? Promise.resolve(null)
+            : journalService.listTags();
+
+        const [page, nextTags] =
+          await Promise.all([
+            journalService.search(query),
+            tagRequest,
+          ]);
 
         if (
           generation !==
@@ -472,7 +756,17 @@ export default function JournalScreen({
         }
 
         setTodayEntryDate(today);
-        setEntries(nextEntries);
+        setEntries((current) =>
+          append
+            ? [...current, ...page.items]
+            : page.items,
+        );
+        setNextOffset(page.nextOffset);
+
+        if (nextTags !== null) {
+          setAvailableTags(nextTags);
+        }
+
         setStatus("ready");
       } catch {
         if (
@@ -482,7 +776,16 @@ export default function JournalScreen({
           return;
         }
 
-        setStatus("error");
+        if (!append) {
+          setStatus("error");
+        }
+      } finally {
+        if (
+          generation ===
+          loadGenerationRef.current
+        ) {
+          setIsLoadingMore(false);
+        }
       }
     },
     [],
@@ -538,6 +841,86 @@ export default function JournalScreen({
     void loadEntries("journal");
   }, [loadEntries]);
 
+  const applySearchFilters = useCallback(() => {
+    try {
+      const query =
+        buildSearchQuery({
+          text: searchText,
+          category: categoryFilter,
+          tagId: tagFilter,
+          dateFrom,
+          dateTo,
+          passageBook,
+          passageChapter,
+          passageVerse,
+          pinnedOnly,
+        });
+
+      appliedQueryRef.current = query;
+      setHasAppliedFilters(
+        hasActiveSearchFilters(query),
+      );
+      setFilterError(null);
+      setNextOffset(null);
+      void loadEntries("journal");
+    } catch (error) {
+      setFilterError(
+        error instanceof Error
+          ? error.message
+          : "Revise os filtros informados.",
+      );
+    }
+  }, [
+    categoryFilter,
+    dateFrom,
+    dateTo,
+    loadEntries,
+    passageBook,
+    passageChapter,
+    passageVerse,
+    pinnedOnly,
+    searchText,
+    tagFilter,
+  ]);
+
+  const clearSearchFilters = useCallback(() => {
+    setSearchText("");
+    setCategoryFilter(null);
+    setTagFilter(null);
+    setDateFrom("");
+    setDateTo("");
+    setPassageBook("");
+    setPassageChapter("");
+    setPassageVerse("");
+    setPinnedOnly(false);
+    setFilterError(null);
+    setHasAppliedFilters(false);
+    appliedQueryRef.current = {
+      offset: 0,
+      limit: PAGE_SIZE,
+    };
+    setNextOffset(null);
+    void loadEntries("journal");
+  }, [loadEntries]);
+
+  const loadMoreEntries = useCallback(() => {
+    if (
+      nextOffset === null ||
+      isLoadingMore
+    ) {
+      return;
+    }
+
+    void loadEntries(
+      "journal",
+      nextOffset,
+      true,
+    );
+  }, [
+    isLoadingMore,
+    loadEntries,
+    nextOffset,
+  ]);
   const pinnedEntries =
     viewMode === "journal"
       ? entries.filter(
@@ -633,6 +1016,309 @@ export default function JournalScreen({
           )}
         </View>
 
+        {viewMode === "journal" && (
+          <View style={styles.searchCard}>
+            <View style={styles.searchHeading}>
+              <Text style={styles.searchTitle}>
+                Buscar no diário
+              </Text>
+              <Text style={styles.searchHint}>
+                Encontre registros por texto ou contexto.
+              </Text>
+            </View>
+
+            <View style={styles.fieldGroup}>
+              <Text style={styles.fieldLabel}>
+                Palavra ou frase
+              </Text>
+              <TextInput
+                accessibilityLabel="Buscar no diário"
+                value={searchText}
+                onChangeText={setSearchText}
+                placeholder="Ex.: promessa, oração, família..."
+                placeholderTextColor={colors.textMuted}
+                style={styles.searchInput}
+                returnKeyType="search"
+                onSubmitEditing={applySearchFilters}
+              />
+            </View>
+
+            <View style={styles.filterSection}>
+              <Text style={styles.fieldLabel}>
+                Categoria
+              </Text>
+              <View style={styles.chipRow}>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Mostrar todas as categorias"
+                  accessibilityState={{
+                    selected: categoryFilter === null,
+                  }}
+                  onPress={() => setCategoryFilter(null)}
+                  style={({ pressed }) => [
+                    styles.filterChip,
+                    categoryFilter === null &&
+                      styles.filterChipSelected,
+                    pressed && styles.pressed,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.filterChipText,
+                      categoryFilter === null &&
+                        styles.filterChipTextSelected,
+                    ]}
+                  >
+                    Todas
+                  </Text>
+                </Pressable>
+
+                {JOURNAL_CATEGORIES.map((category) => (
+                  <Pressable
+                    key={category}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Filtrar por categoria ${CATEGORY_LABELS[category]}`}
+                    accessibilityState={{
+                      selected:
+                        categoryFilter === category,
+                    }}
+                    onPress={() =>
+                      setCategoryFilter(category)
+                    }
+                    style={({ pressed }) => [
+                      styles.filterChip,
+                      categoryFilter === category &&
+                        styles.filterChipSelected,
+                      pressed && styles.pressed,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.filterChipText,
+                        categoryFilter === category &&
+                          styles.filterChipTextSelected,
+                      ]}
+                    >
+                      {CATEGORY_LABELS[category]}
+                    </Text>
+                  </Pressable>
+                ))}
+
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Filtrar registros sem categoria"
+                  accessibilityState={{
+                    selected:
+                      categoryFilter === "UNCATEGORIZED",
+                  }}
+                  onPress={() =>
+                    setCategoryFilter("UNCATEGORIZED")
+                  }
+                  style={({ pressed }) => [
+                    styles.filterChip,
+                    categoryFilter === "UNCATEGORIZED" &&
+                      styles.filterChipSelected,
+                    pressed && styles.pressed,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.filterChipText,
+                      categoryFilter === "UNCATEGORIZED" &&
+                        styles.filterChipTextSelected,
+                    ]}
+                  >
+                    Sem categoria
+                  </Text>
+                </Pressable>
+              </View>
+            </View>
+
+            {availableTags.length > 0 && (
+              <View style={styles.filterSection}>
+                <Text style={styles.fieldLabel}>
+                  Etiquetas
+                </Text>
+                <View style={styles.chipRow}>
+                  {availableTags.map((tag) => {
+                    const selected =
+                      tagFilter === tag.id;
+
+                    return (
+                      <Pressable
+                        key={tag.id}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Filtrar pela etiqueta ${tag.name}`}
+                        accessibilityState={{
+                          selected,
+                        }}
+                        onPress={() =>
+                          setTagFilter(
+                            selected
+                              ? null
+                              : tag.id,
+                          )
+                        }
+                        style={({ pressed }) => [
+                          styles.filterChip,
+                          selected &&
+                            styles.filterChipSelected,
+                          pressed && styles.pressed,
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.filterChipText,
+                            selected &&
+                              styles.filterChipTextSelected,
+                          ]}
+                        >
+                          #{tag.name}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </View>
+            )}
+
+            <View style={styles.filterSection}>
+              <Text style={styles.fieldLabel}>
+                Período
+              </Text>
+              <View style={styles.fieldRow}>
+                <View style={styles.flexField}>
+                  <TextInput
+                    accessibilityLabel="Data inicial do filtro"
+                    value={dateFrom}
+                    onChangeText={setDateFrom}
+                    placeholder="AAAA-MM-DD"
+                    placeholderTextColor={colors.textMuted}
+                    autoCapitalize="none"
+                    style={styles.searchInput}
+                  />
+                </View>
+                <View style={styles.flexField}>
+                  <TextInput
+                    accessibilityLabel="Data final do filtro"
+                    value={dateTo}
+                    onChangeText={setDateTo}
+                    placeholder="AAAA-MM-DD"
+                    placeholderTextColor={colors.textMuted}
+                    autoCapitalize="none"
+                    style={styles.searchInput}
+                  />
+                </View>
+              </View>
+            </View>
+
+            <View style={styles.filterSection}>
+              <Text style={styles.fieldLabel}>
+                Passagem bíblica
+              </Text>
+              <TextInput
+                accessibilityLabel="Livro bíblico do filtro"
+                value={passageBook}
+                onChangeText={setPassageBook}
+                placeholder="Ex.: João, Jo ou JHN"
+                placeholderTextColor={colors.textMuted}
+                style={styles.searchInput}
+              />
+              <View style={styles.fieldRow}>
+                <View style={styles.flexField}>
+                  <TextInput
+                    accessibilityLabel="Capítulo bíblico do filtro"
+                    value={passageChapter}
+                    onChangeText={setPassageChapter}
+                    placeholder="Capítulo"
+                    placeholderTextColor={colors.textMuted}
+                    keyboardType="number-pad"
+                    style={styles.searchInput}
+                  />
+                </View>
+                <View style={styles.flexField}>
+                  <TextInput
+                    accessibilityLabel="Versículo bíblico do filtro"
+                    value={passageVerse}
+                    onChangeText={setPassageVerse}
+                    placeholder="Versículo"
+                    placeholderTextColor={colors.textMuted}
+                    keyboardType="number-pad"
+                    style={styles.searchInput}
+                  />
+                </View>
+              </View>
+            </View>
+
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Mostrar somente registros fixados"
+              accessibilityState={{
+                selected: pinnedOnly,
+              }}
+              onPress={() =>
+                setPinnedOnly((current) => !current)
+              }
+              style={({ pressed }) => [
+                styles.pinFilter,
+                pinnedOnly &&
+                  styles.pinFilterSelected,
+                pressed && styles.pressed,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.pinFilterText,
+                  pinnedOnly &&
+                    styles.pinFilterTextSelected,
+                ]}
+              >
+                {pinnedOnly
+                  ? "Somente fixados"
+                  : "Mostrar somente fixados"}
+              </Text>
+            </Pressable>
+
+            {filterError !== null && (
+              <Text
+                accessibilityRole="alert"
+                style={styles.filterError}
+              >
+                {filterError}
+              </Text>
+            )}
+
+            <View style={styles.searchActions}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Aplicar busca e filtros do diário"
+                onPress={applySearchFilters}
+                style={({ pressed }) => [
+                  styles.applyFilterButton,
+                  pressed && styles.pressed,
+                ]}
+              >
+                <Text style={styles.applyFilterButtonText}>
+                  Buscar
+                </Text>
+              </Pressable>
+
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Limpar busca e filtros do diário"
+                onPress={clearSearchFilters}
+                style={({ pressed }) => [
+                  styles.clearFilterButton,
+                  pressed && styles.pressed,
+                ]}
+              >
+                <Text style={styles.clearFilterButtonText}>
+                  Limpar
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+        )}
         {status === "loading" && (
           <View style={styles.stateCard}>
             <ActivityIndicator
@@ -685,12 +1371,16 @@ export default function JournalScreen({
               <Text style={styles.stateTitle}>
                 {viewMode === "trash"
                   ? "Sua lixeira está vazia"
-                  : "Seu diário ainda está vazio"}
+                  : hasAppliedFilters
+                    ? "Nenhum registro encontrado"
+                    : "Seu diário ainda está vazio"}
               </Text>
               <Text style={styles.stateText}>
                 {viewMode === "trash"
                   ? "Registros movidos para a lixeira aparecerão aqui."
-                  : "Quando você registrar uma reflexão ou gratidão, ela aparecerá aqui."}
+                  : hasAppliedFilters
+                    ? "Tente ajustar ou limpar os filtros para ampliar a busca."
+                    : "Quando você registrar uma reflexão ou gratidão, ela aparecerá aqui."}
               </Text>
             </View>
           )}
@@ -754,7 +1444,31 @@ export default function JournalScreen({
               ))}
             </View>
           )}
-      </ScrollView>
+        {status === "ready" &&
+          viewMode === "journal" &&
+          nextOffset !== null && (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Carregar mais registros do diário"
+              disabled={isLoadingMore}
+              onPress={loadMoreEntries}
+              style={({ pressed }) => [
+                styles.loadMoreButton,
+                pressed && styles.pressed,
+              ]}
+            >
+              {isLoadingMore ? (
+                <ActivityIndicator
+                  size="small"
+                  color={colors.primary}
+                />
+              ) : (
+                <Text style={styles.loadMoreButtonText}>
+                  Carregar mais
+                </Text>
+              )}
+            </Pressable>
+          )}      </ScrollView>
     </View>
   );
 }
@@ -831,7 +1545,167 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "800",
   },
-  stateCard: {
+  searchCard: {
+    gap: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 20,
+    backgroundColor: colors.surface,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+  },
+  searchHeading: {
+    gap: 3,
+  },
+  searchTitle: {
+    color: colors.textStrong,
+    fontSize: 17,
+    fontWeight: "800",
+  },
+  searchHint: {
+    color: colors.textMuted,
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  fieldGroup: {
+    gap: 6,
+  },
+  filterSection: {
+    gap: 8,
+  },
+  fieldLabel: {
+    color: colors.textStrong,
+    fontSize: 12,
+    fontWeight: "800",
+  },
+  searchInput: {
+    minHeight: 44,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    backgroundColor: colors.background,
+    color: colors.text,
+    fontSize: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  chipRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 7,
+  },
+  filterChip: {
+    minHeight: 36,
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 999,
+    backgroundColor: colors.surfaceAlt,
+    paddingHorizontal: 11,
+    paddingVertical: 7,
+  },
+  filterChipSelected: {
+    borderColor: colors.primary,
+    backgroundColor: colors.surfaceHighlight,
+  },
+  filterChipText: {
+    color: colors.textMuted,
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  filterChipTextSelected: {
+    color: colors.primary,
+    fontWeight: "800",
+  },
+  fieldRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  flexField: {
+    flexGrow: 1,
+    flexBasis: 140,
+  },
+  pinFilter: {
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 40,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    backgroundColor: colors.surfaceAlt,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+  },
+  pinFilterSelected: {
+    borderColor: colors.primary,
+    backgroundColor: colors.surfaceHighlight,
+  },
+  pinFilterText: {
+    color: colors.textMuted,
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  pinFilterTextSelected: {
+    color: colors.primary,
+    fontWeight: "800",
+  },
+  filterError: {
+    color: colors.danger,
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  searchActions: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  applyFilterButton: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 44,
+    borderRadius: 12,
+    backgroundColor: colors.primary,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  applyFilterButtonText: {
+    color: colors.textInverse,
+    fontSize: 14,
+    fontWeight: "800",
+  },
+  clearFilterButton: {
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 44,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    backgroundColor: colors.surface,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+  },
+  clearFilterButtonText: {
+    color: colors.primary,
+    fontSize: 14,
+    fontWeight: "800",
+  },
+  loadMoreButton: {
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 46,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 14,
+    backgroundColor: colors.surface,
+    paddingHorizontal: 18,
+    paddingVertical: 11,
+  },
+  loadMoreButtonText: {
+    color: colors.primary,
+    fontSize: 14,
+    fontWeight: "800",
+  },  stateCard: {
     alignItems: "center",
     gap: 8,
     borderWidth: 1,

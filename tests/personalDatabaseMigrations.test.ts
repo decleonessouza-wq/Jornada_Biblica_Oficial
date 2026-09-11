@@ -67,6 +67,8 @@ function loadMigrationsWithSchemaVersion(
     PERSONAL_DATABASE_SCHEMA_VERSION: schemaVersion,
   }));
 
+  // Dynamic reload is required after jest.doMock changes the schema version.
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   return require("../src/data/personal/personalDatabaseMigrations");
 }
 
@@ -86,8 +88,8 @@ describe("Personal database migrations", () => {
     jest.resetModules();
   });
 
-  it("locks the Personal SQLite schema at version 5", () => {
-    expect(PERSONAL_DATABASE_SCHEMA_VERSION).toBe(5);
+  it("locks the Personal SQLite schema at version 6", () => {
+    expect(PERSONAL_DATABASE_SCHEMA_VERSION).toBe(6);
   });
 
   it("migrates a fresh logical database from v0 through v1, v2, v3 and v4", async () => {
@@ -309,19 +311,19 @@ describe("Personal database migrations", () => {
     );
   });
 
-  it("migrates a fresh logical database through current v5", async () => {
+  it("migrates a fresh logical database through current v6", async () => {
     const fake = createFakeDatabase(0);
-    const migrations = loadMigrationsWithSchemaVersion(5);
+    const migrations = loadMigrationsWithSchemaVersion(6);
 
     await migrations.runPersonalDatabaseMigrations(fake.database);
 
-    expect(fake.withTransactionAsync).toHaveBeenCalledTimes(5);
-    expect(fake.execAsync).toHaveBeenCalledTimes(9);
+    expect(fake.withTransactionAsync).toHaveBeenCalledTimes(6);
+    expect(fake.execAsync).toHaveBeenCalledTimes(11);
     expect(fake.execAsync).toHaveBeenCalledWith(
-      "PRAGMA user_version = 5;",
+      "PRAGMA user_version = 6;",
     );
-    expect(fake.getFirstAsync).toHaveBeenCalledTimes(7);
-    expect(fake.getUserVersion()).toBe(5);
+    expect(fake.getFirstAsync).toHaveBeenCalledTimes(8);
+    expect(fake.getUserVersion()).toBe(6);
   });
 
   it("migrates an existing v4 database to v5 in one transaction", async () => {
@@ -367,9 +369,56 @@ describe("Personal database migrations", () => {
     );
   });
 
-  it("is idempotent when the database is already at v5", async () => {
+  it("migrates an existing v5 database to v6 in one transaction", async () => {
     const fake = createFakeDatabase(5);
-    const migrations = loadMigrationsWithSchemaVersion(5);
+    const migrations = loadMigrationsWithSchemaVersion(6);
+
+    await migrations.runPersonalDatabaseMigrations(fake.database);
+
+    expect(fake.withTransactionAsync).toHaveBeenCalledTimes(1);
+    expect(fake.execAsync).toHaveBeenCalledTimes(2);
+    expect(fake.execAsync).toHaveBeenCalledWith(
+      "PRAGMA user_version = 6;",
+    );
+    expect(fake.getFirstAsync).toHaveBeenCalledTimes(3);
+    expect(fake.getUserVersion()).toBe(6);
+  });
+
+  it("adds only the P16-P4 filter and pagination indexes in v6", async () => {
+    const fake = createFakeDatabase(5);
+    const migrations = loadMigrationsWithSchemaVersion(6);
+
+    await migrations.runPersonalDatabaseMigrations(fake.database);
+
+    const ddlSql = getSingleMigrationDdl(fake.execAsync);
+
+    expect(ddlSql).toMatch(
+      /CREATE INDEX idx_personal_journal_entries_status_entry_date_id\s+ON personal_journal_entries \(status, entry_date DESC, id DESC\);/,
+    );
+    expect(ddlSql).toMatch(
+      /CREATE INDEX idx_personal_journal_entries_status_category_entry_date_id\s+ON personal_journal_entries \(status, category, entry_date DESC, id DESC\);/,
+    );
+    expect(ddlSql).toMatch(
+      /CREATE INDEX idx_personal_journal_entries_status_is_pinned_entry_date_id\s+ON personal_journal_entries \(status, is_pinned DESC, entry_date DESC, id DESC\);/,
+    );
+    expect(ddlSql).toMatch(
+      /CREATE INDEX idx_personal_journal_entry_tags_tag_id_entry_id\s+ON personal_journal_entry_tags \(tag_id, entry_id\);/,
+    );
+    expect(ddlSql).toMatch(
+      /CREATE INDEX idx_personal_journal_reference_passages_book_chapter_verse_reference\s+ON personal_journal_reference_passages \(\s*book_id,\s*start_chapter,\s*start_verse,\s*end_chapter,\s*end_verse,\s*reference_id\s*\);/,
+    );
+    expect(
+      (ddlSql.match(/CREATE INDEX\s+/g) ?? []).length,
+    ).toBe(5);
+    expect(ddlSql).not.toMatch(/CREATE\s+TABLE/i);
+    expect(ddlSql).not.toMatch(/ALTER\s+TABLE/i);
+    expect(ddlSql).not.toMatch(/INSERT\s+INTO/i);
+    expect(ddlSql).not.toMatch(/UPDATE\s+/i);
+    expect(ddlSql).not.toMatch(/DELETE\s+FROM/i);
+  });
+  it("is idempotent when the database is already at v6", async () => {
+    const fake = createFakeDatabase(6);
+    const migrations = loadMigrationsWithSchemaVersion(6);
 
     await migrations.runPersonalDatabaseMigrations(fake.database);
 
@@ -378,9 +427,9 @@ describe("Personal database migrations", () => {
     expect(fake.execAsync).not.toHaveBeenCalled();
   });
 
-  it("fails closed when the database is newer than supported v5", async () => {
-    const fake = createFakeDatabase(6);
-    const migrations = loadMigrationsWithSchemaVersion(5);
+  it("fails closed when the database is newer than supported v6", async () => {
+    const fake = createFakeDatabase(7);
+    const migrations = loadMigrationsWithSchemaVersion(6);
 
     await expect(
       migrations.runPersonalDatabaseMigrations(fake.database),
@@ -476,14 +525,14 @@ describe("Personal database migrations", () => {
 
   it("fails closed when the next required sequential migration step is missing", async () => {
     const fake = createFakeDatabase(0);
-    const migrations = loadMigrationsWithSchemaVersion(6);
+    const migrations = loadMigrationsWithSchemaVersion(7);
 
     await expect(
       migrations.runPersonalDatabaseMigrations(fake.database),
-    ).rejects.toThrow("PERSONAL_DATABASE_MIGRATION_MISSING:6");
+    ).rejects.toThrow("PERSONAL_DATABASE_MIGRATION_MISSING:7");
 
-    expect(fake.withTransactionAsync).toHaveBeenCalledTimes(5);
-    expect(fake.execAsync).toHaveBeenCalledTimes(9);
+    expect(fake.withTransactionAsync).toHaveBeenCalledTimes(6);
+    expect(fake.execAsync).toHaveBeenCalledTimes(11);
     expect(fake.execAsync).toHaveBeenCalledWith(
       "PRAGMA user_version = 1;",
     );
@@ -499,6 +548,9 @@ describe("Personal database migrations", () => {
     expect(fake.execAsync).toHaveBeenCalledWith(
       "PRAGMA user_version = 5;",
     );
-    expect(fake.getUserVersion()).toBe(5);
+    expect(fake.execAsync).toHaveBeenCalledWith(
+      "PRAGMA user_version = 6;",
+    );
+    expect(fake.getUserVersion()).toBe(6);
   });
 });

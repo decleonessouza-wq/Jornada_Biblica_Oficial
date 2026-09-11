@@ -693,6 +693,229 @@ describe("SQLiteJournalRepository v4", () => {
     ).toBe("oracao");
   });
 
+  it("searches only active and draft entries with deterministic offset pagination", async () => {
+    const harness = createHarness();
+
+    harness.getAllAsync.mockImplementation(
+      async (sql: unknown) => {
+        if (
+          String(sql).includes(
+            "FROM personal_journal_entries",
+          )
+        ) {
+          return [
+            entryRow({
+              id: "journal-entry-3",
+            }),
+            entryRow({
+              id: "journal-entry-2",
+            }),
+            entryRow({
+              id: "journal-entry-1",
+            }),
+          ];
+        }
+
+        return [];
+      },
+    );
+
+    const page = await harness.repository.search({
+      offset: 0,
+      limit: 2,
+    });
+
+    expect(
+      page.items.map((entry) => entry.id),
+    ).toEqual([
+      "journal-entry-3",
+      "journal-entry-2",
+    ]);
+    expect(page.nextOffset).toBe(2);
+
+    const [sql, ...parameters] =
+      harness.getAllAsync.mock.calls[0] ?? [];
+
+    expect(String(sql)).toContain(
+      "status IN ('ACTIVE', 'DRAFT')",
+    );
+    expect(String(sql)).toContain(
+      "ORDER BY entry_date DESC, id DESC",
+    );
+    expect(String(sql)).toContain(
+      "LIMIT ? OFFSET ?",
+    );
+    expect(parameters.slice(-2)).toEqual([
+      3,
+      0,
+    ]);
+  });
+
+  it("composes text category tag period passage and pin filters with bound parameters", async () => {
+    const harness = createHarness();
+
+    harness.getAllAsync.mockResolvedValueOnce([]);
+
+    const page = await harness.repository.search({
+      text: "fé_100%",
+      category: "PRAYER",
+      tagId: "tag-prayer" as JournalTagId,
+      dateFrom:
+        "2026-09-01" as PersonalLocalDate,
+      dateTo:
+        "2026-09-30" as PersonalLocalDate,
+      passage: {
+        bookId: "JHN",
+        chapter: 3,
+        verse: 16,
+      },
+      isPinned: true,
+      offset: 5,
+      limit: 10,
+    });
+
+    expect(page).toEqual({
+      items: [],
+      nextOffset: null,
+    });
+
+    const [sql, ...parameters] =
+      harness.getAllAsync.mock.calls[0] ?? [];
+
+    const querySql = String(sql);
+
+    expect(querySql).toContain(
+      "COALESCE(reflection_text, '') LIKE ?",
+    );
+    expect(querySql).toContain(
+      "category = ?",
+    );
+    expect(querySql).toContain(
+      "personal_journal_entry_tags AS search_entry_tag",
+    );
+    expect(querySql).toContain(
+      "entry_date >= ?",
+    );
+    expect(querySql).toContain(
+      "entry_date <= ?",
+    );
+    expect(querySql).toContain(
+      "personal_journal_reference_passages AS search_passage",
+    );
+    expect(querySql).toContain(
+      "search_passage.start_verse = ?",
+    );
+    expect(querySql).toContain(
+      "is_pinned = ?",
+    );
+    expect(querySql).not.toContain("fé_100%");
+    expect(parameters).toContain(
+      "%fé\\_100\\%%",
+    );
+    expect(parameters).toContain("PRAYER");
+    expect(parameters).toContain(
+      "tag-prayer",
+    );
+    expect(parameters).toContain(
+      "2026-09-01",
+    );
+    expect(parameters).toContain(
+      "2026-09-30",
+    );
+    expect(parameters).toContain("JHN");
+    expect(parameters).toContain(16);
+    expect(parameters).toContain(1);
+    expect(parameters.slice(-2)).toEqual([
+      11,
+      5,
+    ]);
+  });
+
+  it("supports explicit uncategorized filtering without inventing a category parameter", async () => {
+    const harness = createHarness();
+
+    harness.getAllAsync.mockResolvedValueOnce([]);
+
+    await harness.repository.search({
+      category: null,
+      offset: 0,
+      limit: 20,
+    });
+
+    const [sql, ...parameters] =
+      harness.getAllAsync.mock.calls[0] ?? [];
+
+    expect(String(sql)).toContain(
+      "category IS NULL",
+    );
+    expect(parameters).toEqual([
+      21,
+      0,
+    ]);
+  });
+
+  it.each([
+    [
+      {
+        offset: -1,
+        limit: 10,
+      },
+      "PERSONAL_JOURNAL_SEARCH_OFFSET_INVALID",
+    ],
+    [
+      {
+        offset: 0,
+        limit: 0,
+      },
+      "PERSONAL_JOURNAL_SEARCH_LIMIT_INVALID",
+    ],
+    [
+      {
+        dateFrom: "2026-09-30",
+        dateTo: "2026-09-01",
+        offset: 0,
+        limit: 10,
+      },
+      "PERSONAL_JOURNAL_SEARCH_DATE_RANGE_INVALID",
+    ],
+    [
+      {
+        passage: {
+          bookId: "JHN",
+          verse: 16,
+        },
+        offset: 0,
+        limit: 10,
+      },
+      "PERSONAL_JOURNAL_SEARCH_PASSAGE_CHAPTER_REQUIRED",
+    ],
+    [
+      {
+        category: "BROKEN",
+        offset: 0,
+        limit: 10,
+      },
+      "PERSONAL_JOURNAL_SEARCH_CATEGORY_INVALID",
+    ],
+  ] as const)(
+    "fails closed for malformed search query %#",
+    async (query, errorCode) => {
+      const harness = createHarness();
+
+      await expect(
+        harness.repository.search(
+          query as never,
+        ),
+      ).rejects.toThrow(errorCode);
+
+      expect(
+        harness.withConnection,
+      ).not.toHaveBeenCalled();
+      expect(
+        harness.getAllAsync,
+      ).not.toHaveBeenCalled();
+    },
+  );
   it("supports zero references and zero tags on a mapped record", async () => {
     const harness = createHarness();
 

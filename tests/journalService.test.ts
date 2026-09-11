@@ -1,6 +1,10 @@
 import type {
+  BibleBookId,
+} from "../src/domain/bible/bibleReference";
+import type {
   JournalEntry,
   JournalEntryId,
+  JournalTagId,
 } from "../src/domain/journal/journal";
 import type {
   PersonalCanonicalIdFactory,
@@ -75,6 +79,7 @@ function createHarness() {
   const listByDate = jest.fn();
   const listTags = jest.fn();
   const findTagByNormalizedName = jest.fn();
+  const search = jest.fn();
   const create = jest.fn();
   const update = jest.fn();
   const remove = jest.fn();
@@ -86,6 +91,7 @@ function createHarness() {
     listByDate,
     listTags,
     findTagByNormalizedName,
+    search,
     create,
     update,
     remove,
@@ -123,6 +129,7 @@ function createHarness() {
     listByDate,
     listTags,
     findTagByNormalizedName,
+    search,
     create,
     update,
     remove,
@@ -214,6 +221,181 @@ describe("JournalService", () => {
     expect(harness.listTags).toHaveBeenCalledTimes(1);
   });
 
+  it("normalizes text and delegates all local search filters without changing page order", async () => {
+    const harness = createHarness();
+    const first = persistenceEntry();
+    const second = persistenceEntry({
+      id: OTHER_ENTRY_ID,
+      entryDate: OTHER_ENTRY_DATE,
+    });
+    const page = {
+      items: [first, second],
+      nextOffset: 20,
+    };
+
+    harness.search.mockResolvedValue(page);
+
+    const result = await harness.service.search({
+      text: "  fé no caminho  ",
+      category: "REFLECTION",
+      tagId: "tag-faith" as JournalTagId,
+      dateFrom:
+        "2026-09-01" as PersonalLocalDate,
+      dateTo:
+        "2026-09-30" as PersonalLocalDate,
+      passage: {
+        bookId: "JHN" as BibleBookId,
+        chapter: 3,
+        verse: 16,
+      },
+      isPinned: true,
+      offset: 0,
+      limit: 20,
+    });
+
+    expect(result).toBe(page);
+    expect(harness.search).toHaveBeenCalledTimes(1);
+    expect(harness.search).toHaveBeenCalledWith({
+      text: "fé no caminho",
+      category: "REFLECTION",
+      tagId: "tag-faith",
+      dateFrom: "2026-09-01",
+      dateTo: "2026-09-30",
+      passage: {
+        bookId: "JHN",
+        chapter: 3,
+        verse: 16,
+      },
+      isPinned: true,
+      offset: 0,
+      limit: 20,
+    });
+  });
+
+  it("normalizes a whitespace-only search text to an omitted text filter", async () => {
+    const harness = createHarness();
+    const page = {
+      items: [],
+      nextOffset: null,
+    };
+
+    harness.search.mockResolvedValue(page);
+
+    await expect(
+      harness.service.search({
+        text: "   ",
+        offset: 20,
+        limit: 20,
+      }),
+    ).resolves.toBe(page);
+
+    expect(harness.search).toHaveBeenCalledWith({
+      text: undefined,
+      offset: 20,
+      limit: 20,
+    });
+  });
+
+  it.each([
+    [
+      {
+        offset: -1,
+        limit: 20,
+      },
+      "PERSONAL_JOURNAL_SEARCH_OFFSET_INVALID",
+    ],
+    [
+      {
+        offset: 0,
+        limit: 0,
+      },
+      "PERSONAL_JOURNAL_SEARCH_LIMIT_INVALID",
+    ],
+    [
+      {
+        text: 7,
+        offset: 0,
+        limit: 20,
+      },
+      "PERSONAL_JOURNAL_SEARCH_TEXT_INVALID",
+    ],
+    [
+      {
+        category: "BROKEN",
+        offset: 0,
+        limit: 20,
+      },
+      "PERSONAL_JOURNAL_SEARCH_CATEGORY_INVALID",
+    ],
+    [
+      {
+        tagId: " ",
+        offset: 0,
+        limit: 20,
+      },
+      "PERSONAL_JOURNAL_SEARCH_TAG_ID_INVALID",
+    ],
+    [
+      {
+        dateFrom: "2026-02-30",
+        offset: 0,
+        limit: 20,
+      },
+      "PERSONAL_JOURNAL_SEARCH_DATE_FROM_INVALID",
+    ],
+    [
+      {
+        dateFrom: "2026-09-30",
+        dateTo: "2026-09-01",
+        offset: 0,
+        limit: 20,
+      },
+      "PERSONAL_JOURNAL_SEARCH_DATE_RANGE_INVALID",
+    ],
+    [
+      {
+        passage: {
+          bookId: "JHN",
+          chapter: 0,
+        },
+        offset: 0,
+        limit: 20,
+      },
+      "PERSONAL_JOURNAL_SEARCH_PASSAGE_CHAPTER_INVALID",
+    ],
+    [
+      {
+        passage: {
+          bookId: "JHN",
+          verse: 16,
+        },
+        offset: 0,
+        limit: 20,
+      },
+      "PERSONAL_JOURNAL_SEARCH_PASSAGE_CHAPTER_REQUIRED",
+    ],
+    [
+      {
+        isPinned: "yes",
+        offset: 0,
+        limit: 20,
+      },
+      "PERSONAL_JOURNAL_SEARCH_PIN_INVALID",
+    ],
+  ] as const)(
+    "rejects malformed service search input before repository access %#",
+    async (query, errorCode) => {
+      const harness = createHarness();
+
+      await expect(
+        harness.service.search(
+          query as never,
+        ),
+      ).rejects.toThrow(errorCode);
+
+      expect(harness.search).not.toHaveBeenCalled();
+    },
+  );
   it("delegates findById and preserves the full persistence record", async () => {
     const harness = createHarness();
     const existing = persistenceEntry();

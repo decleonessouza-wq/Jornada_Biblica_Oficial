@@ -211,7 +211,34 @@ ADD COLUMN is_pinned INTEGER NOT NULL DEFAULT 0
 `);
     },
   },
-] as const;
+  {
+    version: 6,
+    up: async (database) => {
+      await database.execAsync(`
+CREATE INDEX idx_personal_journal_entries_status_entry_date_id
+ON personal_journal_entries (status, entry_date DESC, id DESC);
+
+CREATE INDEX idx_personal_journal_entries_status_category_entry_date_id
+ON personal_journal_entries (status, category, entry_date DESC, id DESC);
+
+CREATE INDEX idx_personal_journal_entries_status_is_pinned_entry_date_id
+ON personal_journal_entries (status, is_pinned DESC, entry_date DESC, id DESC);
+
+CREATE INDEX idx_personal_journal_entry_tags_tag_id_entry_id
+ON personal_journal_entry_tags (tag_id, entry_id);
+
+CREATE INDEX idx_personal_journal_reference_passages_book_chapter_verse_reference
+ON personal_journal_reference_passages (
+  book_id,
+  start_chapter,
+  start_verse,
+  end_chapter,
+  end_verse,
+  reference_id
+);
+`);
+    },
+  },] as const;
 
 export async function getPersonalDatabaseUserVersion(
   database: SQLiteDatabase,

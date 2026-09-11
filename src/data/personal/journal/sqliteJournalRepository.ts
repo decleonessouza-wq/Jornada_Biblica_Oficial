@@ -36,6 +36,8 @@ import {
 import type {
   JournalEntryPersistenceRecord,
   JournalRepository,
+  JournalSearchPage,
+  JournalSearchQuery,
 } from "./journalRepository";
 
 type JournalEntryRow = Readonly<{
@@ -1254,6 +1256,248 @@ VALUES (?, ?)
   }
 }
 
+function escapeLikePattern(
+  value: string,
+): string {
+  return value.replace(/[\\%_]/g, "\\$&");
+}
+
+function validateSearchQuery(
+  query: JournalSearchQuery,
+): void {
+  assertNonNegativeInteger(
+    query.offset,
+    "PERSONAL_JOURNAL_SEARCH_OFFSET_INVALID",
+  );
+  assertPositiveInteger(
+    query.limit,
+    "PERSONAL_JOURNAL_SEARCH_LIMIT_INVALID",
+  );
+
+  if (
+    query.text !== undefined &&
+    typeof query.text !== "string"
+  ) {
+    throw new Error(
+      "PERSONAL_JOURNAL_SEARCH_TEXT_INVALID",
+    );
+  }
+
+  if (
+    query.category !== undefined &&
+    query.category !== null &&
+    !isJournalCategory(query.category)
+  ) {
+    throw new Error(
+      "PERSONAL_JOURNAL_SEARCH_CATEGORY_INVALID",
+    );
+  }
+
+  if (query.tagId !== undefined) {
+    assertNonEmptyString(
+      query.tagId,
+      "PERSONAL_JOURNAL_SEARCH_TAG_ID_INVALID",
+    );
+  }
+
+  if (query.dateFrom !== undefined) {
+    assertValidLocalDate(
+      query.dateFrom,
+      "PERSONAL_JOURNAL_SEARCH_DATE_FROM_INVALID",
+    );
+  }
+
+  if (query.dateTo !== undefined) {
+    assertValidLocalDate(
+      query.dateTo,
+      "PERSONAL_JOURNAL_SEARCH_DATE_TO_INVALID",
+    );
+  }
+
+  if (
+    query.dateFrom !== undefined &&
+    query.dateTo !== undefined &&
+    query.dateFrom > query.dateTo
+  ) {
+    throw new Error(
+      "PERSONAL_JOURNAL_SEARCH_DATE_RANGE_INVALID",
+    );
+  }
+
+  if (
+    query.isPinned !== undefined &&
+    typeof query.isPinned !== "boolean"
+  ) {
+    throw new Error(
+      "PERSONAL_JOURNAL_SEARCH_PIN_INVALID",
+    );
+  }
+
+  if (query.passage === undefined) {
+    return;
+  }
+
+  assertNonEmptyString(
+    query.passage.bookId,
+    "PERSONAL_JOURNAL_SEARCH_PASSAGE_BOOK_ID_INVALID",
+  );
+
+  if (query.passage.chapter !== undefined) {
+    assertPositiveInteger(
+      query.passage.chapter,
+      "PERSONAL_JOURNAL_SEARCH_PASSAGE_CHAPTER_INVALID",
+    );
+  }
+
+  if (query.passage.verse !== undefined) {
+    assertPositiveInteger(
+      query.passage.verse,
+      "PERSONAL_JOURNAL_SEARCH_PASSAGE_VERSE_INVALID",
+    );
+
+    if (query.passage.chapter === undefined) {
+      throw new Error(
+        "PERSONAL_JOURNAL_SEARCH_PASSAGE_CHAPTER_REQUIRED",
+      );
+    }
+  }
+}
+
+function appendPassageSearch(
+  whereParts: string[],
+  parameters: (string | number)[],
+  query: JournalSearchQuery,
+): void {
+  const passage = query.passage;
+
+  if (passage === undefined) {
+    return;
+  }
+
+  if (passage.chapter === undefined) {
+    whereParts.push(`
+EXISTS (
+  SELECT 1
+  FROM personal_journal_entry_references AS search_reference
+  INNER JOIN personal_journal_reference_passages AS search_passage
+    ON search_passage.reference_id = search_reference.id
+  WHERE search_reference.entry_id = personal_journal_entries.id
+    AND search_passage.book_id = ?
+)
+`);
+    parameters.push(passage.bookId);
+    return;
+  }
+
+  const chapter = passage.chapter;
+
+  if (passage.verse === undefined) {
+    whereParts.push(`
+EXISTS (
+  SELECT 1
+  FROM personal_journal_entry_references AS search_reference
+  INNER JOIN personal_journal_reference_passages AS search_passage
+    ON search_passage.reference_id = search_reference.id
+  WHERE search_reference.entry_id = personal_journal_entries.id
+    AND search_passage.book_id = ?
+    AND (
+      search_passage.kind = 'WHOLE_BOOK'
+      OR (
+        search_passage.kind = 'CHAPTER'
+        AND search_passage.start_chapter = ?
+      )
+      OR (
+        search_passage.kind = 'CHAPTER_RANGE'
+        AND search_passage.start_chapter <= ?
+        AND search_passage.end_chapter >= ?
+      )
+      OR (
+        search_passage.kind = 'VERSE'
+        AND search_passage.start_chapter = ?
+      )
+      OR (
+        search_passage.kind = 'VERSE_RANGE'
+        AND search_passage.start_chapter <= ?
+        AND search_passage.end_chapter >= ?
+      )
+    )
+)
+`);
+    parameters.push(
+      passage.bookId,
+      chapter,
+      chapter,
+      chapter,
+      chapter,
+      chapter,
+      chapter,
+    );
+    return;
+  }
+
+  const verse = passage.verse;
+
+  whereParts.push(`
+EXISTS (
+  SELECT 1
+  FROM personal_journal_entry_references AS search_reference
+  INNER JOIN personal_journal_reference_passages AS search_passage
+    ON search_passage.reference_id = search_reference.id
+  WHERE search_reference.entry_id = personal_journal_entries.id
+    AND search_passage.book_id = ?
+    AND (
+      search_passage.kind = 'WHOLE_BOOK'
+      OR (
+        search_passage.kind = 'CHAPTER'
+        AND search_passage.start_chapter = ?
+      )
+      OR (
+        search_passage.kind = 'CHAPTER_RANGE'
+        AND search_passage.start_chapter <= ?
+        AND search_passage.end_chapter >= ?
+      )
+      OR (
+        search_passage.kind = 'VERSE'
+        AND search_passage.start_chapter = ?
+        AND search_passage.start_verse = ?
+      )
+      OR (
+        search_passage.kind = 'VERSE_RANGE'
+        AND (
+          search_passage.start_chapter < ?
+          OR (
+            search_passage.start_chapter = ?
+            AND search_passage.start_verse <= ?
+          )
+        )
+        AND (
+          search_passage.end_chapter > ?
+          OR (
+            search_passage.end_chapter = ?
+            AND search_passage.end_verse >= ?
+          )
+        )
+      )
+    )
+)
+`);
+
+  parameters.push(
+    passage.bookId,
+    chapter,
+    chapter,
+    chapter,
+    chapter,
+    verse,
+    chapter,
+    chapter,
+    verse,
+    chapter,
+    chapter,
+    verse,
+  );
+}
+
 const ENTRY_COLUMNS_SQL = `
 SELECT
   id,
@@ -1304,6 +1548,122 @@ ORDER BY entry_date DESC, id DESC
               ),
           ),
         );
+      },
+    );
+  }
+
+  async search(
+    query: JournalSearchQuery,
+  ): Promise<JournalSearchPage> {
+    validateSearchQuery(query);
+
+    return this.personalDatabase.withConnection(
+      async (database) => {
+        const whereParts: string[] = [
+          "status IN ('ACTIVE', 'DRAFT')",
+        ];
+        const parameters: (string | number)[] = [];
+
+        const text = query.text?.trim();
+
+        if (text !== undefined && text.length > 0) {
+          const pattern =
+            `%${escapeLikePattern(text)}%`;
+
+          whereParts.push(`(
+  COALESCE(reflection_text, '') LIKE ? ESCAPE '\\'
+  OR COALESCE(gratitude_text, '') LIKE ? ESCAPE '\\'
+  OR COALESCE(source_title_snapshot, '') LIKE ? ESCAPE '\\'
+  OR COALESCE(prompt_snapshot, '') LIKE ? ESCAPE '\\'
+)`);
+
+          parameters.push(
+            pattern,
+            pattern,
+            pattern,
+            pattern,
+          );
+        }
+
+        if (query.category === null) {
+          whereParts.push("category IS NULL");
+        } else if (query.category !== undefined) {
+          whereParts.push("category = ?");
+          parameters.push(query.category);
+        }
+
+        if (query.tagId !== undefined) {
+          whereParts.push(`
+EXISTS (
+  SELECT 1
+  FROM personal_journal_entry_tags AS search_entry_tag
+  WHERE search_entry_tag.entry_id = personal_journal_entries.id
+    AND search_entry_tag.tag_id = ?
+)
+`);
+          parameters.push(query.tagId);
+        }
+
+        if (query.dateFrom !== undefined) {
+          whereParts.push("entry_date >= ?");
+          parameters.push(query.dateFrom);
+        }
+
+        if (query.dateTo !== undefined) {
+          whereParts.push("entry_date <= ?");
+          parameters.push(query.dateTo);
+        }
+
+        appendPassageSearch(
+          whereParts,
+          parameters,
+          query,
+        );
+
+        if (query.isPinned !== undefined) {
+          whereParts.push("is_pinned = ?");
+          parameters.push(
+            query.isPinned ? 1 : 0,
+          );
+        }
+
+        const rows =
+          await database.getAllAsync<JournalEntryRow>(
+            `${ENTRY_COLUMNS_SQL}
+WHERE ${whereParts.join("\n  AND ")}
+ORDER BY entry_date DESC, id DESC
+LIMIT ? OFFSET ?
+`,
+            ...parameters,
+            query.limit + 1,
+            query.offset,
+          );
+
+        const hasMore =
+          rows.length > query.limit;
+
+        const pageRows =
+          hasMore
+            ? rows.slice(0, query.limit)
+            : rows;
+
+        const items =
+          await Promise.all(
+            pageRows.map(
+              (row) =>
+                loadPersistenceRecord(
+                  database,
+                  row,
+                ),
+            ),
+          );
+
+        return {
+          items,
+          nextOffset: hasMore
+            ? query.offset + query.limit
+            : null,
+        };
       },
     );
   }
