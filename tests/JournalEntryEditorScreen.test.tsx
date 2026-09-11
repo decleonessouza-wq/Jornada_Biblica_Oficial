@@ -8,8 +8,14 @@ import {
 } from "@testing-library/react-native";
 
 import type {
+  BibleReference,
+} from "../src/domain/bible/bibleReference";
+import type {
   JournalEntryId,
 } from "../src/domain/journal/journal";
+import type {
+  JournalEntryEditorSourceContext,
+} from "../src/navigation/types";
 import type {
   JournalEntryPersistenceRecord,
 } from "../src/data/personal/journal/journalRepository";
@@ -41,6 +47,7 @@ const mockFindById = jest.fn();
 const mockGetTodayEntryDate = jest.fn();
 const mockCreate = jest.fn();
 const mockCreateDraft = jest.fn();
+const mockCreateBibleDraft = jest.fn();
 const mockUpdateDraft = jest.fn();
 const mockPublishDraft = jest.fn();
 const mockUpdate = jest.fn();
@@ -50,6 +57,23 @@ const entryId =
   "journal-entry-edit" as JournalEntryId;
 const draftId =
   "journal-entry-draft" as JournalEntryId;
+
+const bibleReference: BibleReference = {
+  passages: [
+    {
+      kind: "VERSE",
+      bookId: "JHN",
+      chapter: 3,
+      verse: 16,
+    },
+  ],
+};
+
+const bibleSourceContext:
+  JournalEntryEditorSourceContext = {
+    sourceType: "BIBLE",
+    reference: bibleReference,
+  };
 
 const existingEntry = {
   id: entryId,
@@ -80,6 +104,19 @@ const draftEntry = {
   gratitudeText: null,
 } as JournalEntryPersistenceRecord;
 
+const bibleDraftEntry = {
+  ...draftEntry,
+  sourceType: "BIBLE",
+  references: [
+    {
+      id: "journal-reference-test" as never,
+      entryId: draftId,
+      position: 0,
+      reference: bibleReference,
+    },
+  ],
+} as JournalEntryPersistenceRecord;
+
 function configureHub(): void {
   mockedGetPersonalPlatformHub.mockReturnValue({
     journalService: {
@@ -88,6 +125,8 @@ function configureHub(): void {
         mockGetTodayEntryDate,
       create: mockCreate,
       createDraft: mockCreateDraft,
+      createBibleDraft:
+        mockCreateBibleDraft,
       updateDraft: mockUpdateDraft,
       publishDraft: mockPublishDraft,
       update: mockUpdate,
@@ -101,6 +140,8 @@ function configureHub(): void {
 
 function renderEditor(
   editingEntryId?: JournalEntryId,
+  sourceContext?:
+    JournalEntryEditorSourceContext,
 ) {
   const goBack = jest.fn();
 
@@ -111,12 +152,17 @@ function renderEditor(
         key: "journal-editor-test",
         name: "JournalEntryEditor",
         params:
-          editingEntryId === undefined
+          editingEntryId === undefined &&
+          sourceContext === undefined
             ? undefined
-            : {
-                entryId:
-                  editingEntryId,
-              },
+            : editingEntryId !== undefined
+              ? {
+                  entryId:
+                    editingEntryId,
+                }
+              : {
+                  sourceContext,
+                },
       } as never}
     />,
   );
@@ -161,6 +207,7 @@ describe(
       mockGetTodayEntryDate.mockReset();
       mockCreate.mockReset();
       mockCreateDraft.mockReset();
+      mockCreateBibleDraft.mockReset();
       mockUpdateDraft.mockReset();
       mockPublishDraft.mockReset();
       mockUpdate.mockReset();
@@ -172,6 +219,9 @@ describe(
       );
       mockCreateDraft.mockResolvedValue(
         draftEntry,
+      );
+      mockCreateBibleDraft.mockResolvedValue(
+        bibleDraftEntry,
       );
       mockUpdateDraft.mockResolvedValue(
         draftEntry,
@@ -233,6 +283,182 @@ describe(
       },
       10000,
     );
+
+    it(
+      "opens Bible context without persisting before the user edits",
+      () => {
+        const view = renderEditor(
+          undefined,
+          bibleSourceContext,
+        );
+
+        expect(
+          view.getByLabelText(
+            "Referência bíblica vinculada: João 3:16",
+          ),
+        ).toBeTruthy();
+        expect(
+          view.getByText("João 3:16"),
+        ).toBeTruthy();
+        expect(
+          mockCreateBibleDraft,
+        ).not.toHaveBeenCalled();
+        expect(
+          mockCreateDraft,
+        ).not.toHaveBeenCalled();
+        expect(
+          mockCreate,
+        ).not.toHaveBeenCalled();
+      },
+      10000,
+    );
+
+    it("autosaves Bible context through createBibleDraft instead of a FREE draft", async () => {
+      const view = renderEditor(
+        undefined,
+        bibleSourceContext,
+      );
+
+      fireEvent.changeText(
+        view.getByLabelText("Reflexão"),
+        "Reflexão em João 3:16.",
+      );
+
+      await advanceAutosave();
+
+      await waitFor(() => {
+        expect(
+          mockCreateBibleDraft,
+        ).toHaveBeenCalledWith({
+          entryDate: "2026-09-10",
+          reflectionText:
+            "Reflexão em João 3:16.",
+          gratitudeText: "",
+          reference: bibleReference,
+        });
+      });
+
+      expect(
+        mockCreateDraft,
+      ).not.toHaveBeenCalled();
+      expect(
+        mockCreate,
+      ).not.toHaveBeenCalled();
+    });
+
+    it("directly saves Bible context by creating one draft and publishing that same record", async () => {
+      const view = renderEditor(
+        undefined,
+        bibleSourceContext,
+      );
+
+      fireEvent.changeText(
+        view.getByLabelText("Reflexão"),
+        "Guardar esta reflexão bíblica.",
+      );
+
+      fireEvent.press(
+        view.getByLabelText(
+          "Salvar registro do diário",
+        ),
+      );
+
+      await waitFor(() => {
+        expect(
+          mockCreateBibleDraft,
+        ).toHaveBeenCalledWith({
+          entryDate: "2026-09-10",
+          reflectionText:
+            "Guardar esta reflexão bíblica.",
+          gratitudeText: "",
+          reference: bibleReference,
+        });
+        expect(
+          mockPublishDraft,
+        ).toHaveBeenCalledWith(
+          draftId,
+          {
+            entryDate: "2026-09-10",
+            reflectionText:
+              "Guardar esta reflexão bíblica.",
+            gratitudeText: "",
+          },
+        );
+        expect(
+          view.goBack,
+        ).toHaveBeenCalledTimes(1);
+      });
+
+      expect(
+        mockCreateBibleDraft,
+      ).toHaveBeenCalledTimes(1);
+      expect(
+        mockCreate,
+      ).not.toHaveBeenCalled();
+    });
+
+    it("retries a failed Bible publish without creating a duplicate draft", async () => {
+      mockPublishDraft
+        .mockRejectedValueOnce(
+          new Error("temporary"),
+        )
+        .mockResolvedValueOnce(
+          existingEntry,
+        );
+
+      const view = renderEditor(
+        undefined,
+        bibleSourceContext,
+      );
+
+      fireEvent.changeText(
+        view.getByLabelText("Reflexão"),
+        "Não duplicar esta origem bíblica.",
+      );
+
+      fireEvent.press(
+        view.getByLabelText(
+          "Salvar registro do diário",
+        ),
+      );
+
+      await waitFor(() => {
+        expect(
+          view.getByText(
+            "Não foi possível salvar seu registro agora. Tente novamente.",
+          ),
+        ).toBeTruthy();
+      });
+
+      expect(
+        mockCreateBibleDraft,
+      ).toHaveBeenCalledTimes(1);
+      expect(
+        view.goBack,
+      ).not.toHaveBeenCalled();
+
+      fireEvent.press(
+        view.getByLabelText(
+          "Salvar registro do diário",
+        ),
+      );
+
+      await waitFor(() => {
+        expect(
+          mockPublishDraft,
+        ).toHaveBeenCalledTimes(2);
+        expect(
+          view.goBack,
+        ).toHaveBeenCalledTimes(1);
+      });
+
+      expect(
+        mockCreateBibleDraft,
+      ).toHaveBeenCalledTimes(1);
+      expect(
+        mockCreate,
+      ).not.toHaveBeenCalled();
+    });
 
     it("autosaves category and tags together with the same draft", async () => {
       const view = renderEditor();
@@ -810,6 +1036,15 @@ describe(
       );
       expect(source).toContain(
         "createDraft",
+      );
+      expect(source).toContain(
+        "createBibleDraft",
+      );
+      expect(source).toContain(
+        "sourceContext",
+      );
+      expect(source).toContain(
+        "getBibleBookById",
       );
       expect(source).toContain(
         "updateDraft",

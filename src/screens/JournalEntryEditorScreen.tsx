@@ -15,6 +15,13 @@ import {
 } from "react-native";
 
 import {
+  getBibleBookById,
+} from "../domain/bible/bibleBooks";
+import type {
+  BiblePassage,
+  BibleReference,
+} from "../domain/bible/bibleReference";
+import {
   JOURNAL_GRATITUDE_MAX_CHARS,
   JOURNAL_REFLECTION_MAX_CHARS,
   type JournalCategory,
@@ -71,6 +78,57 @@ const DATE_INVALID_MESSAGE =
   "Informe uma data válida no formato DD/MM/AAAA.";
 
 const AUTOSAVE_DELAY_MS = 800;
+
+function formatBiblePassage(
+  passage: BiblePassage,
+): string {
+  const book =
+    getBibleBookById(passage.bookId)
+      .canonicalName;
+
+  switch (passage.kind) {
+    case "WHOLE_BOOK":
+      return book;
+    case "CHAPTER":
+      return `${book} ${passage.chapter}`;
+    case "CHAPTER_RANGE":
+      return (
+        `${book} ${passage.startChapter}` +
+        `–${passage.endChapter}`
+      );
+    case "VERSE":
+      return (
+        `${book} ${passage.chapter}:` +
+        `${passage.verse}`
+      );
+    case "VERSE_RANGE":
+      if (
+        passage.start.chapter ===
+        passage.end.chapter
+      ) {
+        return (
+          `${book} ${passage.start.chapter}:` +
+          `${passage.start.verse}–` +
+          `${passage.end.verse}`
+        );
+      }
+
+      return (
+        `${book} ${passage.start.chapter}:` +
+        `${passage.start.verse}–` +
+        `${passage.end.chapter}:` +
+        `${passage.end.verse}`
+      );
+  }
+}
+
+function formatBibleReference(
+  reference: BibleReference,
+): string {
+  return reference.passages
+    .map(formatBiblePassage)
+    .join("; ");
+}
 
 function parseTagNames(
   value: string,
@@ -201,6 +259,12 @@ export default function JournalEntryEditorScreen({
   route,
 }: JournalEntryEditorScreenProps) {
   const routeEntryId = route.params?.entryId;
+  const routeSourceContext =
+    route.params?.sourceContext;
+  const routeBibleReference =
+    routeSourceContext?.sourceType === "BIBLE"
+      ? routeSourceContext.reference
+      : null;
   const loadGenerationRef = useRef(0);
   const submitLockRef = useRef(false);
   const mountedRef = useRef(true);
@@ -228,6 +292,12 @@ export default function JournalEntryEditorScreen({
     useState("");
   const [isPinned, setIsPinned] =
     useState(false);
+  const [
+    bibleContextReference,
+    setBibleContextReference,
+  ] = useState<BibleReference | null>(
+    routeBibleReference,
+  );
   const [loadedStatus, setLoadedStatus] =
     useState<"ACTIVE" | "DRAFT" | null>(null);
   const [loadStatus, setLoadStatus] =
@@ -261,6 +331,9 @@ export default function JournalEntryEditorScreen({
       setCategory(null);
       setTagsInput("");
       setIsPinned(false);
+      setBibleContextReference(
+        routeBibleReference,
+      );
       setEntryDateInput(
         formatEntryDateInput(
           journalService.getTodayEntryDate(),
@@ -312,6 +385,12 @@ export default function JournalEntryEditorScreen({
 
       setLoadedStatus(entry.status);
       setCategory(entry.category);
+      setBibleContextReference(
+        entry.sourceType === "BIBLE" &&
+          entry.references.length > 0
+          ? entry.references[0].reference
+          : null,
+      );
       setTagsInput(
         formatTagNames(entry.tags),
       );
@@ -338,7 +417,10 @@ export default function JournalEntryEditorScreen({
 
       setLoadStatus("error");
     }
-  }, [routeEntryId]);
+  }, [
+    routeBibleReference,
+    routeEntryId,
+  ]);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -389,9 +471,17 @@ export default function JournalEntryEditorScreen({
 
               if (draftId === null) {
                 const draft =
-                  await journalService.createDraft(
-                    contentSnapshot,
-                  );
+                  bibleContextReference === null
+                    ? await journalService.createDraft(
+                        contentSnapshot,
+                      )
+                    : await journalService.createBibleDraft(
+                        {
+                          ...contentSnapshot,
+                          reference:
+                            bibleContextReference,
+                        },
+                      );
 
                 draftId = draft.id;
                 draftEntryIdRef.current =
@@ -425,7 +515,11 @@ export default function JournalEntryEditorScreen({
       autosaveQueueRef.current = run;
       return run;
     },
-    [loadedStatus, saving],
+    [
+      bibleContextReference,
+      loadedStatus,
+      saving,
+    ],
   );
 
   useEffect(() => {
@@ -564,6 +658,30 @@ export default function JournalEntryEditorScreen({
         if (mountedRef.current) {
           setLoadedStatus("ACTIVE");
         }
+      } else if (
+        bibleContextReference !== null
+      ) {
+        const draft =
+          await journalService.createBibleDraft({
+            ...input,
+            reference: bibleContextReference,
+          });
+
+        savedEntryId = draft.id;
+        draftEntryIdRef.current = draft.id;
+
+        await journalService.publishDraft(
+          savedEntryId,
+          input,
+        );
+
+        draftEntryIdRef.current = null;
+        activeEntryIdRef.current =
+          savedEntryId;
+
+        if (mountedRef.current) {
+          setLoadedStatus("ACTIVE");
+        }
       } else {
         const created =
           await journalService.create(input);
@@ -600,6 +718,7 @@ export default function JournalEntryEditorScreen({
       }
     }
   }, [
+    bibleContextReference,
     category,
     clearAutosaveTimer,
     entryDateInput,
@@ -698,6 +817,27 @@ export default function JournalEntryEditorScreen({
 
         {loadStatus === "ready" && (
           <View style={styles.formCard}>
+            {bibleContextReference !== null && (
+              <View
+                accessibilityLabel={`Referência bíblica vinculada: ${formatBibleReference(
+                  bibleContextReference,
+                )}`}
+                style={styles.bibleContextCard}
+              >
+                <Text style={styles.bibleContextEyebrow}>
+                  ORIGEM BÍBLICA
+                </Text>
+                <Text style={styles.bibleContextTitle}>
+                  {formatBibleReference(
+                    bibleContextReference,
+                  )}
+                </Text>
+                <Text style={styles.bibleContextText}>
+                  Esta referência será mantida junto ao registro.
+                </Text>
+              </View>
+            )}
+
             <View style={styles.field}>
               <Text style={styles.fieldLabel}>
                 Data do registro
@@ -1084,6 +1224,31 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: 14,
     lineHeight: 20,
+  },
+  bibleContextCard: {
+    gap: 4,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 16,
+    backgroundColor: colors.surfaceHighlight,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  bibleContextEyebrow: {
+    color: colors.secondaryPressed,
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 0.8,
+  },
+  bibleContextTitle: {
+    color: colors.textStrong,
+    fontSize: 16,
+    fontWeight: "800",
+  },
+  bibleContextText: {
+    color: colors.textMuted,
+    fontSize: 13,
+    lineHeight: 18,
   },
   stateCard: {
     alignItems: "center",

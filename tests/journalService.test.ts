@@ -1,5 +1,6 @@
 import type {
   BibleBookId,
+  BibleReference,
 } from "../src/domain/bible/bibleReference";
 import type {
   JournalEntry,
@@ -40,6 +41,17 @@ const UPDATED_AT =
 
 const NOW =
   new Date("2026-09-09T12:00:00.000Z");
+
+const BIBLE_REFERENCE: BibleReference = {
+  passages: [
+    {
+      kind: "VERSE",
+      bookId: "JHN",
+      chapter: 3,
+      verse: 16,
+    },
+  ],
+};
 
 function journalEntry(
   overrides: Partial<JournalEntry> = {},
@@ -603,6 +615,90 @@ describe("JournalService", () => {
       updatedAtUtc: CREATED_AT,
     });
     expect(harness.create).toHaveBeenCalledWith(draft);
+  });
+
+  it("creates a BIBLE draft with one structured reference and no parallel schema state", async () => {
+    const harness = createHarness();
+
+    const draft =
+      await harness.service.createBibleDraft({
+        entryDate: OTHER_ENTRY_DATE,
+        reflectionText: "Reflexão a partir da leitura",
+        reference: BIBLE_REFERENCE,
+      });
+
+    expect(harness.now).toHaveBeenCalledTimes(1);
+    expect(harness.toLocalDate).not.toHaveBeenCalled();
+    expect(harness.toUtcTimestamp).toHaveBeenCalledWith(NOW);
+    expect(harness.createId).toHaveBeenNthCalledWith(
+      1,
+      "journal_entry",
+    );
+    expect(harness.createId).toHaveBeenNthCalledWith(
+      2,
+      "journal_entry_reference",
+    );
+
+    expect(draft).toEqual({
+      id: ENTRY_ID,
+      entryDate: OTHER_ENTRY_DATE,
+      reflectionText: "Reflexão a partir da leitura",
+      gratitudeText: null,
+      status: "DRAFT",
+      sourceType: "BIBLE",
+      sourceTitleSnapshot: null,
+      promptSnapshot: null,
+      category: null,
+      isPinned: false,
+      references: [
+        {
+          id: ENTRY_ID,
+          entryId: ENTRY_ID,
+          position: 0,
+          reference: BIBLE_REFERENCE,
+        },
+      ],
+      tags: [],
+      createdAtUtc: CREATED_AT,
+      updatedAtUtc: CREATED_AT,
+    });
+
+    expect(harness.create).toHaveBeenCalledTimes(1);
+    expect(harness.create).toHaveBeenCalledWith(draft);
+    expect(harness.findByDate).not.toHaveBeenCalled();
+  });
+
+  it("publishes a BIBLE draft without losing its structured reference context", async () => {
+    const harness = createHarness();
+
+    const draft =
+      await harness.service.createBibleDraft({
+        reference: BIBLE_REFERENCE,
+      });
+
+    harness.findById.mockResolvedValue(draft);
+
+    const published =
+      await harness.service.publishDraft(
+        draft.id,
+        {
+          reflectionText: "Reflexão concluída",
+        },
+      );
+
+    expect(published.status).toBe("ACTIVE");
+    expect(published.sourceType).toBe("BIBLE");
+    expect(published.references).toEqual(
+      draft.references,
+    );
+    expect(published.sourceTitleSnapshot).toBeNull();
+    expect(published.promptSnapshot).toBeNull();
+    expect(published.createdAtUtc).toBe(
+      draft.createdAtUtc,
+    );
+    expect(harness.update).toHaveBeenCalledWith(
+      published,
+    );
   });
 
   it("creates a draft with explicit date and preserves non-empty text byte-for-byte", async () => {

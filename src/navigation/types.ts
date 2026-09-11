@@ -7,6 +7,9 @@ import type { DrawerScreenProps } from "@react-navigation/drawer";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 
 import type { OfflineBibleReaderRouteParams } from "../bible/reader/bibleReaderContracts";
+import type {
+  BibleReference,
+} from "../domain/bible/bibleReference";
 import type { JournalEntryId } from "../domain/journal/journal";
 import type { HymnId } from "../domain/hymnal/hymn";
 import type { HymnalEditionId } from "../domain/hymnal/hymnalEdition";
@@ -31,12 +34,23 @@ export type HymnalStackParamList = {
   };
 };
 
+export type JournalEntryEditorSourceContext =
+  | Readonly<{
+      sourceType: "BIBLE";
+      reference: BibleReference;
+    }>;
+
 export type JournalStackParamList = {
   JournalHome: undefined;
   JournalEntryEditor:
-    | {
-        entryId?: JournalEntryId;
-      }
+    | Readonly<{
+        entryId: JournalEntryId;
+        sourceContext?: never;
+      }>
+    | Readonly<{
+        entryId?: never;
+        sourceContext?: JournalEntryEditorSourceContext;
+      }>
     | undefined;
   JournalEntryDetail: {
     entryId: JournalEntryId;

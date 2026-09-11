@@ -1,3 +1,6 @@
+import type {
+  BibleReference,
+} from "../../domain/bible/bibleReference";
 import {
   JOURNAL_CATEGORIES,
   JOURNAL_GRATITUDE_MAX_CHARS,
@@ -36,6 +39,12 @@ export type UpdateJournalEntryInput = Readonly<{
 
 export type CreateJournalDraftInput =
   CreateJournalEntryInput;
+
+export type CreateBibleJournalDraftInput =
+  CreateJournalDraftInput &
+  Readonly<{
+    reference: BibleReference;
+  }>;
 
 export type UpdateJournalDraftInput =
   UpdateJournalEntryInput;
@@ -494,6 +503,55 @@ export class JournalService {
       category: null,
       isPinned: false,
       references: [],
+      tags: [],
+      createdAtUtc: timestamp,
+      updatedAtUtc: timestamp,
+    };
+
+    await this.repository.create(draft);
+
+    return draft;
+  }
+
+  async createBibleDraft(
+    input: CreateBibleJournalDraftInput,
+  ): Promise<JournalEntryPersistenceRecord> {
+    const now = this.clock.now();
+    const entryDate =
+      input.entryDate ??
+      this.datePolicy.toLocalDate(now);
+    const timestamp =
+      this.datePolicy.toUtcTimestamp(now);
+    const entryId =
+      this.canonicalIdFactory.create(
+        "journal_entry",
+      );
+
+    const draft: JournalEntryPersistenceRecord = {
+      id: entryId,
+      entryDate,
+      reflectionText: normalizeReflectionText(
+        input.reflectionText,
+      ),
+      gratitudeText: normalizeGratitudeText(
+        input.gratitudeText,
+      ),
+      status: "DRAFT",
+      sourceType: "BIBLE",
+      sourceTitleSnapshot: null,
+      promptSnapshot: null,
+      category: null,
+      isPinned: false,
+      references: [
+        {
+          id: this.canonicalIdFactory.create(
+            "journal_entry_reference",
+          ),
+          entryId,
+          position: 0,
+          reference: input.reference,
+        },
+      ],
       tags: [],
       createdAtUtc: timestamp,
       updatedAtUtc: timestamp,
