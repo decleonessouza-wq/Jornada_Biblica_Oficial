@@ -18,7 +18,7 @@ import type { DrawerNavigationProp } from "@react-navigation/drawer";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
 import { colors } from "../theme/colors";
-import { restoreFromAutoBackup } from "../services/backupRestore";
+import { restoreFromAutoBackup } from "../services/backupRestore";import { requestLegacyGratitudeRuntimeReconciliation } from "../services/journal/legacyGratitudeRuntime";
 import { APP_INFO } from "../constants/appInfo";
 import type { AppDrawerParamList, RootStackParamList } from "../navigation/types";
 
@@ -342,7 +342,9 @@ export default function SettingsScreen() {
       await setCompletedDays(validDates);
 
       const gratitudeByDate = sanitizeGratitudeMap(parsed?.gratitudeByDate);
-      await AsyncStorage.setItem(GRATITUDE_KEY, JSON.stringify(gratitudeByDate));
+      await AsyncStorage.setItem(GRATITUDE_KEY, JSON.stringify(gratitudeByDate));      await requestLegacyGratitudeRuntimeReconciliation(
+        "settings-import",
+      );
 
       if (typeof parsed?.userName === "string") {
         const name = parsed.userName.trim();
@@ -414,7 +416,9 @@ export default function SettingsScreen() {
       await resetProgress();
 
       // ✅ limpa extras (gratidão + onboarding)
-      await AsyncStorage.removeItem(GRATITUDE_KEY);
+      await AsyncStorage.removeItem(GRATITUDE_KEY);      await requestLegacyGratitudeRuntimeReconciliation(
+        "settings-reset",
+      );
       await AsyncStorage.removeItem(USER_NAME_KEY);
       await AsyncStorage.removeItem(HAS_ONBOARDED_KEY);
 

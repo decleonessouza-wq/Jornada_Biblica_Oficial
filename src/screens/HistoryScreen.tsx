@@ -15,7 +15,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect } from "@react-navigation/native";
 
 import { colors } from "../theme/colors";
-import { restoreFromAutoBackup } from "../services/backupRestore";
+import { restoreFromAutoBackup } from "../services/backupRestore";import { requestLegacyGratitudeRuntimeReconciliation } from "../services/journal/legacyGratitudeRuntime";
 import { APP_INFO } from "../constants/appInfo";
 
 import {
@@ -422,7 +422,9 @@ export default function HistoryScreen() {
       let gCount = 0;
 
       if (g) {
-        await AsyncStorage.setItem(GRATITUDE_KEY, JSON.stringify(g));
+        await AsyncStorage.setItem(GRATITUDE_KEY, JSON.stringify(g));        await requestLegacyGratitudeRuntimeReconciliation(
+          "history-import",
+        );
         setGratitudeByDate(g);
         gCount = Object.keys(g).length;
       } else {
@@ -491,7 +493,9 @@ export default function HistoryScreen() {
   async function resetProgressNow() {
     try {
       await resetProgress();
-      await AsyncStorage.removeItem(GRATITUDE_KEY);
+      await AsyncStorage.removeItem(GRATITUDE_KEY);      await requestLegacyGratitudeRuntimeReconciliation(
+        "history-reset",
+      );
 
       setHistory({});
       setExportJson(null);

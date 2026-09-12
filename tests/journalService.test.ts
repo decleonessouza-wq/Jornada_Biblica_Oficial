@@ -1518,3 +1518,245 @@ describe("JournalService", () => {
     expect(harness.create).toHaveBeenCalledTimes(1);
   });
 });
+
+describe("JournalService legacy gratitude migration boundary", () => {
+  it("lists only HOME_GRATITUDE records without confusing another same-day entry", async () => {
+    const legacyRecord = {
+      id: "legacy-gratitude-id",
+      entryDate: "2026-01-04",
+      reflectionText: null,
+      gratitudeText: "Sou grato.",
+      status: "ACTIVE",
+      sourceType: "HOME_GRATITUDE",
+      sourceTitleSnapshot: null,
+      promptSnapshot: null,
+      category: "GRATITUDE",
+      isPinned: false,
+      references: [],
+      tags: [],
+      createdAtUtc: "2026-09-11T12:34:56.000Z",
+      updatedAtUtc: "2026-09-11T12:34:56.000Z",
+    };
+    const unrelatedRecord = {
+      ...legacyRecord,
+      id: "free-entry-id",
+      sourceType: "FREE",
+      category: "REFLECTION",
+    };
+    const repository = {
+      list: jest.fn().mockResolvedValue([
+        unrelatedRecord,
+        legacyRecord,
+      ]),
+    };
+    const service = new JournalService(
+      repository as never,
+      {} as never,
+      {} as never,
+      {} as never,
+    );
+
+    const entries =
+      await service.listLegacyGratitudeMigrationEntries();
+
+    expect(repository.list).toHaveBeenCalledTimes(1);
+    expect(entries).toEqual([legacyRecord]);
+  });
+
+  it("creates ACTIVE HOME_GRATITUDE without inventing a historical timestamp", async () => {
+    const create = jest.fn().mockResolvedValue(undefined);
+    const repository = {
+      create,
+    };
+    const canonicalIdFactory = {
+      create: jest.fn().mockReturnValue(
+        "migration-entry-id",
+      ),
+    };
+    const now = new Date(
+      "2026-09-11T12:34:56.000Z",
+    );
+    const clock = {
+      now: jest.fn().mockReturnValue(now),
+    };
+    const datePolicy = {
+      toUtcTimestamp: jest.fn().mockReturnValue(
+        "2026-09-11T12:34:56.000Z",
+      ),
+    };
+    const service = new JournalService(
+      repository as never,
+      canonicalIdFactory as never,
+      clock as never,
+      datePolicy as never,
+    );
+
+    const created =
+      await service.createLegacyGratitudeMigrationEntry({
+        entryDate: "2026-01-04" as never,
+        gratitudeText: "Sou grato.",
+      });
+
+    expect(canonicalIdFactory.create).toHaveBeenCalledWith(
+      "journal_entry",
+    );
+    expect(clock.now).toHaveBeenCalledTimes(1);
+    expect(datePolicy.toUtcTimestamp).toHaveBeenCalledWith(
+      now,
+    );
+    expect(created).toEqual({
+      id: "migration-entry-id",
+      entryDate: "2026-01-04",
+      reflectionText: null,
+      gratitudeText: "Sou grato.",
+      status: "ACTIVE",
+      sourceType: "HOME_GRATITUDE",
+      sourceTitleSnapshot: null,
+      promptSnapshot: null,
+      category: "GRATITUDE",
+      isPinned: false,
+      references: [],
+      tags: [],
+      createdAtUtc: "2026-09-11T12:34:56.000Z",
+      updatedAtUtc: "2026-09-11T12:34:56.000Z",
+    });
+    expect(create).toHaveBeenCalledTimes(1);
+    expect(create).toHaveBeenCalledWith(created);
+  });
+});
+
+describe("JournalService legacy gratitude reconciliation boundary", () => {
+  function makeLegacyGratitudeRecord(
+    overrides: Record<string, unknown> = {},
+  ) {
+    return {
+      id: "legacy-gratitude-id",
+      entryDate: "2026-01-04",
+      reflectionText: null,
+      gratitudeText: "Original",
+      status: "ACTIVE",
+      sourceType: "HOME_GRATITUDE",
+      sourceTitleSnapshot: null,
+      promptSnapshot: null,
+      category: "GRATITUDE",
+      isPinned: false,
+      references: [],
+      tags: [],
+      createdAtUtc: "2026-09-10T10:00:00.000Z",
+      updatedAtUtc: "2026-09-10T10:00:00.000Z",
+      ...overrides,
+    };
+  }
+
+  it("updates only a HOME_GRATITUDE mirror and preserves identity plus createdAtUtc", async () => {
+    const update = jest.fn().mockResolvedValue(undefined);
+    const repository = {
+      update,
+    };
+    const now = new Date(
+      "2026-09-11T12:34:56.000Z",
+    );
+    const clock = {
+      now: jest.fn().mockReturnValue(now),
+    };
+    const datePolicy = {
+      toUtcTimestamp: jest.fn().mockReturnValue(
+        "2026-09-11T12:34:56.000Z",
+      ),
+    };
+    const service = new JournalService(
+      repository as never,
+      {} as never,
+      clock as never,
+      datePolicy as never,
+    );
+    const existing = makeLegacyGratitudeRecord();
+
+    const updated =
+      await service.updateLegacyGratitudeMigrationEntry(
+        existing as never,
+        {
+          entryDate: "2026-01-04" as never,
+          gratitudeText: "Atualizada",
+        },
+      );
+
+    expect(updated).toEqual({
+      ...existing,
+      gratitudeText: "Atualizada",
+      updatedAtUtc: "2026-09-11T12:34:56.000Z",
+    });
+    expect(updated.id).toBe(existing.id);
+    expect(updated.createdAtUtc).toBe(
+      existing.createdAtUtc,
+    );
+    expect(update).toHaveBeenCalledWith(updated);
+  });
+
+  it("rejects update of a non-HOME_GRATITUDE entry before repository mutation", async () => {
+    const update = jest.fn();
+    const service = new JournalService(
+      { update } as never,
+      {} as never,
+      { now: jest.fn() } as never,
+      { toUtcTimestamp: jest.fn() } as never,
+    );
+
+    await expect(
+      service.updateLegacyGratitudeMigrationEntry(
+        makeLegacyGratitudeRecord({
+          sourceType: "FREE",
+        }) as never,
+        {
+          entryDate: "2026-01-04" as never,
+          gratitudeText: "Não tocar",
+        },
+      ),
+    ).rejects.toThrow(
+      "PERSONAL_LEGACY_GRATITUDE_UPDATE_SOURCE_INVALID",
+    );
+
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  it("removes only a HOME_GRATITUDE mirror by its existing id", async () => {
+    const remove = jest.fn().mockResolvedValue(undefined);
+    const service = new JournalService(
+      { remove } as never,
+      {} as never,
+      {} as never,
+      {} as never,
+    );
+    const existing = makeLegacyGratitudeRecord();
+
+    await service.removeLegacyGratitudeMigrationEntry(
+      existing as never,
+    );
+
+    expect(remove).toHaveBeenCalledWith(
+      "legacy-gratitude-id",
+    );
+  });
+
+  it("rejects removal of a non-HOME_GRATITUDE entry", async () => {
+    const remove = jest.fn();
+    const service = new JournalService(
+      { remove } as never,
+      {} as never,
+      {} as never,
+      {} as never,
+    );
+
+    await expect(
+      service.removeLegacyGratitudeMigrationEntry(
+        makeLegacyGratitudeRecord({
+          sourceType: "PLAN",
+        }) as never,
+      ),
+    ).rejects.toThrow(
+      "PERSONAL_LEGACY_GRATITUDE_REMOVE_SOURCE_INVALID",
+    );
+
+    expect(remove).not.toHaveBeenCalled();
+  });
+});

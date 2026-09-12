@@ -8,7 +8,7 @@ import { bootstrapBibleDatabase } from "./src/bible/database/bibleDatabaseBootst
 import { bootstrapHymnalDatabase } from "./src/hymnal/database/hymnalDatabaseBootstrap";
 import RootNavigator from "./src/navigation/RootNavigator";
 import { initNotifications } from "./src/services/notifications";
-import { runAutoBackup } from "./src/utils/autoBackup";
+import { runAutoBackup } from "./src/utils/autoBackup";import { requestLegacyGratitudeRuntimeReconciliation } from "./src/services/journal/legacyGratitudeRuntime";
 
 export default function App() {
   useEffect(() => {
@@ -26,6 +26,12 @@ export default function App() {
     void bootstrapHymnalDatabase().catch((error: unknown) => {
       console.error("[HymnalDatabase] bootstrap failed", error);
     });
+  }, []);
+
+  useEffect(() => {
+    void requestLegacyGratitudeRuntimeReconciliation(
+      "startup",
+    );
   }, []);
 
   useEffect(() => {

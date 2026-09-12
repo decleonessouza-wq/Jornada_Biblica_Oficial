@@ -967,4 +967,114 @@ export class JournalService {
   ): Promise<void> {
     await this.repository.remove(id);
   }
+
+  async listLegacyGratitudeMigrationEntries(): Promise<
+    readonly JournalEntryPersistenceRecord[]
+  > {
+    const entries = await this.repository.list();
+
+    return entries.filter(
+      (entry) => entry.sourceType === "HOME_GRATITUDE",
+    );
+  }
+
+  async createLegacyGratitudeMigrationEntry(
+    input: Readonly<{
+      entryDate: PersonalLocalDate;
+      gratitudeText: string;
+    }>,
+  ): Promise<JournalEntryPersistenceRecord> {
+    const gratitudeText = normalizeGratitudeText(
+      input.gratitudeText,
+    );
+
+    assertJournalContentRequired(null, gratitudeText);
+
+    const now = this.clock.now();
+    const timestamp =
+      this.datePolicy.toUtcTimestamp(now);
+
+    const entry: JournalEntryPersistenceRecord = {
+      id: this.canonicalIdFactory.create(
+        "journal_entry",
+      ),
+      entryDate: input.entryDate,
+      reflectionText: null,
+      gratitudeText,
+      status: "ACTIVE",
+      sourceType: "HOME_GRATITUDE",
+      sourceTitleSnapshot: null,
+      promptSnapshot: null,
+      category: "GRATITUDE",
+      isPinned: false,
+      references: [],
+      tags: [],
+      createdAtUtc: timestamp,
+      updatedAtUtc: timestamp,
+    };
+
+    await this.repository.create(entry);
+
+    return entry;
+  }
+
+  async updateLegacyGratitudeMigrationEntry(
+    existing: JournalEntryPersistenceRecord,
+    input: Readonly<{
+      entryDate: PersonalLocalDate;
+      gratitudeText: string;
+    }>,
+  ): Promise<JournalEntryPersistenceRecord> {
+    if (existing.sourceType !== "HOME_GRATITUDE") {
+      throw new Error(
+        "PERSONAL_LEGACY_GRATITUDE_UPDATE_SOURCE_INVALID",
+      );
+    }
+
+    if (existing.entryDate !== input.entryDate) {
+      throw new Error(
+        "PERSONAL_LEGACY_GRATITUDE_UPDATE_DATE_INVALID",
+      );
+    }
+
+    const gratitudeText = normalizeGratitudeText(
+      input.gratitudeText,
+    );
+
+    assertJournalContentRequired(null, gratitudeText);
+
+    const updated: JournalEntryPersistenceRecord = {
+      ...existing,
+      entryDate: input.entryDate,
+      reflectionText: null,
+      gratitudeText,
+      status: "ACTIVE",
+      sourceType: "HOME_GRATITUDE",
+      sourceTitleSnapshot: null,
+      promptSnapshot: null,
+      category: "GRATITUDE",
+      isPinned: false,
+      references: [],
+      tags: [],
+      updatedAtUtc: this.datePolicy.toUtcTimestamp(
+        this.clock.now(),
+      ),
+    };
+
+    await this.repository.update(updated);
+
+    return updated;
+  }
+
+  async removeLegacyGratitudeMigrationEntry(
+    existing: JournalEntryPersistenceRecord,
+  ): Promise<void> {
+    if (existing.sourceType !== "HOME_GRATITUDE") {
+      throw new Error(
+        "PERSONAL_LEGACY_GRATITUDE_REMOVE_SOURCE_INVALID",
+      );
+    }
+
+    await this.repository.remove(existing.id);
+  }
 }

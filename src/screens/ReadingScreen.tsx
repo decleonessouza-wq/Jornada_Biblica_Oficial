@@ -14,7 +14,7 @@ import {
   ImageBackground,
 } from "react-native";
 import { useEffect, useMemo, useState, useCallback } from "react";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import AsyncStorage from "@react-native-async-storage/async-storage";import { requestLegacyGratitudeRuntimeReconciliation } from "../services/journal/legacyGratitudeRuntime";
 import { WebView } from "react-native-webview";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -895,7 +895,11 @@ export default function ReadingScreen({ route }: Props) {
 
       map[date] = text;
 
-      await AsyncStorage.setItem(GRATITUDE_KEY, JSON.stringify(map));
+      await AsyncStorage.setItem(GRATITUDE_KEY, JSON.stringify(map));      await requestLegacyGratitudeRuntimeReconciliation(
+        "reading-delete",
+      );      await requestLegacyGratitudeRuntimeReconciliation(
+        "reading-save",
+      );
       setSavedGratitude(text);
 
       Alert.alert("Salvo ✅", "Sua gratidão foi registrada.");
