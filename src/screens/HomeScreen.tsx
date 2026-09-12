@@ -1,3 +1,4 @@
+import { getPersonalPlatformHub } from "../services/personalPlatformHub";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Alert,
@@ -325,14 +326,28 @@ export default function HomeScreen() {
 
   const loadGratitude = useCallback(async () => {
     try {
-      const raw = await AsyncStorage.getItem("gratitudeByDate");
-      const parsed = raw ? JSON.parse(raw) : {};
-      setGratitudeByDate(sanitizeGratitudeMap(parsed));
+      const { journalService } =
+        getPersonalPlatformHub();
+      const entry =
+        await journalService.getHomeGratitudeForDate(
+          today,
+        );
+
+      setGratitudeByDate(
+        sanitizeGratitudeMap(
+          entry?.gratitudeText
+            ? { [today]: entry.gratitudeText }
+            : {},
+        ),
+      );
     } catch (err) {
-      console.log("Erro ao carregar gratitudeByDate", err);
+      console.log(
+        "Erro ao carregar gratidão do Journal",
+        err,
+      );
       setGratitudeByDate({});
     }
-  }, []);
+  }, [today]);
 
   const loadProgress = useCallback(async () => {
     try {

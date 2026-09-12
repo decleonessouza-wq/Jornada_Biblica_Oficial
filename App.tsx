@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import {
   AppState,
   AppStateStatus,
@@ -8,9 +8,10 @@ import { bootstrapBibleDatabase } from "./src/bible/database/bibleDatabaseBootst
 import { bootstrapHymnalDatabase } from "./src/hymnal/database/hymnalDatabaseBootstrap";
 import RootNavigator from "./src/navigation/RootNavigator";
 import { initNotifications } from "./src/services/notifications";
-import { runAutoBackup } from "./src/utils/autoBackup";import { requestLegacyGratitudeRuntimeReconciliation } from "./src/services/journal/legacyGratitudeRuntime";
+import { runAutoBackup } from "./src/utils/autoBackup";import { prepareLegacyGratitudeCutover } from "./src/services/journal/legacyGratitudeRuntime";
 
 export default function App() {
+  const [gratitudeCutoverReady, setGratitudeCutoverReady] = useState(false);
   useEffect(() => {
     // Inicializa handler + canal Android (sem pedir permissão)
     initNotifications();
@@ -29,9 +30,24 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    void requestLegacyGratitudeRuntimeReconciliation(
-      "startup",
-    );
+    let mounted = true;
+
+    void prepareLegacyGratitudeCutover()
+      .then(() => {
+        if (mounted) {
+          setGratitudeCutoverReady(true);
+        }
+      })
+      .catch((error: unknown) => {
+        console.error(
+          "[LegacyGratitudeRuntime] cutover preparation failed",
+          error,
+        );
+      });
+
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -46,6 +62,8 @@ export default function App() {
 
     return () => sub.remove();
   }, []);
+
+  if (!gratitudeCutoverReady) return null;
 
   return <RootNavigator />;
 }

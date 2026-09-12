@@ -1,3 +1,4 @@
+import { getPersonalPlatformHub } from "../services/personalPlatformHub";
 import {
   View,
   Text,
@@ -14,8 +15,7 @@ import {
   ImageBackground,
 } from "react-native";
 import { useEffect, useMemo, useState, useCallback } from "react";
-import AsyncStorage from "@react-native-async-storage/async-storage";import { requestLegacyGratitudeRuntimeReconciliation } from "../services/journal/legacyGratitudeRuntime";
-import { WebView } from "react-native-webview";
+import AsyncStorage from "@react-native-async-storage/async-storage";import { WebView } from "react-native-webview";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
@@ -62,8 +62,6 @@ const OPEN_MODE_KEY = "preferredReadingOpenMode";
 const COMPLETED_KEY = "completedDays";
 
 // ✅ gratidão por data
-const GRATITUDE_KEY = "gratitudeByDate";
-
 function normalizeTextKeepNumbers(s: string) {
   return s
     .toLowerCase()
@@ -818,7 +816,7 @@ export default function ReadingScreen({ route }: Props) {
       return;
     }
     try {
-      const raw = await AsyncStorage.getItem(GRATITUDE_KEY);
+      const raw = JSON.stringify(await getPersonalPlatformHub().journalService.exportHomeGratitudeMap());
       const parsedObj = raw ? JSON.parse(raw) : {};
       const map = parsedObj && typeof parsedObj === "object" ? parsedObj : {};
       const existing = typeof map[dateIso] === "string" ? map[dateIso] : null;
@@ -889,17 +887,13 @@ export default function ReadingScreen({ route }: Props) {
     }
 
     try {
-      const raw = await AsyncStorage.getItem(GRATITUDE_KEY);
+      const raw = JSON.stringify(await getPersonalPlatformHub().journalService.exportHomeGratitudeMap());
       const parsedObj = raw ? JSON.parse(raw) : {};
       const map = parsedObj && typeof parsedObj === "object" ? parsedObj : {};
 
       map[date] = text;
 
-      await AsyncStorage.setItem(GRATITUDE_KEY, JSON.stringify(map));      await requestLegacyGratitudeRuntimeReconciliation(
-        "reading-delete",
-      );      await requestLegacyGratitudeRuntimeReconciliation(
-        "reading-save",
-      );
+      await getPersonalPlatformHub().journalService.replaceHomeGratitudeMap(map);
       setSavedGratitude(text);
 
       Alert.alert("Salvo ✅", "Sua gratidão foi registrada.");
@@ -911,13 +905,13 @@ export default function ReadingScreen({ route }: Props) {
   async function deleteGratitude() {
     if (!date) return;
     try {
-      const raw = await AsyncStorage.getItem(GRATITUDE_KEY);
+      const raw = JSON.stringify(await getPersonalPlatformHub().journalService.exportHomeGratitudeMap());
       const parsedObj = raw ? JSON.parse(raw) : {};
       const map = parsedObj && typeof parsedObj === "object" ? parsedObj : {};
 
       if (map[date]) delete map[date];
 
-      await AsyncStorage.setItem(GRATITUDE_KEY, JSON.stringify(map));
+      await getPersonalPlatformHub().journalService.replaceHomeGratitudeMap(map);
       setSavedGratitude(null);
       setGratitudeText("");
 

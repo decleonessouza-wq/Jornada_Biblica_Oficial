@@ -6,8 +6,10 @@ import {
   type LegacyGratitudeMigrationResult,
 } from "./legacyGratitudeMigration";
 
-export const LEGACY_GRATITUDE_STORAGE_KEY =
+const LEGACY_GRATITUDE_STORAGE_KEY =
   "gratitudeByDate";
+const LEGACY_GRATITUDE_CUTOVER_MARKER_KEY =
+  "journalGratitudeCutoverV1";
 
 export type LegacyGratitudeRuntimeContext =
   | "startup"
@@ -20,6 +22,8 @@ export type LegacyGratitudeRuntimeContext =
 
 let reconciliationQueue: Promise<void> =
   Promise.resolve();
+let cutoverPreparationPromise: Promise<void> | null =
+  null;
 
 async function readLegacyGratitudeInput(): Promise<unknown> {
   const raw = await AsyncStorage.getItem(
@@ -37,6 +41,14 @@ async function readLegacyGratitudeInput(): Promise<unknown> {
       "PERSONAL_LEGACY_GRATITUDE_STORAGE_INVALID_JSON",
     );
   }
+}
+
+export async function hasLegacyGratitudeCutoverCompleted(): Promise<boolean> {
+  return (
+    (await AsyncStorage.getItem(
+      LEGACY_GRATITUDE_CUTOVER_MARKER_KEY,
+    )) === "1"
+  );
 }
 
 async function reconcileLegacyGratitudeOnce(): Promise<
@@ -69,9 +81,45 @@ export function reconcileLegacyGratitudeRuntime(): Promise<
   return task;
 }
 
+async function performLegacyGratitudeCutoverPreparation(): Promise<void> {
+  if (await hasLegacyGratitudeCutoverCompleted()) {
+    return;
+  }
+
+  await reconcileLegacyGratitudeRuntime();
+
+  await AsyncStorage.setItem(
+    LEGACY_GRATITUDE_CUTOVER_MARKER_KEY,
+    "1",
+  );
+}
+
+export function prepareLegacyGratitudeCutover(): Promise<void> {
+  if (cutoverPreparationPromise !== null) {
+    return cutoverPreparationPromise;
+  }
+
+  const current =
+    performLegacyGratitudeCutoverPreparation();
+
+  cutoverPreparationPromise = current;
+
+  void current.catch(() => {
+    if (cutoverPreparationPromise === current) {
+      cutoverPreparationPromise = null;
+    }
+  });
+
+  return current;
+}
+
 export async function requestLegacyGratitudeRuntimeReconciliation(
   context: LegacyGratitudeRuntimeContext,
 ): Promise<LegacyGratitudeMigrationResult | null> {
+  if (await hasLegacyGratitudeCutoverCompleted()) {
+    return null;
+  }
+
   try {
     return await reconcileLegacyGratitudeRuntime();
   } catch (error) {

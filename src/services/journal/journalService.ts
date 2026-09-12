@@ -1,3 +1,4 @@
+import { sanitizeLegacyGratitudeMap } from "./legacyGratitudeMigration";
 import type {
   BibleReference,
 } from "../../domain/bible/bibleReference";
@@ -966,6 +967,162 @@ export class JournalService {
     id: JournalEntryId,
   ): Promise<void> {
     await this.repository.remove(id);
+  }
+
+  async listActiveHomeGratitudeEntries(): Promise<
+    readonly JournalEntryPersistenceRecord[]
+  > {
+    const entries =
+      await this.listLegacyGratitudeMigrationEntries();
+    const active = entries.filter(
+      (entry) =>
+        entry.status === "ACTIVE" &&
+        entry.category === "GRATITUDE",
+    );
+    const seen = new Set<string>();
+
+    for (const entry of active) {
+      if (seen.has(entry.entryDate)) {
+        throw new Error(
+          "PERSONAL_HOME_GRATITUDE_DUPLICATE_DATE",
+        );
+      }
+
+      seen.add(entry.entryDate);
+    }
+
+    return active;
+  }
+
+  async getHomeGratitudeForDate(
+    entryDate: string,
+  ): Promise<JournalEntryPersistenceRecord | null> {
+    const matches = (
+      await this.listActiveHomeGratitudeEntries()
+    ).filter((entry) => entry.entryDate === entryDate);
+
+    if (matches.length > 1) {
+      throw new Error(
+        "PERSONAL_HOME_GRATITUDE_DUPLICATE_DATE",
+      );
+    }
+
+    return matches[0] ?? null;
+  }
+
+  async listActiveGratitudeEntries(): Promise<
+    readonly JournalEntryPersistenceRecord[]
+  > {
+    const entries = await this.repository.list();
+
+    return entries.filter(
+      (entry) =>
+        entry.status === "ACTIVE" &&
+        entry.category === "GRATITUDE",
+    );
+  }
+
+  async countDistinctActiveGratitudeDates(): Promise<number> {
+    const entries =
+      await this.listActiveGratitudeEntries();
+
+    return new Set(
+      entries.map((entry) => entry.entryDate),
+    ).size;
+  }
+
+  async exportHomeGratitudeMap(): Promise<
+    Record<string, string>
+  > {
+    const entries =
+      await this.listActiveHomeGratitudeEntries();
+    const result: Record<string, string> = {};
+
+    for (const entry of entries) {
+      if (entry.gratitudeText !== null) {
+        result[entry.entryDate] = entry.gratitudeText;
+      }
+    }
+
+    return result;
+  }
+
+  async replaceHomeGratitudeMap(
+    input: unknown,
+  ): Promise<Record<string, string>> {
+    const candidates =
+      sanitizeLegacyGratitudeMap(input);
+    const candidatesByDate = new Map(
+      candidates.map((candidate) => [
+        candidate.entryDate,
+        candidate,
+      ]),
+    );
+    const existing =
+      await this.listLegacyGratitudeMigrationEntries();
+    const existingByDate = new Map<
+      PersonalLocalDate,
+      JournalEntryPersistenceRecord
+    >();
+
+    for (const entry of existing) {
+      if (existingByDate.has(entry.entryDate)) {
+        throw new Error(
+          "PERSONAL_HOME_GRATITUDE_DUPLICATE_DATE",
+        );
+      }
+
+      existingByDate.set(entry.entryDate, entry);
+    }
+
+    for (const entry of existing) {
+      if (!candidatesByDate.has(entry.entryDate)) {
+        await this.removeLegacyGratitudeMigrationEntry(
+          entry,
+        );
+      }
+    }
+
+    for (const candidate of candidates) {
+      const current =
+        existingByDate.get(candidate.entryDate);
+
+      if (current === undefined) {
+        await this.createLegacyGratitudeMigrationEntry(
+          candidate,
+        );
+        continue;
+      }
+
+      await this.updateLegacyGratitudeMigrationEntry(
+        current,
+        candidate,
+      );
+    }
+
+    return this.exportHomeGratitudeMap();
+  }
+
+  async clearHomeGratitudeEntries(): Promise<void> {
+    const existing =
+      await this.listLegacyGratitudeMigrationEntries();
+    const seen = new Set<string>();
+
+    for (const entry of existing) {
+      if (seen.has(entry.entryDate)) {
+        throw new Error(
+          "PERSONAL_HOME_GRATITUDE_DUPLICATE_DATE",
+        );
+      }
+
+      seen.add(entry.entryDate);
+    }
+
+    for (const entry of existing) {
+      await this.removeLegacyGratitudeMigrationEntry(
+        entry,
+      );
+    }
   }
 
   async listLegacyGratitudeMigrationEntries(): Promise<

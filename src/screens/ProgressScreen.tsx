@@ -1,3 +1,4 @@
+import { getPersonalPlatformHub } from "../services/personalPlatformHub";
 import {
   View,
   Text,
@@ -8,7 +9,6 @@ import {
   useWindowDimensions,
 } from "react-native";
 import { useCallback, useMemo, useState } from "react";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect } from "@react-navigation/native";
 
 import { colors } from "../theme/colors";
@@ -168,10 +168,11 @@ export default function ProgressScreen() {
     setPlanStartDate(start);
 
     try {
-      const raw = await AsyncStorage.getItem("gratitudeByDate");
-      const parsed = raw ? JSON.parse(raw) : {};
-      const safe = parsed && typeof parsed === "object" ? parsed : {};
-      setGratitudeCount(Object.keys(safe).length);
+      const { journalService } =
+        getPersonalPlatformHub();
+      setGratitudeCount(
+        await journalService.countDistinctActiveGratitudeDates(),
+      );
     } catch {
       setGratitudeCount(0);
     }
