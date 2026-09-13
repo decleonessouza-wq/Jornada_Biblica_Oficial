@@ -89,6 +89,11 @@ export default function AppDrawerNavigator() {
             navigation.navigate("Journal");
           };
 
+          const handleOpenFavorites = () => {
+            closeQuickActions();
+            navigation.navigate("Favorites");
+          };
+
           return (
             <>
               <MainTabsNavigator onQuickAction={openQuickActions} />
@@ -100,6 +105,7 @@ export default function AppDrawerNavigator() {
                 onOpenProgress={handleOpenProgress}
                 onOpenHistory={handleOpenHistory}
                 onOpenJournal={handleOpenJournal}
+                onOpenFavorites={handleOpenFavorites}
               />
             </>
           );

@@ -16,6 +16,9 @@ import {
 } from "react-native";
 
 import type { Favorite } from "../domain/favorites/favorite";
+import {
+  HARPA_CRISTA_JORNADA_EDITION_METADATA,
+} from "../hymnal/catalog/harpaCristaEditionMetadata";
 import type { AppDrawerScreenProps } from "../navigation/types";
 import { getPersonalPlatformHub } from "../services/personalPlatformHub";
 import { colors } from "../theme/colors";
@@ -300,7 +303,7 @@ export default function FavoritesScreen({
                       {hymnLabel}
                     </Text>
                     <Text style={styles.favoriteMeta}>
-                      Edição {favorite.target.editionId}
+                      Edição {HARPA_CRISTA_JORNADA_EDITION_METADATA.displayName}
                     </Text>
                   </Pressable>
                 );
@@ -425,16 +428,16 @@ const styles = StyleSheet.create({
     fontWeight: "800",
   },
   list: {
-    gap: 10,
+    gap: 8,
   },
   favoriteCard: {
-    gap: 7,
+    gap: 4,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 18,
+    borderRadius: 14,
     backgroundColor: colors.surface,
-    paddingHorizontal: 16,
-    paddingVertical: 15,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
   },
   favoriteCardPressed: {
     opacity: 0.82,
@@ -464,14 +467,14 @@ const styles = StyleSheet.create({
   },
   favoriteTitle: {
     color: colors.textStrong,
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: "800",
-    lineHeight: 23,
+    lineHeight: 20,
   },
   favoriteMeta: {
     color: colors.textMuted,
-    fontSize: 13,
-    lineHeight: 18,
+    fontSize: 12,
+    lineHeight: 16,
   },
   pressed: {
     opacity: 0.82,

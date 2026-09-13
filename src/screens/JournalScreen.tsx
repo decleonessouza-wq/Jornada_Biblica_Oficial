@@ -1047,7 +1047,16 @@ export default function JournalScreen({
               <Text style={styles.fieldLabel}>
                 Categoria
               </Text>
-              <View style={styles.chipRow}>
+              <ScrollView
+                horizontal
+                nestedScrollEnabled
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{
+                  flexDirection: "row",
+                  gap: 8,
+                  paddingRight: 4,
+                }}
+              >
                 <Pressable
                   accessibilityRole="button"
                   accessibilityLabel="Mostrar todas as categorias"
@@ -1131,7 +1140,7 @@ export default function JournalScreen({
                     Sem categoria
                   </Text>
                 </Pressable>
-              </View>
+              </ScrollView>
             </View>
 
             {availableTags.length > 0 && (
