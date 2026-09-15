@@ -1105,7 +1105,7 @@ export default function ReadingScreen({ route }: Props) {
     const planReference =
       structuredReadingDay?.readingUnit.bibleReference ?? null;
 
-    navigation.navigate("AppShell", {
+    navigation.push("AppShell", {
       screen: "Journal",
       params: {
         screen: "JournalEntryEditor",

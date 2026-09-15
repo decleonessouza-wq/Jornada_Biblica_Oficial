@@ -1,3 +1,5 @@
+import { readFileSync } from "fs";
+import { resolve } from "path";
 import React from "react";
 import {
   act,
@@ -17,6 +19,15 @@ import {
   getPersonalPlatformHub,
 } from "../src/services/personalPlatformHub";
 import JournalScreen from "../src/screens/JournalScreen";
+
+jest.mock("react-native-safe-area-context", () => ({
+  useSafeAreaInsets: () => ({
+    top: 0,
+    right: 0,
+    bottom: 48,
+    left: 0,
+  }),
+}));
 
 jest.mock("@react-navigation/native", () => ({
   useFocusEffect: jest.fn(),
@@ -844,7 +855,70 @@ describe(
         });
       });
     });
-    it("uses only the Hub journal service and keeps search telemetry and direct persistence out", () => {
+    it("protects the journal hero text with a localized contrast panel", () => {
+    const source = readFileSync(
+      resolve(__dirname, "../src/screens/JournalScreen.tsx"),
+      "utf8",
+    );
+
+    expect(source).toContain("<View style={styles.heroTextPanel}>");
+    expect(source).toContain(
+      'backgroundColor: "rgba(255, 255, 255, 0.86)"',
+    );
+    expect(source).toContain("borderRadius: 16");
+    expect(source).toContain("paddingHorizontal: 14");
+    expect(source).toContain("paddingVertical: 12");
+    expect(source).toContain('testID="journal-hero"');
+    expect(source).toContain('resizeMode="cover"');
+
+    const headerImageStart = source.indexOf("  headerImage: {");
+    const heroTextPanelStart = source.indexOf(
+      "  heroTextPanel: {",
+      headerImageStart,
+    );
+
+    expect(headerImageStart).toBeGreaterThanOrEqual(0);
+    expect(heroTextPanelStart).toBeGreaterThan(headerImageStart);
+
+    const headerImageStyle = source.slice(
+      headerImageStart,
+      heroTextPanelStart,
+    );
+
+    expect(headerImageStyle).not.toContain("opacity:");
+    expect(headerImageStyle).not.toContain("blurRadius");
+    expect(headerImageStyle).not.toContain("tintColor");
+  });
+  it("keeps the journal hero image fully opaque", () => {
+    const source = readFileSync(
+      resolve(__dirname, "../src/screens/JournalScreen.tsx"),
+      "utf8",
+    );
+
+    const headerImageStart = source.indexOf("  headerImage: {");
+    const headerImageEnd = source.indexOf(
+      "  eyebrow: {",
+      headerImageStart,
+    );
+
+    expect(headerImageStart).toBeGreaterThanOrEqual(0);
+    expect(headerImageEnd).toBeGreaterThan(headerImageStart);
+
+    const headerImageStyle = source.slice(
+      headerImageStart,
+      headerImageEnd,
+    );
+
+    expect(source).toContain('testID="journal-hero"');
+    expect(source).toContain(
+      'source={require("../../assets/module-heroes/journal-hero.png")}',
+    );
+    expect(source).toContain('resizeMode="cover"');
+    expect(source).toContain("imageStyle={styles.headerImage}");
+    expect(headerImageStyle).toContain("borderRadius: 22");
+    expect(headerImageStyle).not.toContain("opacity:");
+  });
+  it("uses only the Hub journal service and keeps search telemetry and direct persistence out", () => {
       const source = fs.readFileSync(
         "src/screens/JournalScreen.tsx",
         "utf8",

@@ -328,10 +328,11 @@ export default function HomeScreen() {
     try {
       const { journalService } =
         getPersonalPlatformHub();
+      const entries =
+        await journalService.listActiveGratitudeEntries();
       const entry =
-        await journalService.getHomeGratitudeForDate(
-          today,
-        );
+        entries.find((candidate) => candidate.entryDate === today) ??
+        null;
 
       setGratitudeByDate(
         sanitizeGratitudeMap(
@@ -348,6 +349,12 @@ export default function HomeScreen() {
       setGratitudeByDate({});
     }
   }, [today]);
+
+  useFocusEffect(
+    useCallback(() => {
+      void loadGratitude();
+    }, [loadGratitude]),
+  );
 
   const loadProgress = useCallback(async () => {
     try {

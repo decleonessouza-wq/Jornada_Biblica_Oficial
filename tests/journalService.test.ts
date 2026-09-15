@@ -225,10 +225,16 @@ describe("JournalService", () => {
     ];
 
     harness.listTags.mockResolvedValue(tags);
+    harness.list.mockResolvedValue([
+      {
+        status: "ACTIVE",
+        tags,
+      },
+    ]);
 
     await expect(
       harness.service.listTags(),
-    ).resolves.toBe(tags);
+    ).resolves.toEqual(tags);
 
     expect(harness.listTags).toHaveBeenCalledTimes(1);
   });

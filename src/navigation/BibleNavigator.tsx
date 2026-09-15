@@ -121,14 +121,21 @@ type BibleReaderRouteProps =
     onRequestJournalReference: (
       reference: BibleReference,
     ) => void;
+    onRequestFavorites: () => void;
   }>;
 
 function BibleReaderRoute({
   navigation,
   route,
   onRequestJournalReference,
+  onRequestFavorites,
 }: BibleReaderRouteProps) {
   const handleRequestBack = () => {
+    if (route.params.returnToFavorites) {
+      onRequestFavorites();
+      return;
+    }
+
     const state = navigation.getState();
     const hasLibraryBeforeReader = state.routes
       .slice(0, state.index)
@@ -145,7 +152,15 @@ function BibleReaderRoute({
   const handleRequestReferenceChange = (
     params: OfflineBibleReaderRouteParams,
   ) => {
-    navigation.replace("BibleReader", params);
+    navigation.replace("BibleReader", {
+      ...params,
+      ...(route.params.returnToFavorites === undefined
+        ? {}
+        : {
+            returnToFavorites:
+              route.params.returnToFavorites,
+          }),
+    });
   };
 
   return (
@@ -165,6 +180,11 @@ function BibleReaderRoute({
 export default function BibleNavigator({
   navigation,
 }: MainTabScreenProps<"BibleTab">) {
+  const handleRequestFavorites =
+    useCallback(() => {
+      navigation.navigate("Favorites");
+    }, [navigation]);
+
   const handleRequestJournalReference =
     useCallback(
       (reference: BibleReference) => {
@@ -284,6 +304,9 @@ export default function BibleNavigator({
             {...screenProps}
             onRequestJournalReference={
               handleRequestJournalReference
+            }
+            onRequestFavorites={
+              handleRequestFavorites
             }
           />
         )}

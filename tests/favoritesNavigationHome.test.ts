@@ -26,6 +26,12 @@ const mainTabsSource = readSource(
 const homeSource = readSource(
   "src/screens/HomeScreen.tsx",
 );
+const hymnalNavigatorSource = readSource(
+  "src/navigation/HymnalNavigator.tsx",
+);
+const hymnalReaderSource = readSource(
+  "src/hymnal/screens/HymnalReaderScreen.tsx",
+);
 
 describe("Favorites navigation and Home contract", () => {
   it("exposes Favorites as an undefined Drawer route", () => {
@@ -168,6 +174,46 @@ describe("Favorites navigation and Home contract", () => {
     );
     expect(mainTabsSource).not.toContain(
       "FavoritesScreen",
+    );
+  });
+
+  it("declares the Favorites origin on the Hymnal reader route", () => {
+    const routeStart = typesSource.indexOf(
+      "HymnalReader: {",
+    );
+    const routeEnd = typesSource.indexOf(
+      "  };",
+      routeStart,
+    );
+
+    expect(routeStart).toBeGreaterThanOrEqual(0);
+    expect(routeEnd).toBeGreaterThan(routeStart);
+
+    const routeBlock = typesSource.slice(
+      routeStart,
+      routeEnd,
+    );
+
+    expect(routeBlock).toContain(
+      "returnToFavorites?: boolean;",
+    );
+  });
+
+  it("routes the Hymnal reader back to Favorites when opened from Favorites", () => {
+    expect(hymnalNavigatorSource).toContain(
+      'navigation.navigate("Favorites")',
+    );
+    expect(hymnalNavigatorSource).toContain(
+      "onRequestFavorites={",
+    );
+    expect(hymnalReaderSource).toContain(
+      "returnToFavorites &&",
+    );
+    expect(hymnalReaderSource).toContain(
+      "onRequestFavorites",
+    );
+    expect(hymnalReaderSource).toContain(
+      '"Voltar para Favoritos"',
     );
   });
 });

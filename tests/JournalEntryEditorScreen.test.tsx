@@ -25,6 +25,15 @@ import {
 } from "../src/services/personalPlatformHub";
 import JournalEntryEditorScreen from "../src/screens/JournalEntryEditorScreen";
 
+jest.mock("react-native-safe-area-context", () => ({
+  useSafeAreaInsets: () => ({
+    top: 0,
+    right: 0,
+    bottom: 48,
+    left: 0,
+  }),
+}));
+
 jest.mock(
   "../src/services/personalPlatformHub",
   () => ({
@@ -188,10 +197,29 @@ function renderEditor(
     JournalEntryEditorSourceContext,
 ) {
   const goBack = jest.fn();
+  const rootGoBack = jest.fn();
+  const rootCanGoBack = jest.fn(
+    () => true,
+  );
+  const rootNavigation = {
+    canGoBack: rootCanGoBack,
+    goBack: rootGoBack,
+  };
+  const drawerNavigation = {
+    getParent: jest.fn(
+      () => rootNavigation,
+    ),
+  };
+  const getParent = jest.fn(
+    () => drawerNavigation,
+  );
 
   const view = render(
     <JournalEntryEditorScreen
-      navigation={{ goBack } as never}
+      navigation={{
+        goBack,
+        getParent,
+      } as never}
       route={{
         key: "journal-editor-test",
         name: "JournalEntryEditor",
@@ -214,6 +242,8 @@ function renderEditor(
   return {
     ...view,
     goBack,
+    rootGoBack,
+    rootCanGoBack,
   };
 }
 
@@ -636,8 +666,14 @@ describe(
           },
         );
         expect(
-          view.goBack,
+          view.rootCanGoBack,
         ).toHaveBeenCalledTimes(1);
+        expect(
+          view.rootGoBack,
+        ).toHaveBeenCalledTimes(1);
+        expect(
+          view.goBack,
+        ).not.toHaveBeenCalled();
       });
 
       expect(

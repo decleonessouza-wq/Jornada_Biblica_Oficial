@@ -53,13 +53,21 @@ function getSectionDisplayLabel(
   }
 }
 
+type HymnalReaderScreenProps =
+  HymnalStackScreenProps<"HymnalReader"> &
+  Readonly<{
+    onRequestFavorites?: () => void;
+  }>;
+
 export default function HymnalReaderScreen({
   navigation,
   route,
-}: HymnalStackScreenProps<"HymnalReader">) {
+  onRequestFavorites,
+}: HymnalReaderScreenProps) {
   const {
     editionId,
     hymnId,
+    returnToFavorites,
   } = route.params;
 
   const [status, setStatus] =
@@ -211,8 +219,22 @@ export default function HymnalReaderScreen({
         <Pressable
           testID="hymnal-reader-back"
           accessibilityRole="button"
-          accessibilityLabel="Voltar para a biblioteca da Harpa"
-          onPress={() => navigation.goBack()}
+          accessibilityLabel={
+            returnToFavorites
+              ? "Voltar para Favoritos"
+              : "Voltar para a biblioteca da Harpa"
+          }
+          onPress={() => {
+            if (
+              returnToFavorites &&
+              onRequestFavorites
+            ) {
+              onRequestFavorites();
+              return;
+            }
+
+            navigation.goBack();
+          }}
           style={({ pressed }) => [
             styles.backButton,
             pressed && styles.backButtonPressed,

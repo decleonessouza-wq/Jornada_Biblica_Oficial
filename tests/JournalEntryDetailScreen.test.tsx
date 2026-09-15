@@ -445,7 +445,7 @@ describe(
       });
     });
 
-    it("renders a trashed entry with restore as its only mutation action", async () => {
+    it("renders a trashed entry with restore and permanent delete actions", async () => {
       const view = await renderLoadedDetail({
         ...completeEntry,
         status: "TRASHED",
@@ -458,6 +458,11 @@ describe(
       expect(
         view.getByLabelText(
           "Restaurar registro do diário",
+        ),
+      ).toBeTruthy();
+      expect(
+        view.getByLabelText(
+          "Excluir registro permanentemente",
         ),
       ).toBeTruthy();
       expect(

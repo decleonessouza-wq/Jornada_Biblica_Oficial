@@ -32,6 +32,7 @@ export type OfflineBibleReaderRouteParams = Readonly<{
   bookId: BibleBookId;
   chapter: number;
   verse?: number;
+  returnToFavorites?: boolean;
 }>;
 
 export type OfflineBibleRouteContract = Readonly<{
@@ -105,7 +106,13 @@ export function parseOfflineBibleReaderRouteParams(
     return null;
   }
 
-  const { versionId, bookId, chapter, verse } = value;
+  const {
+    versionId,
+    bookId,
+    chapter,
+    verse,
+    returnToFavorites,
+  } = value;
 
   if (
     typeof versionId !== "string" ||
@@ -120,9 +127,26 @@ export function parseOfflineBibleReaderRouteParams(
     return null;
   }
 
+  if (
+    returnToFavorites !== undefined &&
+    typeof returnToFavorites !== "boolean"
+  ) {
+    return null;
+  }
+
+  const baseParams =
+    returnToFavorites === undefined
+      ? { versionId, bookId, chapter }
+      : {
+          versionId,
+          bookId,
+          chapter,
+          returnToFavorites,
+        };
+
   return verse === undefined
-    ? { versionId, bookId, chapter }
-    : { versionId, bookId, chapter, verse };
+    ? baseParams
+    : { ...baseParams, verse };
 }
 
 export function getOfflineBibleReaderRouteParamsForReference(
@@ -180,11 +204,20 @@ export function getPreviousOfflineBibleReaderRouteParams(
     return null;
   }
 
+  const originParams =
+    current.returnToFavorites === undefined
+      ? {}
+      : {
+          returnToFavorites:
+            current.returnToFavorites,
+        };
+
   if (current.chapter > 1) {
     return {
       versionId: current.versionId,
       bookId: current.bookId,
       chapter: current.chapter - 1,
+      ...originParams,
     };
   }
 
@@ -202,6 +235,7 @@ export function getPreviousOfflineBibleReaderRouteParams(
     versionId: current.versionId,
     bookId: previousBook.id,
     chapter: previousBook.chapterCount,
+    ...originParams,
   };
 }
 
@@ -214,6 +248,14 @@ export function getNextOfflineBibleReaderRouteParams(
     return null;
   }
 
+  const originParams =
+    current.returnToFavorites === undefined
+      ? {}
+      : {
+          returnToFavorites:
+            current.returnToFavorites,
+        };
+
   const currentBook = getBibleBookById(current.bookId);
 
   if (current.chapter < currentBook.chapterCount) {
@@ -221,6 +263,7 @@ export function getNextOfflineBibleReaderRouteParams(
       versionId: current.versionId,
       bookId: current.bookId,
       chapter: current.chapter + 1,
+      ...originParams,
     };
   }
 
@@ -241,6 +284,7 @@ export function getNextOfflineBibleReaderRouteParams(
     versionId: current.versionId,
     bookId: nextBook.id,
     chapter: 1,
+    ...originParams,
   };
 }
 

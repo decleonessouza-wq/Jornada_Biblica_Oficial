@@ -405,7 +405,26 @@ export class JournalService {
   }
 
   async listTags(): Promise<readonly JournalTag[]> {
-    return this.repository.listTags();
+    const [tags, entries] = await Promise.all([
+      this.repository.listTags(),
+      this.repository.list(),
+    ]);
+
+    const visibleTagIds = new Set<string>();
+
+    for (const entry of entries) {
+      if (entry.status === "TRASHED") {
+        continue;
+      }
+
+      for (const tag of entry.tags) {
+        visibleTagIds.add(tag.id);
+      }
+    }
+
+    return tags.filter((tag) =>
+      visibleTagIds.has(tag.id),
+    );
   }
 
   async search(
@@ -961,6 +980,37 @@ export class JournalService {
     await this.repository.update(restored);
 
     return restored;
+  }
+
+  async deletePermanently(
+    id: JournalEntryId,
+  ): Promise<void> {
+    const existing =
+      await this.repository.findById(id);
+
+    if (existing === null) {
+      throw new Error(
+        "PERSONAL_JOURNAL_PERMANENT_DELETE_TARGET_NOT_FOUND",
+      );
+    }
+
+    if (existing.status !== "TRASHED") {
+      throw new Error(
+        "PERSONAL_JOURNAL_PERMANENT_DELETE_TARGET_INVALID",
+      );
+    }
+
+    await this.repository.remove(id);
+  }
+
+  async emptyTrash(): Promise<number> {
+    if (this.repository.removeAllTrashed === undefined) {
+      throw new Error(
+        "PERSONAL_JOURNAL_EMPTY_TRASH_UNSUPPORTED",
+      );
+    }
+
+    return this.repository.removeAllTrashed();
   }
 
   async remove(

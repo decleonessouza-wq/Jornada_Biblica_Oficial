@@ -34,6 +34,7 @@ export type HymnalStackParamList = {
   HymnalReader: {
     editionId: HymnalEditionId;
     hymnId: HymnId;
+    returnToFavorites?: boolean;
   };
 };
 

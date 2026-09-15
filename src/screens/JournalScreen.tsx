@@ -6,6 +6,8 @@ import React, {
 import { useFocusEffect } from "@react-navigation/native";
 import {
   ActivityIndicator,
+  Alert,
+  ImageBackground,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -13,6 +15,7 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import type {
   JournalEntryPersistenceRecord,
@@ -68,6 +71,48 @@ type SearchFormState = Readonly<{
 
 const PAGE_SIZE = 20;
 
+const TAG_FILTER_COLLAPSED_LIMIT = 8;
+
+function getVisibleJournalTags(
+  tags: readonly JournalTag[],
+  selectedTagId: JournalTagId | null,
+  showAll: boolean,
+): readonly JournalTag[] {
+  if (
+    showAll ||
+    tags.length <= TAG_FILTER_COLLAPSED_LIMIT
+  ) {
+    return tags;
+  }
+
+  const collapsed = tags.slice(
+    0,
+    TAG_FILTER_COLLAPSED_LIMIT,
+  );
+
+  if (
+    selectedTagId === null ||
+    collapsed.some((tag) => tag.id === selectedTagId)
+  ) {
+    return collapsed;
+  }
+
+  const selectedTag = tags.find(
+    (tag) => tag.id === selectedTagId,
+  );
+
+  if (selectedTag === undefined) {
+    return collapsed;
+  }
+
+  return [
+    ...collapsed.slice(
+      0,
+      TAG_FILTER_COLLAPSED_LIMIT - 1,
+    ),
+    selectedTag,
+  ];
+}
 const CATEGORY_LABELS: Record<
   JournalCategory,
   string
@@ -646,7 +691,11 @@ function EntryCard({
 export default function JournalScreen({
   navigation,
 }: JournalScreenProps) {
+  const insets = useSafeAreaInsets();
+  const bottomContentPadding = Math.max(insets.bottom + 24, 52);
   const loadGenerationRef = useRef(0);
+  const [emptyTrashBusy, setEmptyTrashBusy] = useState(false);
+  const [trashActionMessage, setTrashActionMessage] = useState<string | null>(null);
   const [entries, setEntries] =
     useState<
       readonly JournalEntryPersistenceRecord[]
@@ -659,6 +708,8 @@ export default function JournalScreen({
     useState<ViewMode>("journal");
   const [availableTags, setAvailableTags] =
     useState<readonly JournalTag[]>([]);
+  const [showAllTags, setShowAllTags] =
+    useState(false);
   const [nextOffset, setNextOffset] =
     useState<number | null>(null);
   const [isLoadingMore, setIsLoadingMore] =
@@ -841,6 +892,56 @@ export default function JournalScreen({
     void loadEntries("journal");
   }, [loadEntries]);
 
+  const emptyTrash = useCallback(async () => {
+    if (emptyTrashBusy) {
+      return;
+    }
+
+    setEmptyTrashBusy(true);
+    setTrashActionMessage(null);
+
+    try {
+      await getPersonalPlatformHub().journalService.emptyTrash();
+      setEntries([]);
+      setNextOffset(null);
+      setStatus("ready");
+    } catch {
+      setTrashActionMessage(
+        "Não foi possível esvaziar a lixeira agora. Tente novamente.",
+      );
+    } finally {
+      setEmptyTrashBusy(false);
+    }
+  }, [emptyTrashBusy]);
+
+  const requestEmptyTrash = useCallback(() => {
+    if (
+      viewMode !== "trash" ||
+      entries.length === 0 ||
+      emptyTrashBusy
+    ) {
+      return;
+    }
+
+    Alert.alert(
+      "Esvaziar lixeira?",
+      "Todos os registros na lixeira serão excluídos permanentemente. Esta ação não pode ser desfeita.",
+      [
+        {
+          text: "Cancelar",
+          style: "cancel",
+        },
+        {
+          text: "Esvaziar",
+          style: "destructive",
+          onPress: () => {
+            void emptyTrash();
+          },
+        },
+      ],
+    );
+  }, [emptyTrash, emptyTrashBusy, entries, viewMode]);
+
   const applySearchFilters = useCallback(() => {
     try {
       const query =
@@ -951,23 +1052,34 @@ export default function JournalScreen({
     <View style={styles.screen}>
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[
+          styles.content,
+          { paddingBottom: bottomContentPadding },
+        ]}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.header}>
-          <Text style={styles.eyebrow}>
-            DIÁRIO
-          </Text>
-          <Text style={styles.title}>
-            {viewMode === "trash"
-              ? "Lixeira"
-              : "Meu Diário"}
-          </Text>
-          <Text style={styles.subtitle}>
-            {viewMode === "trash"
-              ? "Revise registros removidos e restaure o que quiser preservar."
-              : "Registre o que você aprendeu, viveu e não quer esquecer."}
-          </Text>
+        <ImageBackground
+          testID="journal-hero"
+          source={require("../../assets/module-heroes/journal-hero.png")}
+          resizeMode="cover"
+          style={styles.header}
+          imageStyle={styles.headerImage}
+        >
+          <View style={styles.heroTextPanel}>
+            <Text style={styles.eyebrow}>
+              DIÁRIO
+            </Text>
+            <Text style={styles.title}>
+              {viewMode === "trash"
+                ? "Lixeira"
+                : "Meu Diário"}
+            </Text>
+            <Text style={styles.subtitle}>
+              {viewMode === "trash"
+                ? "Revise registros removidos e restaure o que quiser preservar."
+                : "Registre o que você aprendeu, viveu e não quer esquecer."}
+            </Text>
+          </View>
 
           {viewMode === "journal" ? (
             <>
@@ -1014,7 +1126,36 @@ export default function JournalScreen({
               </Text>
             </Pressable>
           )}
-        </View>
+        </ImageBackground>
+
+        {viewMode === "trash" && entries.length > 0 && (
+          <View style={styles.trashDangerZone}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Esvaziar lixeira do diário"
+              accessibilityState={{
+                disabled: emptyTrashBusy,
+                busy: emptyTrashBusy,
+              }}
+              disabled={emptyTrashBusy}
+              onPress={requestEmptyTrash}
+              style={({ pressed }) => [
+                styles.emptyTrashButton,
+                emptyTrashBusy && styles.emptyTrashButtonDisabled,
+                pressed && !emptyTrashBusy && styles.pressed,
+              ]}
+            >
+              <Text style={styles.emptyTrashButtonText}>
+                {emptyTrashBusy ? "Esvaziando..." : "Esvaziar lixeira"}
+              </Text>
+            </Pressable>
+            {trashActionMessage !== null && (
+              <Text style={styles.trashActionMessage}>
+                {trashActionMessage}
+              </Text>
+            )}
+          </View>
+        )}
 
         {viewMode === "journal" && (
           <View style={styles.searchCard}>
@@ -1149,7 +1290,11 @@ export default function JournalScreen({
                   Etiquetas
                 </Text>
                 <View style={styles.chipRow}>
-                  {availableTags.map((tag) => {
+                  {getVisibleJournalTags(
+                    availableTags,
+                    tagFilter,
+                    showAllTags,
+                  ).map((tag) => {
                     const selected =
                       tagFilter === tag.id;
 
@@ -1187,6 +1332,33 @@ export default function JournalScreen({
                       </Pressable>
                     );
                   })}
+
+                  {availableTags.length >
+                    TAG_FILTER_COLLAPSED_LIMIT && (
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={
+                        showAllTags
+                          ? "Mostrar menos etiquetas"
+                          : "Ver todas as etiquetas"
+                      }
+                      onPress={() =>
+                        setShowAllTags(
+                          (current) => !current,
+                        )
+                      }
+                      style={({ pressed }) => [
+                        styles.filterChip,
+                        pressed && styles.pressed,
+                      ]}
+                    >
+                      <Text style={styles.filterChipText}>
+                        {showAllTags
+                          ? "Mostrar menos"
+                          : `Ver todas (${availableTags.length})`}
+                      </Text>
+                    </Pressable>
+                  )}
                 </View>
               </View>
             )}
@@ -1477,7 +1649,8 @@ export default function JournalScreen({
                 </Text>
               )}
             </Pressable>
-          )}      </ScrollView>
+          )}
+      </ScrollView>
     </View>
   );
 }
@@ -1504,6 +1677,18 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     paddingHorizontal: 20,
     paddingVertical: 20,
+    overflow: "hidden",
+  },
+  headerImage: {
+    borderRadius: 22,
+  },
+  heroTextPanel: {
+    alignSelf: "stretch",
+    backgroundColor: "rgba(255, 255, 255, 0.86)",
+    borderRadius: 16,
+    gap: 4,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
   },
   eyebrow: {
     color: colors.secondaryPressed,
@@ -1920,5 +2105,30 @@ const styles = StyleSheet.create({
   },
   pressed: {
     opacity: 0.82,
+  },
+  trashDangerZone: {
+    gap: 8,
+  },
+  emptyTrashButton: {
+    borderWidth: 1,
+    borderColor: colors.danger,
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    alignItems: "center",
+    backgroundColor: colors.surfaceHighlight,
+  },
+  emptyTrashButtonDisabled: {
+    opacity: 0.55,
+  },
+  emptyTrashButtonText: {
+    color: colors.danger,
+    fontSize: 14,
+    fontWeight: "800",
+  },
+  trashActionMessage: {
+    color: colors.danger,
+    fontSize: 13,
+    lineHeight: 18,
   },
 });

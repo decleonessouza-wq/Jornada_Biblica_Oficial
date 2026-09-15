@@ -22,6 +22,38 @@ describe("Bible Reader contracts", () => {
     });
   });
 
+  it("preserves the Favorites origin through validation and chapter navigation", () => {
+    expect(
+      parseOfflineBibleReaderRouteParams({
+        versionId: "BLIVRE",
+        bookId: "GEN",
+        chapter: 1,
+        verse: 3,
+        returnToFavorites: true,
+      }),
+    ).toEqual({
+      versionId: "BLIVRE",
+      bookId: "GEN",
+      chapter: 1,
+      verse: 3,
+      returnToFavorites: true,
+    });
+
+    expect(
+      getNextOfflineBibleReaderRouteParams({
+        versionId: "BLIVRE",
+        bookId: "GEN",
+        chapter: 1,
+        returnToFavorites: true,
+      }),
+    ).toEqual({
+      versionId: "BLIVRE",
+      bookId: "GEN",
+      chapter: 2,
+      returnToFavorites: true,
+    });
+  });
+
   it("rejects a chapter outside the canonical book range", () => {
     expect(
       parseOfflineBibleReaderRouteParams({

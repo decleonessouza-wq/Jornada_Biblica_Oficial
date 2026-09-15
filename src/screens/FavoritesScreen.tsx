@@ -115,6 +115,7 @@ export default function FavoritesScreen({
               bookId: favorite.target.bookId,
               chapter: favorite.target.chapter,
               verse: favorite.target.verse,
+              returnToFavorites: true,
             },
           },
         });
@@ -128,6 +129,7 @@ export default function FavoritesScreen({
           params: {
             editionId: favorite.target.editionId,
             hymnId: favorite.target.hymnId,
+            returnToFavorites: true,
           },
         },
       });

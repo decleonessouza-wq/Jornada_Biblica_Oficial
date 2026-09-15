@@ -193,6 +193,7 @@ export default function JournalEntryDetailScreen({
   const { entryId } = route.params;
   const loadGenerationRef = useRef(0);
   const actionLockRef = useRef(false);
+  const [deleteBusy, setDeleteBusy] = useState(false);
 
   const [entry, setEntry] =
     useState<JournalEntryPersistenceRecord | null>(
@@ -375,7 +376,63 @@ export default function JournalEntryDetailScreen({
     }
   }, [entry, entryId, navigation]);
 
-  const isBusy = actionBusy !== null;
+  const deleteEntryPermanently = useCallback(async () => {
+    if (
+      actionLockRef.current ||
+      deleteBusy ||
+      entry?.status !== "TRASHED"
+    ) {
+      return;
+    }
+
+    actionLockRef.current = true;
+    setDeleteBusy(true);
+    setActionMessage(null);
+
+    try {
+      await getPersonalPlatformHub().journalService.deletePermanently(
+        entryId,
+      );
+      navigation.goBack();
+    } catch {
+      setActionMessage(
+        "Não foi possível excluir este registro permanentemente agora. Tente novamente.",
+      );
+    } finally {
+      actionLockRef.current = false;
+      setDeleteBusy(false);
+    }
+  }, [deleteBusy, entry, entryId, navigation]);
+
+  const requestPermanentDelete = useCallback(() => {
+    if (
+      actionBusy !== null ||
+      deleteBusy ||
+      entry?.status !== "TRASHED"
+    ) {
+      return;
+    }
+
+    Alert.alert(
+      "Excluir permanentemente?",
+      "Esta ação não pode ser desfeita. O registro será removido definitivamente.",
+      [
+        {
+          text: "Cancelar",
+          style: "cancel",
+        },
+        {
+          text: "Excluir",
+          style: "destructive",
+          onPress: () => {
+            void deleteEntryPermanently();
+          },
+        },
+      ],
+    );
+  }, [actionBusy, deleteBusy, deleteEntryPermanently, entry]);
+
+  const isBusy = actionBusy !== null || deleteBusy;
   const isTrashed = entry?.status === "TRASHED";
 
   return (
@@ -679,32 +736,56 @@ export default function JournalEntryDetailScreen({
                 </Pressable>
               </View>
             ) : (
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Restaurar registro do diário"
-                accessibilityState={{
-                  disabled: isBusy,
-                  busy: actionBusy === "restore",
-                }}
-                disabled={isBusy}
-                onPress={() => {
-                  void restoreEntry();
-                }}
-                style={({ pressed }) => [
-                  styles.primaryButton,
-                  isBusy &&
-                    styles.buttonDisabled,
-                  pressed &&
-                    !isBusy &&
-                    styles.pressed,
-                ]}
-              >
-                <Text style={styles.primaryButtonText}>
-                  {actionBusy === "restore"
-                    ? "Restaurando..."
-                    : "Restaurar registro"}
-                </Text>
-              </Pressable>
+              <View style={styles.trashActions}>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Restaurar registro do diário"
+                  accessibilityState={{
+                    disabled: isBusy,
+                    busy: actionBusy === "restore",
+                  }}
+                  disabled={isBusy}
+                  onPress={() => {
+                    void restoreEntry();
+                  }}
+                  style={({ pressed }) => [
+                    styles.primaryButton,
+                    isBusy &&
+                      styles.buttonDisabled,
+                    pressed &&
+                      !isBusy &&
+                      styles.pressed,
+                  ]}
+                >
+                  <Text style={styles.primaryButtonText}>
+                    {actionBusy === "restore"
+                      ? "Restaurando..."
+                      : "Restaurar registro"}
+                  </Text>
+                </Pressable>
+
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Excluir registro permanentemente"
+                  accessibilityState={{
+                    disabled: isBusy,
+                    busy: deleteBusy,
+                  }}
+                  disabled={isBusy}
+                  onPress={requestPermanentDelete}
+                  style={({ pressed }) => [
+                    styles.permanentDeleteButton,
+                    isBusy && styles.buttonDisabled,
+                    pressed && !isBusy && styles.pressed,
+                  ]}
+                >
+                  <Text style={styles.permanentDeleteButtonText}>
+                    {deleteBusy
+                      ? "Excluindo..."
+                      : "Excluir permanentemente"}
+                  </Text>
+                </Pressable>
+              </View>
             )}
           </>
         )}
@@ -976,5 +1057,22 @@ const styles = StyleSheet.create({
   },
   pressed: {
     opacity: 0.82,
+  },
+  trashActions: {
+    gap: 10,
+  },
+  permanentDeleteButton: {
+    borderWidth: 1,
+    borderColor: colors.danger,
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 13,
+    alignItems: "center",
+    backgroundColor: colors.surfaceHighlight,
+  },
+  permanentDeleteButtonText: {
+    color: colors.danger,
+    fontSize: 14,
+    fontWeight: "800",
   },
 });

@@ -51,6 +51,9 @@ describe("ReadingScreen Plan -> Journal contract", () => {
     const handler = getHandlerSource();
 
     expect(handler).toContain(
+      'navigation.push("AppShell", {',
+    );
+    expect(handler).not.toContain(
       'navigation.navigate("AppShell", {',
     );
     expect(handler).toContain(

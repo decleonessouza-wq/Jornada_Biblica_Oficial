@@ -301,6 +301,7 @@ describe("FavoritesScreen", () => {
             bookId: "JHN",
             chapter: 3,
             verse: 16,
+            returnToFavorites: true,
           },
         },
       },
@@ -339,6 +340,7 @@ describe("FavoritesScreen", () => {
               "harpa-crista-jornada-v1",
             hymnId:
               "harpa-crista-jornada-v1:15",
+            returnToFavorites: true,
           },
         },
       },

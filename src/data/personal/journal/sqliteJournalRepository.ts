@@ -1989,6 +1989,21 @@ WHERE entry_id = ?
     );
   }
 
+  async removeAllTrashed(): Promise<number> {
+    return this.personalDatabase.withConnection(
+      async (database) => {
+        const result = await database.runAsync(
+          `
+DELETE FROM personal_journal_entries
+WHERE status = 'TRASHED'
+`,
+        );
+
+        return result.changes;
+      },
+    );
+  }
+
   async remove(
     id: JournalEntryId,
   ): Promise<void> {

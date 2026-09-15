@@ -83,4 +83,6 @@ export interface JournalRepository {
   remove(
     id: JournalEntryId,
   ): Promise<void>;
+
+  removeAllTrashed?(): Promise<number>;
 }

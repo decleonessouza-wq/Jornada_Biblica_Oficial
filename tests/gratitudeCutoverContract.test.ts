@@ -47,8 +47,16 @@ describe("P16-P8 gratitude cutover contracts", () => {
     );
 
     expect(home).toContain(
+      "journalService.listActiveGratitudeEntries",
+    );
+    expect(home).not.toContain(
       "journalService.getHomeGratitudeForDate",
     );
+    expect(home).toContain(
+      "entries.find((candidate) => candidate.entryDate === today)",
+    );
+    expect(home).toContain("void loadGratitude();");
+    expect(home).not.toContain("journalService.replaceHomeGratitudeMap");
     expect(progress).toContain(
       "journalService.countDistinctActiveGratitudeDates",
     );

@@ -15,6 +15,7 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import {
   getBibleBookById,
@@ -260,6 +261,8 @@ export default function JournalEntryEditorScreen({
   navigation,
   route,
 }: JournalEntryEditorScreenProps) {
+  const insets = useSafeAreaInsets();
+  const bottomContentPadding = Math.max(insets.bottom + 48, 84);
   const routeEntryId = route.params?.entryId;
   const routeSourceContext =
     route.params?.sourceContext;
@@ -275,6 +278,7 @@ export default function JournalEntryEditorScreen({
   const submitLockRef = useRef(false);
   const mountedRef = useRef(true);
   const hasUserEditedRef = useRef(false);
+  const scrollViewRef = useRef<ScrollView | null>(null);
   const draftEntryIdRef =
     useRef<JournalEntryId | null>(null);
   const activeEntryIdRef =
@@ -811,6 +815,19 @@ export default function JournalEntryEditorScreen({
       );
 
       hasUserEditedRef.current = false;
+
+      if (routePlanContext !== null) {
+        const drawerNavigation =
+          navigation.getParent();
+        const rootNavigation =
+          drawerNavigation?.getParent();
+
+        if (rootNavigation?.canGoBack()) {
+          rootNavigation.goBack();
+          return;
+        }
+      }
+
       navigation.goBack();
     } catch (error) {
       setFormMessage(
@@ -854,8 +871,12 @@ export default function JournalEntryEditorScreen({
       keyboardVerticalOffset={0}
     >
       <ScrollView
+        ref={scrollViewRef}
         style={styles.scroll}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[
+          styles.content,
+          { paddingBottom: bottomContentPadding },
+        ]}
         automaticallyAdjustKeyboardInsets={Platform.OS === "ios"}
         keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
         keyboardShouldPersistTaps="handled"
@@ -1239,6 +1260,17 @@ export default function JournalEntryEditorScreen({
               <TextInput
                 accessibilityLabel="Gratidão"
                 value={gratitudeText}
+                onFocus={() => {
+                  if (Platform.OS !== "android") {
+                    return;
+                  }
+
+                  setTimeout(() => {
+                    scrollViewRef.current?.scrollToEnd({
+                      animated: true,
+                    });
+                  }, 250);
+                }}
                 onChangeText={(value) => {
                   markEdited();
                   setGratitudeText(value);

@@ -2,6 +2,7 @@ import { getPersonalPlatformHub } from "../services/personalPlatformHub";
 import {
   View,
   Text,
+  ImageBackground,
   ScrollView,
   StyleSheet,
   StatusBar,
@@ -232,11 +233,20 @@ export default function ProgressScreen() {
       >
         <View style={[styles.contentWrap, { maxWidth, alignSelf: "center" }]}>
           {/* HERO */}
-          <View style={styles.hero}>
-            <Text style={styles.heroTitle}>Progresso</Text>
-            <Text style={styles.heroSubtitle}>Acompanhe sua constância e evolução na leitura.</Text>
-            <Text style={styles.heroHint}>{planStatusText}</Text>
-          </View>
+          <ImageBackground
+            testID="progress-hero"
+            source={require("../../assets/module-heroes/progress-hero.png")}
+            resizeMode="cover"
+            style={styles.hero}
+            imageStyle={styles.heroImage}
+            accessibilityIgnoresInvertColors
+          >
+            <View style={styles.heroTextPanel}>
+              <Text style={styles.heroTitle}>Progresso</Text>
+              <Text style={styles.heroSubtitle}>Acompanhe sua constância e evolução na leitura.</Text>
+              <Text style={styles.heroHint}>{planStatusText}</Text>
+            </View>
+          </ImageBackground>
 
           {/* MÉTRICAS (grid) */}
           <View style={styles.statsGrid}>
@@ -349,10 +359,23 @@ const styles = StyleSheet.create({
   },
 
   hero: {
-    backgroundColor: "#fff",
+    minHeight: 220,
     borderRadius: 18,
-    padding: 16,
+    overflow: "hidden",
+    justifyContent: "flex-end",
+    padding: 14,
     ...shadowCard(),
+  },
+  heroImage: {
+    borderRadius: 18,
+  },
+  heroTextPanel: {
+    maxWidth: "86%",
+    alignSelf: "flex-start",
+    backgroundColor: "rgba(255, 255, 255, 0.86)",
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
   },
   heroTitle: {
     fontSize: 28,
