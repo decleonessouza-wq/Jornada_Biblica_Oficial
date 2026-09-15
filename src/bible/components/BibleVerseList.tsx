@@ -28,6 +28,7 @@ type BibleVerseListProps = Readonly<{
   highlightedVerse?: number;
   favoriteVerses?: ReadonlySet<number>;
   onToggleFavoriteVerse?: (verse: number) => void;
+  onRequestJournalVerse?: (verse: number) => void;
   onFirstVisibleVerseChange?: (verse: number) => void;
   onInitialRestoreComplete?: () => void;
   onScrollOffsetChange?: (offsetY: number) => void;
@@ -118,6 +119,7 @@ export function BibleVerseList({
   highlightedVerse,
   favoriteVerses,
   onToggleFavoriteVerse,
+  onRequestJournalVerse,
   onFirstVisibleVerseChange,
   onInitialRestoreComplete,
   onScrollOffsetChange,
@@ -387,32 +389,64 @@ export function BibleVerseList({
             </Text>
           </View>
 
-          {onToggleFavoriteVerse && (
-            <Pressable
-              testID={`bible-reader-favorite-verse-${item.verse}`}
-              accessibilityRole="button"
-              accessibilityLabel={
-                isFavorite
-                  ? "Remover versículo dos favoritos"
-                  : "Adicionar versículo aos favoritos"
-              }
-              accessibilityState={{ selected: isFavorite }}
-              onPress={() => onToggleFavoriteVerse(item.verse)}
-              style={({ pressed }) => [
-                styles.favoriteButton,
-                pressed && styles.favoriteButtonPressed,
-              ]}
-            >
-              <Text
-                accessible={false}
-                style={[
-                  styles.favoriteIcon,
-                  isFavorite && styles.favoriteIconActive,
-                ]}
-              >
-                {isFavorite ? "★" : "☆"}
-              </Text>
-            </Pressable>
+          {(onRequestJournalVerse ||
+            onToggleFavoriteVerse) && (
+            <View style={styles.verseActions}>
+              {onRequestJournalVerse && (
+                <Pressable
+                  testID={`bible-reader-journal-verse-${item.verse}`}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Registrar versículo ${item.verse} no diário`}
+                  onPress={() =>
+                    onRequestJournalVerse(item.verse)
+                  }
+                  style={({ pressed }) => [
+                    styles.journalButton,
+                    pressed &&
+                      styles.journalButtonPressed,
+                  ]}
+                >
+                  <Text
+                    accessible={false}
+                    style={styles.journalIcon}
+                  >
+                    ✎
+                  </Text>
+                </Pressable>
+              )}
+
+              {onToggleFavoriteVerse && (
+                <Pressable
+                  testID={`bible-reader-favorite-verse-${item.verse}`}
+                  accessibilityRole="button"
+                  accessibilityLabel={
+                    isFavorite
+                      ? "Remover versículo dos favoritos"
+                      : "Adicionar versículo aos favoritos"
+                  }
+                  accessibilityState={{
+                    selected: isFavorite,
+                  }}
+                  onPress={() => onToggleFavoriteVerse(item.verse)}
+                  style={({ pressed }) => [
+                    styles.favoriteButton,
+                    pressed &&
+                      styles.favoriteButtonPressed,
+                  ]}
+                >
+                  <Text
+                    accessible={false}
+                    style={[
+                      styles.favoriteIcon,
+                      isFavorite &&
+                        styles.favoriteIconActive,
+                    ]}
+                  >
+                    {isFavorite ? "★" : "☆"}
+                  </Text>
+                </Pressable>
+              )}
+            </View>
           )}
         </View>
       );
@@ -421,6 +455,7 @@ export function BibleVerseList({
       favoriteVerses,
       highlightedVerse,
       initialVerse,
+      onRequestJournalVerse,
       onToggleFavoriteVerse,
       typography,
     ],
@@ -703,12 +738,31 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "flex-start",
   },
+  verseActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginLeft: 4,
+  },
+  journalButton: {
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 44,
+    minWidth: 44,
+  },
+  journalButtonPressed: {
+    opacity: 0.65,
+  },
+  journalIcon: {
+    color: colors.primary,
+    fontSize: 22,
+    lineHeight: 28,
+    fontWeight: "700",
+  },
   favoriteButton: {
     alignItems: "center",
     justifyContent: "center",
     minHeight: 44,
     minWidth: 44,
-    marginLeft: 4,
   },
   favoriteButtonPressed: {
     opacity: 0.65,

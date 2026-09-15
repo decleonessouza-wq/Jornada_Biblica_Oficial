@@ -2,8 +2,15 @@ import HymnalLibraryScreen from "../hymnal/screens/HymnalLibraryScreen";
 import HymnalReaderScreen from "../hymnal/screens/HymnalReaderScreen";
 
 import { HymnalStack } from "./navigationFactories";
+import type { MainTabScreenProps } from "./types";
 
-export default function HymnalNavigator() {
+export default function HymnalNavigator({
+  navigation,
+}: MainTabScreenProps<"HymnalTab">) {
+  const handleRequestFavorites = () => {
+    navigation.navigate("Favorites");
+  };
+
   return (
     <HymnalStack.Navigator
       initialRouteName="HymnalLibrary"
@@ -15,10 +22,16 @@ export default function HymnalNavigator() {
         name="HymnalLibrary"
         component={HymnalLibraryScreen}
       />
-      <HymnalStack.Screen
-        name="HymnalReader"
-        component={HymnalReaderScreen}
-      />
+      <HymnalStack.Screen name="HymnalReader">
+        {(screenProps) => (
+          <HymnalReaderScreen
+            {...screenProps}
+            onRequestFavorites={
+              handleRequestFavorites
+            }
+          />
+        )}
+      </HymnalStack.Screen>
     </HymnalStack.Navigator>
   );
 }

@@ -10,6 +10,7 @@ import TermsScreen from "../screens/TermsScreen";
 import { colors } from "../theme/colors";
 
 import AppDrawerContent from "./AppDrawerContent";
+import JournalNavigator from "./JournalNavigator";
 import MainTabsNavigator from "./MainTabsNavigator";
 import { AppDrawer } from "./navigationFactories";
 import QuickActionSheet from "./QuickActionSheet";
@@ -83,6 +84,16 @@ export default function AppDrawerNavigator() {
             navigation.navigate("History");
           };
 
+          const handleOpenJournal = () => {
+            closeQuickActions();
+            navigation.navigate("Journal");
+          };
+
+          const handleOpenFavorites = () => {
+            closeQuickActions();
+            navigation.navigate("Favorites");
+          };
+
           return (
             <>
               <MainTabsNavigator onQuickAction={openQuickActions} />
@@ -93,11 +104,23 @@ export default function AppDrawerNavigator() {
                 onOpenPlan={handleOpenPlan}
                 onOpenProgress={handleOpenProgress}
                 onOpenHistory={handleOpenHistory}
+                onOpenJournal={handleOpenJournal}
+                onOpenFavorites={handleOpenFavorites}
               />
             </>
           );
         }}
       </AppDrawer.Screen>
+
+      <AppDrawer.Screen
+        name="Journal"
+        component={JournalNavigator}
+        options={{
+          title: "Meu Diário",
+          drawerLabel: "Meu Diário",
+          headerShown: false,
+        }}
+      />
 
       <AppDrawer.Screen
         name="Favorites"

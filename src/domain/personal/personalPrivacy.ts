@@ -17,6 +17,13 @@ export interface PersonalPrivacyPolicy {
   readonly userGeneratedTextInLogsAllowed: false;
   readonly secretOrCredentialLoggingAllowed: false;
   readonly stringMetadataValuesAllowed: false;
+  readonly journalPrivacyPosture: "private-local";
+  readonly personalContentInTelemetryOrAnalyticsAllowed: false;
+  readonly personalSearchAnalyticsAllowed: false;
+  readonly journalDeviceAuthProtection: "optional-contract-only";
+  readonly homemadeCryptographyAllowed: false;
+  readonly externalPersonalExportRequiresExplicitUserAction: true;
+
 }
 
 export const PERSONAL_PRIVACY_POLICY: PersonalPrivacyPolicy = {
@@ -31,4 +38,11 @@ export const PERSONAL_PRIVACY_POLICY: PersonalPrivacyPolicy = {
   userGeneratedTextInLogsAllowed: false,
   secretOrCredentialLoggingAllowed: false,
   stringMetadataValuesAllowed: false,
+  journalPrivacyPosture: "private-local",
+  personalContentInTelemetryOrAnalyticsAllowed: false,
+  personalSearchAnalyticsAllowed: false,
+  journalDeviceAuthProtection: "optional-contract-only",
+  homemadeCryptographyAllowed: false,
+  externalPersonalExportRequiresExplicitUserAction: true,
+
 };

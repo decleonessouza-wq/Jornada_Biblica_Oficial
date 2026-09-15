@@ -7,6 +7,13 @@ import type { DrawerScreenProps } from "@react-navigation/drawer";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 
 import type { OfflineBibleReaderRouteParams } from "../bible/reader/bibleReaderContracts";
+import type {
+  BibleReference,
+} from "../domain/bible/bibleReference";
+import type { JournalEntryId } from "../domain/journal/journal";
+import type {
+  PersonalLocalDate,
+} from "../domain/personal/personalTime";
 import type { HymnId } from "../domain/hymnal/hymn";
 import type { HymnalEditionId } from "../domain/hymnal/hymnalEdition";
 
@@ -27,6 +34,37 @@ export type HymnalStackParamList = {
   HymnalReader: {
     editionId: HymnalEditionId;
     hymnId: HymnId;
+    returnToFavorites?: boolean;
+  };
+};
+
+export type JournalEntryEditorSourceContext =
+  | Readonly<{
+      sourceType: "BIBLE";
+      reference: BibleReference;
+    }>
+  | Readonly<{
+      sourceType: "PLAN";
+      entryDate: PersonalLocalDate;
+      sourceTitleSnapshot: string;
+      promptSnapshot: string;
+      reference: BibleReference | null;
+    }>;
+
+export type JournalStackParamList = {
+  JournalHome: undefined;
+  JournalEntryEditor:
+    | Readonly<{
+        entryId: JournalEntryId;
+        sourceContext?: never;
+      }>
+    | Readonly<{
+        entryId?: never;
+        sourceContext?: JournalEntryEditorSourceContext;
+      }>
+    | undefined;
+  JournalEntryDetail: {
+    entryId: JournalEntryId;
   };
 };
 
@@ -39,6 +77,7 @@ export type MainTabParamList = {
 
 export type AppDrawerParamList = {
   MainTabs: NavigatorScreenParams<MainTabParamList> | undefined;
+  Journal: NavigatorScreenParams<JournalStackParamList> | undefined;
   Favorites: undefined;
   Progress: undefined;
   History: undefined;
@@ -84,3 +123,7 @@ export type BibleStackScreenProps<
 export type HymnalStackScreenProps<
   RouteName extends keyof HymnalStackParamList,
 > = NativeStackScreenProps<HymnalStackParamList, RouteName>;
+
+export type JournalStackScreenProps<
+  RouteName extends keyof JournalStackParamList,
+> = NativeStackScreenProps<JournalStackParamList, RouteName>;

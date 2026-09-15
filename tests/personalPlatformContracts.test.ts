@@ -73,6 +73,13 @@ describe("Personal platform contracts", () => {
       userGeneratedTextInLogsAllowed: false,
       secretOrCredentialLoggingAllowed: false,
       stringMetadataValuesAllowed: false,
+      journalPrivacyPosture: "private-local",
+      personalContentInTelemetryOrAnalyticsAllowed: false,
+      personalSearchAnalyticsAllowed: false,
+      journalDeviceAuthProtection: "optional-contract-only",
+      homemadeCryptographyAllowed: false,
+      externalPersonalExportRequiresExplicitUserAction: true,
+
     });
   });
 

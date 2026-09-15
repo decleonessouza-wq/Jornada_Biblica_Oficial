@@ -1,4 +1,5 @@
 import { SQLiteFavoritesRepository } from "../data/personal/favorites/sqliteFavoritesRepository";
+import { SQLiteJournalRepository } from "../data/personal/journal/sqliteJournalRepository";
 import { PersonalDatabase } from "../data/personal/personalDatabase";
 import type { PersonalCanonicalIdFactory } from "../domain/personal/personalIdentity";
 import type { PersonalLogger } from "../domain/personal/personalLogging";
@@ -17,6 +18,7 @@ import {
   SystemPersonalDatePolicy,
 } from "./personalPlatformDefaults";
 import { FavoritesService } from "./favorites/favoritesService";
+import { JournalService } from "./journal/journalService";
 
 export interface PersonalPlatformHub {
   readonly database: PersonalDatabase;
@@ -26,6 +28,7 @@ export interface PersonalPlatformHub {
   readonly logger: PersonalLogger;
   readonly privacyPolicy: PersonalPrivacyPolicy;
   readonly favoritesService: FavoritesService;
+  readonly journalService: JournalService;
 }
 
 export interface PersonalPlatformHubOverrides {
@@ -58,6 +61,14 @@ export function createPersonalPlatformHub(
     clock,
     datePolicy,
   );
+  const journalRepository =
+    new SQLiteJournalRepository(database);
+  const journalService = new JournalService(
+    journalRepository,
+    canonicalIdFactory,
+    clock,
+    datePolicy,
+  );
 
   const hub: PersonalPlatformHub = {
     database,
@@ -67,6 +78,7 @@ export function createPersonalPlatformHub(
     logger,
     privacyPolicy: PERSONAL_PRIVACY_POLICY,
     favoritesService,
+    journalService,
   };
 
   return Object.freeze(hub);

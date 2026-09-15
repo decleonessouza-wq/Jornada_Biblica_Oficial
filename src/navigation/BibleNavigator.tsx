@@ -1,4 +1,8 @@
-import React, { useEffect, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useState,
+} from "react";
 import {
   ActivityIndicator,
   StyleSheet,
@@ -21,7 +25,10 @@ import { loadOfflineBibleLastReading } from "../bible/state/bibleReaderPreferenc
 import { colors } from "../theme/colors";
 
 import { BibleStack } from "./navigationFactories";
-import type { BibleStackScreenProps } from "./types";
+import type {
+  BibleStackScreenProps,
+  MainTabScreenProps,
+} from "./types";
 
 type BootstrapState =
   | Readonly<{
@@ -108,11 +115,27 @@ function BibleSearchRoute({
   );
 }
 
+type BibleReaderRouteProps =
+  BibleStackScreenProps<"BibleReader"> &
+  Readonly<{
+    onRequestJournalReference: (
+      reference: BibleReference,
+    ) => void;
+    onRequestFavorites: () => void;
+  }>;
+
 function BibleReaderRoute({
   navigation,
   route,
-}: BibleStackScreenProps<"BibleReader">) {
+  onRequestJournalReference,
+  onRequestFavorites,
+}: BibleReaderRouteProps) {
   const handleRequestBack = () => {
+    if (route.params.returnToFavorites) {
+      onRequestFavorites();
+      return;
+    }
+
     const state = navigation.getState();
     const hasLibraryBeforeReader = state.routes
       .slice(0, state.index)
@@ -129,19 +152,55 @@ function BibleReaderRoute({
   const handleRequestReferenceChange = (
     params: OfflineBibleReaderRouteParams,
   ) => {
-    navigation.replace("BibleReader", params);
+    navigation.replace("BibleReader", {
+      ...params,
+      ...(route.params.returnToFavorites === undefined
+        ? {}
+        : {
+            returnToFavorites:
+              route.params.returnToFavorites,
+          }),
+    });
   };
 
   return (
     <BibleReaderScreen
       params={route.params}
       onRequestBack={handleRequestBack}
-      onRequestReferenceChange={handleRequestReferenceChange}
+      onRequestReferenceChange={
+        handleRequestReferenceChange
+      }
+      onRequestJournalReference={
+        onRequestJournalReference
+      }
     />
   );
 }
 
-export default function BibleNavigator() {
+export default function BibleNavigator({
+  navigation,
+}: MainTabScreenProps<"BibleTab">) {
+  const handleRequestFavorites =
+    useCallback(() => {
+      navigation.navigate("Favorites");
+    }, [navigation]);
+
+  const handleRequestJournalReference =
+    useCallback(
+      (reference: BibleReference) => {
+        navigation.navigate("Journal", {
+          screen: "JournalEntryEditor",
+          params: {
+            sourceContext: {
+              sourceType: "BIBLE",
+              reference,
+            },
+          },
+        });
+      },
+      [navigation],
+    );
+
   const [bootstrapState, setBootstrapState] = useState<BootstrapState>({
     status: "loading",
     initialReaderParams: null,
@@ -235,9 +294,23 @@ export default function BibleNavigator() {
       />
       <BibleStack.Screen
         name="BibleReader"
-        component={BibleReaderRoute}
-        initialParams={bootstrapState.initialReaderParams ?? undefined}
-      />
+        initialParams={
+          bootstrapState.initialReaderParams ??
+          undefined
+        }
+      >
+        {(screenProps) => (
+          <BibleReaderRoute
+            {...screenProps}
+            onRequestJournalReference={
+              handleRequestJournalReference
+            }
+            onRequestFavorites={
+              handleRequestFavorites
+            }
+          />
+        )}
+      </BibleStack.Screen>
     </BibleStack.Navigator>
   );
 }

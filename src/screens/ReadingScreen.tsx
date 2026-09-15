@@ -1,3 +1,4 @@
+import { getPersonalPlatformHub } from "../services/personalPlatformHub";
 import {
   View,
   Text,
@@ -14,8 +15,7 @@ import {
   ImageBackground,
 } from "react-native";
 import { useEffect, useMemo, useState, useCallback } from "react";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { WebView } from "react-native-webview";
+import AsyncStorage from "@react-native-async-storage/async-storage";import { WebView } from "react-native-webview";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
@@ -26,6 +26,7 @@ import { getPlanPhaseForOffset } from "../domain/plan/planPhaseProjection";
 import { projectPlanCivilDate } from "../domain/plan/planCivilSchedule";
 import { resolvePlanCivilDayPolicy } from "../domain/plan/planSpecialDayPolicy";
 import type { RootStackParamList } from "../navigation/types";
+import type { PersonalLocalDate } from "../domain/personal/personalTime";
 import { addCompletedDay } from "../services/progressStore";
 import { projectCanonicalStructuredPlan } from "../domain/plan/canonicalStructuredPlanV2";
 import { buildBibleReadingProviderTarget } from "../services/bibleReadingProviderAdapter";
@@ -61,8 +62,6 @@ const OPEN_MODE_KEY = "preferredReadingOpenMode";
 const COMPLETED_KEY = "completedDays";
 
 // ✅ gratidão por data
-const GRATITUDE_KEY = "gratitudeByDate";
-
 function normalizeTextKeepNumbers(s: string) {
   return s
     .toLowerCase()
@@ -817,7 +816,7 @@ export default function ReadingScreen({ route }: Props) {
       return;
     }
     try {
-      const raw = await AsyncStorage.getItem(GRATITUDE_KEY);
+      const raw = JSON.stringify(await getPersonalPlatformHub().journalService.exportHomeGratitudeMap());
       const parsedObj = raw ? JSON.parse(raw) : {};
       const map = parsedObj && typeof parsedObj === "object" ? parsedObj : {};
       const existing = typeof map[dateIso] === "string" ? map[dateIso] : null;
@@ -888,13 +887,13 @@ export default function ReadingScreen({ route }: Props) {
     }
 
     try {
-      const raw = await AsyncStorage.getItem(GRATITUDE_KEY);
+      const raw = JSON.stringify(await getPersonalPlatformHub().journalService.exportHomeGratitudeMap());
       const parsedObj = raw ? JSON.parse(raw) : {};
       const map = parsedObj && typeof parsedObj === "object" ? parsedObj : {};
 
       map[date] = text;
 
-      await AsyncStorage.setItem(GRATITUDE_KEY, JSON.stringify(map));
+      await getPersonalPlatformHub().journalService.replaceHomeGratitudeMap(map);
       setSavedGratitude(text);
 
       Alert.alert("Salvo ✅", "Sua gratidão foi registrada.");
@@ -906,13 +905,13 @@ export default function ReadingScreen({ route }: Props) {
   async function deleteGratitude() {
     if (!date) return;
     try {
-      const raw = await AsyncStorage.getItem(GRATITUDE_KEY);
+      const raw = JSON.stringify(await getPersonalPlatformHub().journalService.exportHomeGratitudeMap());
       const parsedObj = raw ? JSON.parse(raw) : {};
       const map = parsedObj && typeof parsedObj === "object" ? parsedObj : {};
 
       if (map[date]) delete map[date];
 
-      await AsyncStorage.setItem(GRATITUDE_KEY, JSON.stringify(map));
+      await getPersonalPlatformHub().journalService.replaceHomeGratitudeMap(map);
       setSavedGratitude(null);
       setGratitudeText("");
 
@@ -1089,6 +1088,39 @@ export default function ReadingScreen({ route }: Props) {
     isNatal,
     version,
   ]);
+
+  function openPlanJournal() {
+    if (!date || !isIsoDateString(date)) {
+      Alert.alert(
+        "Não foi possível abrir o Diário",
+        "Esta leitura não possui uma data válida para o Diário.",
+      );
+      return;
+    }
+
+    const sourceTitleSnapshot = currentPhase?.title
+      ? `Plano de leitura • ${currentPhase.title}`
+      : `Plano de leitura • ${reference}`;
+
+    const planReference =
+      structuredReadingDay?.readingUnit.bibleReference ?? null;
+
+    navigation.push("AppShell", {
+      screen: "Journal",
+      params: {
+        screen: "JournalEntryEditor",
+        params: {
+          sourceContext: {
+            sourceType: "PLAN",
+            entryDate: date as PersonalLocalDate,
+            sourceTitleSnapshot,
+            promptSnapshot: spiritual.reflection,
+            reference: planReference,
+          },
+        },
+      },
+    });
+  }
 
   async function openInLocalBibleReader() {
     if (!usesLocalBibleReader) {
@@ -1396,6 +1428,13 @@ export default function ReadingScreen({ route }: Props) {
                 </Pressable>
               </>
             )}
+
+            <View style={{ height: 10 }} />
+            <SecondaryButton
+              title="Registrar no Diário"
+              icon="📝"
+              onPress={openPlanJournal}
+            />
 
             {/* informações internas do plano não são exibidas em produção */}
           </Card>

@@ -18,6 +18,12 @@ export const PLAN_START_DATE_KEY = "planStartDate"; // YYYY-MM-DD
 // ✅ NOVO: overrides (redistribuição) por data
 // map: { "YYYY-MM-DD": "Gn 1-3; Êx 1-2" }
 export const PLAN_OVERRIDES_KEY = "planOverridesByDate";
+export const PLAN_REDISTRIBUTIONS_KEY = "planRedistributionsBySourceDate";
+
+type PlanRedistributionRecord = {
+  targetDate: string;
+  reference: string;
+};
 
 /**
  * ✅ Notificações (modo inteligente)
@@ -215,6 +221,7 @@ export async function getOverdueOffsets(params?: {
 
   const completed = await getCompletedDays();
   const done = new Set(completed);
+  const redistributions = await getRedistributionsMap();
 
   const endIso = includeToday ? today : addDaysIso(today, -1);
   if (endIso < start) return [];
@@ -235,7 +242,7 @@ export async function getOverdueOffsets(params?: {
     const policy = resolvePlanCivilDayPolicy(dateIso);
 
     if (!policy.consumesReadingUnit) continue;
-    if (!done.has(dateIso)) overdue.push(off);
+    if (!done.has(dateIso) && !redistributions[dateIso]) overdue.push(off);
   }
 
   return overdue;
@@ -351,11 +358,68 @@ async function getOverridesMap(): Promise<Record<string, string>> {
 }
 
 async function setOverridesMap(map: Record<string, string>): Promise<void> {
-  try {
-    await AsyncStorage.setItem(PLAN_OVERRIDES_KEY, JSON.stringify(map));
-  } catch {
-    // ignore
+  await AsyncStorage.setItem(
+    PLAN_OVERRIDES_KEY,
+    JSON.stringify(map),
+  );
+}
+
+function sanitizeRedistributionsMap(
+  input: unknown,
+): Record<string, PlanRedistributionRecord> {
+  const out: Record<string, PlanRedistributionRecord> = {};
+  if (!input || typeof input !== "object") return out;
+
+  for (const [sourceDate, raw] of Object.entries(
+    input as Record<string, unknown>,
+  )) {
+    if (!isValidDateString(sourceDate)) continue;
+    if (!raw || typeof raw !== "object") continue;
+
+    const record = raw as {
+      targetDate?: unknown;
+      reference?: unknown;
+    };
+
+    if (!isValidDateString(record.targetDate)) continue;
+    if (typeof record.reference !== "string") continue;
+
+    const reference = record.reference.trim();
+    if (!reference) continue;
+
+    out[sourceDate] = {
+      targetDate: record.targetDate,
+      reference:
+        reference.length > 2000
+          ? reference.slice(0, 2000)
+          : reference,
+    };
   }
+
+  return out;
+}
+
+async function getRedistributionsMap(): Promise<
+  Record<string, PlanRedistributionRecord>
+> {
+  try {
+    const raw = await AsyncStorage.getItem(
+      PLAN_REDISTRIBUTIONS_KEY,
+    );
+    const parsed = raw ? JSON.parse(raw) : {};
+    return sanitizeRedistributionsMap(parsed);
+  } catch {
+    return {};
+  }
+}
+
+async function setRedistributionsMap(
+  map: Record<string, PlanRedistributionRecord>,
+): Promise<void> {
+  await AsyncStorage.setItem(
+    PLAN_REDISTRIBUTIONS_KEY,
+    JSON.stringify(map),
+  );
 }
 
 /**
@@ -375,6 +439,7 @@ export async function clearOverridesFrom(dateIso: string): Promise<number> {
   if (!isValidDateString(dateIso)) return 0;
 
   const map = await getOverridesMap();
+  const redistributions = await getRedistributionsMap();
   const keys = Object.keys(map);
   let removed = 0;
 
@@ -385,16 +450,26 @@ export async function clearOverridesFrom(dateIso: string): Promise<number> {
     }
   }
 
+  for (const [sourceDate, record] of Object.entries(
+    redistributions,
+  )) {
+    if (record.targetDate >= dateIso) {
+      delete redistributions[sourceDate];
+    }
+  }
+
   await setOverridesMap(map);
+  await setRedistributionsMap(redistributions);
   return removed;
 }
-
 export async function clearAllOverrides(): Promise<void> {
   try {
     await AsyncStorage.removeItem(PLAN_OVERRIDES_KEY);
+    await AsyncStorage.removeItem(
+      PLAN_REDISTRIBUTIONS_KEY,
+    );
   } catch {}
 }
-
 /* ==========================
    ✅ Resolver referência base (consistente com seu ReadingScreen)
    - dias especiais são resolvidos pela política civil explícita
@@ -511,11 +586,16 @@ export async function redistributeOverdueReadings(params?: {
   planEndDate: string;
 }> {
   const start = await ensurePlanStartDate();
-  const today = isValidDateString(params?.todayIso) ? params!.todayIso! : getTodayIsoLocal();
-  const includeTodayAsTarget = params?.includeTodayAsTarget !== false;
+  const today = isValidDateString(params?.todayIso)
+    ? params!.todayIso!
+    : getTodayIsoLocal();
+  const includeTodayAsTarget =
+    params?.includeTodayAsTarget !== false;
 
-  // 1) quais datas estão atrasadas (<= ontem)
-  const overdueDates = await getOverdueDates({ todayIso: today, includeToday: false });
+  const overdueDates = await getOverdueDates({
+    todayIso: today,
+    includeToday: false,
+  });
 
   if (overdueDates.length === 0) {
     return {
@@ -528,14 +608,33 @@ export async function redistributeOverdueReadings(params?: {
     };
   }
 
-  // 2) transformar cada atraso em referência de dia de leitura
-  const backlog: string[] = [];
-  for (const d of overdueDates) {
-    if (!resolvePlanCivilDayPolicy(d).consumesReadingUnit) continue;
-    const base = await getBaseReferenceForDate(d);
-    // se por algum motivo está "concluído", ignora
-    if (base.finished) continue;
-    if (base.reference && !/meditar/i.test(base.reference)) backlog.push(base.reference);
+  const backlog: Array<{
+    sourceDate: string;
+    reference: string;
+  }> = [];
+
+  for (const sourceDate of overdueDates) {
+    if (
+      !resolvePlanCivilDayPolicy(sourceDate)
+        .consumesReadingUnit
+    ) {
+      continue;
+    }
+
+    const effective =
+      await getEffectiveReferenceForDate(sourceDate);
+
+    if (effective.finished) continue;
+
+    if (
+      effective.reference &&
+      !/meditar/i.test(effective.reference)
+    ) {
+      backlog.push({
+        sourceDate,
+        reference: effective.reference,
+      });
+    }
   }
 
   if (backlog.length === 0) {
@@ -549,23 +648,30 @@ export async function redistributeOverdueReadings(params?: {
     };
   }
 
-  // 3) calcular a data final do plano (pela sequência útil)
   const seq = getNonSundaySequence();
   const lastIdx = Math.max(0, seq.length - 1);
-  const planEndDate = getCivilDateForPlanReadingUnitIndex(start, lastIdx);
+  const planEndDate =
+    getCivilDateForPlanReadingUnitIndex(
+      start,
+      lastIdx,
+    );
 
-  // 4) listar dias alvo (próximos dias em aberto)
   const completed = await getCompletedDays();
   const done = new Set(completed);
+  const targetStart = includeTodayAsTarget
+    ? today
+    : addDaysIso(today, 1);
 
-  const targetStart = includeTodayAsTarget ? today : addDaysIso(today, 1);
   const targets: string[] = [];
-
   let cur = targetStart;
+
   while (cur <= planEndDate) {
     const policy = resolvePlanCivilDayPolicy(cur);
 
-    if (policy.consumesReadingUnit && !done.has(cur)) {
+    if (
+      policy.consumesReadingUnit &&
+      !done.has(cur)
+    ) {
       targets.push(cur);
     }
 
@@ -583,58 +689,226 @@ export async function redistributeOverdueReadings(params?: {
     };
   }
 
-  // 5) limpamos overrides futuros (para não somar bagunça em recalcular de novo)
-  await clearOverridesFrom(targetStart);
+  const previousOverrides = await getOverridesMap();
+  const previousRedistributions =
+    await getRedistributionsMap();
 
-  // 6) distribuição equilibrada (q + resto)
+  const nextRedistributions: Record<
+    string,
+    PlanRedistributionRecord
+  > = {
+    ...previousRedistributions,
+  };
+
   const totalBacklog = backlog.length;
   const daysCount = targets.length;
   const q = Math.floor(totalBacklog / daysCount);
   const r = totalBacklog % daysCount;
 
-  const overrides = await getOverridesMap();
-
   let cursorBacklog = 0;
-  let written = 0;
 
   for (let i = 0; i < targets.length; i++) {
-    const dateIso = targets[i];
-
-    const policy = resolvePlanCivilDayPolicy(dateIso);
-    if (!policy.consumesReadingUnit) continue;
-
-    const base = await getBaseReferenceForDate(dateIso);
-    if (base.finished) break; // segurança
-
+    const targetDate = targets[i];
     const take = q + (i < r ? 1 : 0);
+
     if (take <= 0) continue;
 
-    const extras = backlog.slice(cursorBacklog, cursorBacklog + take);
-    cursorBacklog += extras.length;
+    const entries = backlog.slice(
+      cursorBacklog,
+      cursorBacklog + take,
+    );
 
-    if (extras.length === 0) continue;
+    cursorBacklog += entries.length;
 
-    // Combina a leitura do dia + extras
-    const combined = [base.reference, ...extras].join("; ");
-
-    overrides[dateIso] = combined;
-    written++;
+    for (const entry of entries) {
+      nextRedistributions[entry.sourceDate] = {
+        targetDate,
+        reference: entry.reference,
+      };
+    }
 
     if (cursorBacklog >= totalBacklog) break;
   }
 
-  await setOverridesMap(overrides);
+  const nextOverrides: Record<string, string> = {
+    ...previousOverrides,
+  };
+
+  for (const dateIso of Object.keys(nextOverrides)) {
+    if (dateIso >= targetStart) {
+      delete nextOverrides[dateIso];
+    }
+  }
+
+  const assignmentsByTarget = new Map<
+    string,
+    Array<{
+      sourceDate: string;
+      reference: string;
+    }>
+  >();
+
+  for (const [sourceDate, record] of Object.entries(
+    nextRedistributions,
+  ).sort(([a], [b]) => a.localeCompare(b))) {
+    if (record.targetDate < targetStart) continue;
+
+    if (record.targetDate > planEndDate) {
+      throw new Error(
+        "PLAN_REDISTRIBUTION_TARGET_OUT_OF_RANGE",
+      );
+    }
+
+    const targetPolicy =
+      resolvePlanCivilDayPolicy(record.targetDate);
+
+    if (!targetPolicy.consumesReadingUnit) {
+      throw new Error(
+        "PLAN_REDISTRIBUTION_TARGET_INVALID",
+      );
+    }
+
+    if (done.has(record.targetDate)) {
+      continue;
+    }
+
+    const current =
+      assignmentsByTarget.get(record.targetDate) ?? [];
+
+    current.push({
+      sourceDate,
+      reference: record.reference,
+    });
+
+    assignmentsByTarget.set(
+      record.targetDate,
+      current,
+    );
+  }
+
+  let written = 0;
+
+  for (const targetDate of Array.from(
+    assignmentsByTarget.keys(),
+  ).sort()) {
+    const base =
+      await getBaseReferenceForDate(targetDate);
+
+    if (base.finished) {
+      throw new Error(
+        "PLAN_REDISTRIBUTION_TARGET_FINISHED",
+      );
+    }
+
+    const extras = (
+      assignmentsByTarget.get(targetDate) ?? []
+    )
+      .sort((a, b) =>
+        a.sourceDate.localeCompare(b.sourceDate),
+      )
+      .map((entry) => entry.reference);
+
+    if (extras.length === 0) continue;
+
+    nextOverrides[targetDate] = [
+      base.reference,
+      ...extras,
+    ].join("; ");
+
+    written++;
+  }
+
+  try {
+    await setOverridesMap(nextOverrides);
+    await setRedistributionsMap(
+      nextRedistributions,
+    );
+
+    const persistedOverrides =
+      await getOverridesMap();
+
+    const overrideKeys =
+      Object.keys(nextOverrides).sort();
+
+    const persistedOverrideKeys =
+      Object.keys(persistedOverrides).sort();
+
+    const overridesMatch =
+      overrideKeys.length ===
+        persistedOverrideKeys.length &&
+      overrideKeys.every(
+        (dateIso, index) =>
+          dateIso === persistedOverrideKeys[index] &&
+          persistedOverrides[dateIso] ===
+            nextOverrides[dateIso],
+      );
+
+    if (!overridesMatch) {
+      throw new Error(
+        "PLAN_OVERRIDE_PERSISTENCE_VERIFICATION_FAILED",
+      );
+    }
+
+    const persistedRedistributions =
+      await getRedistributionsMap();
+
+    const redistributionKeys =
+      Object.keys(nextRedistributions).sort();
+
+    const persistedRedistributionKeys =
+      Object.keys(
+        persistedRedistributions,
+      ).sort();
+
+    const redistributionsMatch =
+      redistributionKeys.length ===
+        persistedRedistributionKeys.length &&
+      redistributionKeys.every(
+        (sourceDate, index) => {
+          const expected =
+            nextRedistributions[sourceDate];
+          const actual =
+            persistedRedistributions[sourceDate];
+
+          return (
+            sourceDate ===
+              persistedRedistributionKeys[index] &&
+            actual?.targetDate ===
+              expected.targetDate &&
+            actual?.reference ===
+              expected.reference
+          );
+        },
+      );
+
+    if (!redistributionsMatch) {
+      throw new Error(
+        "PLAN_REDISTRIBUTION_PERSISTENCE_VERIFICATION_FAILED",
+      );
+    }
+  } catch (error) {
+    try {
+      await setOverridesMap(previousOverrides);
+      await setRedistributionsMap(
+        previousRedistributions,
+      );
+    } catch {}
+
+    throw error;
+  }
 
   return {
     overdueCount: overdueDates.length,
-    redistributedCount: Math.min(cursorBacklog, totalBacklog),
+    redistributedCount: Math.min(
+      cursorBacklog,
+      totalBacklog,
+    ),
     targetDays: targets.length,
     overridesWritten: written,
     start,
     planEndDate,
   };
 }
-
 /* ==========================
    MARK / RESET / RESTORE
 ========================== */
@@ -672,6 +946,9 @@ export async function resetProgress(): Promise<void> {
 
   // ✅ limpa redistribuições
   await AsyncStorage.removeItem(PLAN_OVERRIDES_KEY);
+  await AsyncStorage.removeItem(
+    PLAN_REDISTRIBUTIONS_KEY,
+  );
 
   // ✅ reavalia notificações (se estava ligado, cancela/recria conforme settings)
   await syncNotificationsSafely();

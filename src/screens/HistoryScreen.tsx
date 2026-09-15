@@ -1,3 +1,4 @@
+import { getPersonalPlatformHub } from "../services/personalPlatformHub";
 import {
   View,
   Text,
@@ -15,8 +16,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect } from "@react-navigation/native";
 
 import { colors } from "../theme/colors";
-import { restoreFromAutoBackup } from "../services/backupRestore";
-import { APP_INFO } from "../constants/appInfo";
+import { restoreFromAutoBackup } from "../services/backupRestore";import { APP_INFO } from "../constants/appInfo";
 
 import {
   getCompletedDays,
@@ -47,8 +47,6 @@ type ExportData = {
 
 // --- CONSTANTES ---
 const LAST_BACKUP_KEY = "lastAutoBackupDate";
-const GRATITUDE_KEY = "gratitudeByDate";
-
 /* ==========================
    HELPERS (LÓGICA PRESERVADA)
 ========================== */
@@ -288,7 +286,7 @@ export default function HistoryScreen() {
 
   const loadGratitude = useCallback(async () => {
     try {
-      const raw = await AsyncStorage.getItem(GRATITUDE_KEY);
+      const raw = JSON.stringify(await getPersonalPlatformHub().journalService.exportHomeGratitudeMap());
       const parsed = raw ? JSON.parse(raw) : {};
       setGratitudeByDate(sanitizeGratitudeMap(parsed));
     } catch {
@@ -367,7 +365,7 @@ export default function HistoryScreen() {
   async function exportAsText() {
     try {
       const completed = await getCompletedDays();
-      const rawG = await AsyncStorage.getItem(GRATITUDE_KEY);
+      const rawG = JSON.stringify(await getPersonalPlatformHub().journalService.exportHomeGratitudeMap());
       const parsedG = rawG ? JSON.parse(rawG) : {};
       const gratitudeClean = sanitizeGratitudeMap(parsedG);
 
@@ -422,7 +420,7 @@ export default function HistoryScreen() {
       let gCount = 0;
 
       if (g) {
-        await AsyncStorage.setItem(GRATITUDE_KEY, JSON.stringify(g));
+        await getPersonalPlatformHub().journalService.replaceHomeGratitudeMap(g);
         setGratitudeByDate(g);
         gCount = Object.keys(g).length;
       } else {
@@ -491,7 +489,7 @@ export default function HistoryScreen() {
   async function resetProgressNow() {
     try {
       await resetProgress();
-      await AsyncStorage.removeItem(GRATITUDE_KEY);
+      await getPersonalPlatformHub().journalService.clearHomeGratitudeEntries();
 
       setHistory({});
       setExportJson(null);

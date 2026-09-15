@@ -1,3 +1,4 @@
+import { getPersonalPlatformHub } from "../services/personalPlatformHub";
 import {
   View,
   Text,
@@ -18,8 +19,7 @@ import type { DrawerNavigationProp } from "@react-navigation/drawer";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
 import { colors } from "../theme/colors";
-import { restoreFromAutoBackup } from "../services/backupRestore";
-import { APP_INFO } from "../constants/appInfo";
+import { restoreFromAutoBackup } from "../services/backupRestore";import { APP_INFO } from "../constants/appInfo";
 import type { AppDrawerParamList, RootStackParamList } from "../navigation/types";
 
 // ✅ usar as rotinas oficiais do app para não deixar chaves “penduradas”
@@ -45,8 +45,6 @@ type NavigationProp = CompositeNavigationProp<
 const LAST_BACKUP_KEY = "lastAutoBackupDate";
 const USER_NAME_KEY = "userName";
 const HAS_ONBOARDED_KEY = "hasOnboarded";
-const GRATITUDE_KEY = "gratitudeByDate";
-
 // ✅ NOTIF SETTINGS (NOVO) — chaves estáveis (não quebram nada)
 const NOTIF_ENABLED_KEY = "notif_enabled";
 const NOTIF_TIME_KEY = "notif_time_hhmm"; // "08:00"
@@ -292,7 +290,7 @@ export default function SettingsScreen() {
       const parsed = stored ? JSON.parse(stored) : [];
       const completed = uniqueSortedIsoDates(Array.isArray(parsed) ? parsed : []);
 
-      const gratitudeRaw = await AsyncStorage.getItem(GRATITUDE_KEY);
+      const gratitudeRaw = JSON.stringify(await getPersonalPlatformHub().journalService.exportHomeGratitudeMap());
       const gratitudeParsed = gratitudeRaw ? JSON.parse(gratitudeRaw) : {};
       const gratitudeByDate = sanitizeGratitudeMap(gratitudeParsed);
 
@@ -342,7 +340,7 @@ export default function SettingsScreen() {
       await setCompletedDays(validDates);
 
       const gratitudeByDate = sanitizeGratitudeMap(parsed?.gratitudeByDate);
-      await AsyncStorage.setItem(GRATITUDE_KEY, JSON.stringify(gratitudeByDate));
+      await getPersonalPlatformHub().journalService.replaceHomeGratitudeMap(gratitudeByDate);
 
       if (typeof parsed?.userName === "string") {
         const name = parsed.userName.trim();
@@ -414,7 +412,7 @@ export default function SettingsScreen() {
       await resetProgress();
 
       // ✅ limpa extras (gratidão + onboarding)
-      await AsyncStorage.removeItem(GRATITUDE_KEY);
+      await getPersonalPlatformHub().journalService.clearHomeGratitudeEntries();
       await AsyncStorage.removeItem(USER_NAME_KEY);
       await AsyncStorage.removeItem(HAS_ONBOARDED_KEY);
 

@@ -1,3 +1,4 @@
+import { getPersonalPlatformHub } from "../services/personalPlatformHub";
 import {
   View,
   Text,
@@ -218,11 +219,18 @@ export default function PlanScreen() {
 
   const loadGratitude = useCallback(async () => {
     try {
-      const raw = await AsyncStorage.getItem("gratitudeByDate");
-      const parsed = raw ? JSON.parse(raw) : {};
-      setGratitudeByDate(sanitizeGratitudeMap(parsed));
+      const { journalService } =
+        getPersonalPlatformHub();
+      setGratitudeByDate(
+        sanitizeGratitudeMap(
+          await journalService.exportHomeGratitudeMap(),
+        ),
+      );
     } catch (err) {
-      console.log("Erro ao carregar gratitudeByDate", err);
+      console.log(
+        "Erro ao carregar gratidão do Journal",
+        err,
+      );
       setGratitudeByDate({});
     }
   }, []);

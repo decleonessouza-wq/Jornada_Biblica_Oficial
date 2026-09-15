@@ -1,3 +1,4 @@
+import { getPersonalPlatformHub } from "../services/personalPlatformHub";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Alert,
@@ -325,14 +326,35 @@ export default function HomeScreen() {
 
   const loadGratitude = useCallback(async () => {
     try {
-      const raw = await AsyncStorage.getItem("gratitudeByDate");
-      const parsed = raw ? JSON.parse(raw) : {};
-      setGratitudeByDate(sanitizeGratitudeMap(parsed));
+      const { journalService } =
+        getPersonalPlatformHub();
+      const entries =
+        await journalService.listActiveGratitudeEntries();
+      const entry =
+        entries.find((candidate) => candidate.entryDate === today) ??
+        null;
+
+      setGratitudeByDate(
+        sanitizeGratitudeMap(
+          entry?.gratitudeText
+            ? { [today]: entry.gratitudeText }
+            : {},
+        ),
+      );
     } catch (err) {
-      console.log("Erro ao carregar gratitudeByDate", err);
+      console.log(
+        "Erro ao carregar gratidão do Journal",
+        err,
+      );
       setGratitudeByDate({});
     }
-  }, []);
+  }, [today]);
+
+  useFocusEffect(
+    useCallback(() => {
+      void loadGratitude();
+    }, [loadGratitude]),
+  );
 
   const loadProgress = useCallback(async () => {
     try {
@@ -1072,7 +1094,7 @@ export default function HomeScreen() {
               <Text style={styles.quickSectionEyebrow}>NAVEGAÇÃO</Text>
               <Text style={styles.quickSectionTitle}>Acessos rápidos</Text>
             </View>
-            <Text style={styles.quickSectionHint}>4 recursos ativos</Text>
+            <Text style={styles.quickSectionHint}>5 recursos ativos</Text>
           </View>
 
           <View style={styles.quickGrid}>
@@ -1094,7 +1116,7 @@ export default function HomeScreen() {
               iconSource={require("../../assets/home/icons/diario_icone.png")}
               title="Meu Diário"
               subtitle="Anote e reflita"
-              disabled
+              onPress={() => navigation.navigate("Journal")}
             />
 
             <QuickAccessCard
