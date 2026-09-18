@@ -4,7 +4,6 @@ import {
   TRACK_06_DRAFT_BATCH_PROFILE,
   TRACK_06_DRAFT_BATCH_PUBLISHED,
   TRACK_06_DRAFT_BATCH_RUNTIME_ELIGIBLE,
-  TRACK_06_DRAFT_BATCH_VALIDATOR_DEBT,
   track06DraftBatchEditorialSources,
   track06DraftBatchPackage,
 } from "../src/studies/content/track06DraftBatch";
@@ -269,10 +268,37 @@ describe("P17-P2-A28-A1 Track 06 controlled DRAFT materialization", () => {
       expect(reflection).toBeDefined();
     }
   });
-  it("records the validator debt instead of fabricating a REFLECT section", () => {
-    expect(TRACK_06_DRAFT_BATCH_VALIDATOR_DEBT).toBe("JOURNEY_20_30_V1_REQUIRES_REFLECT_BUT_TRACK06_SOURCE_PRESERVES_REFLITA_INSIDE_APPLY");
-    expect(JOURNEY_20_30_REQUIRED_SECTION_TYPES).toContain("REFLECT");
-    expect(track06DraftBatchPackage.sections.some((section)=>String(section.type)==="REFLECT")).toBe(false);
+  it("records the resolved validator policy without fabricating CONNECT or REFLECT sections", () => {
+    expect(JOURNEY_20_30_REQUIRED_SECTION_TYPES).not.toContain("CONNECT");
+    expect(JOURNEY_20_30_REQUIRED_SECTION_TYPES).not.toContain("REFLECT");
+    expect(
+      track06DraftBatchPackage.sections.some(
+        (section) => section.type === "CONNECT",
+      ),
+    ).toBe(false);
+    expect(
+      track06DraftBatchPackage.sections.some(
+        (section) => section.type === "REFLECT",
+      ),
+    ).toBe(false);
+  
+    for (const study of track06DraftBatchPackage.studies) {
+      const apply = track06DraftBatchPackage.sections.find(
+        (section) => section.studyId === study.id && section.type === "APPLY",
+      );
+  
+      expect(apply).toBeDefined();
+  
+      const reflita =
+        apply?.blocks.filter(
+          (block) =>
+            "text" in block &&
+            typeof block.text === "string" &&
+            /^REFLITA(?:\s|$)/i.test(block.text),
+        ) ?? [];
+  
+      expect(reflita).toHaveLength(4);
+    }
   });
   it("keeps Study 10 terminal", () => {
     const study10=track06DraftBatchPackage.studies.find((study)=>study.id==="track-06-study-10");

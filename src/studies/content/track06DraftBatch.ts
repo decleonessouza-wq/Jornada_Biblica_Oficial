@@ -14,9 +14,6 @@ export const TRACK_06_DRAFT_BATCH_PROFILE = "JOURNEY_20_30_V1" as const;
 export const TRACK_06_DRAFT_BATCH_EDITORIAL_STATUS = "DRAFT" as const;
 export const TRACK_06_DRAFT_BATCH_PUBLISHED = false as const;
 export const TRACK_06_DRAFT_BATCH_RUNTIME_ELIGIBLE = false as const;
-export const TRACK_06_DRAFT_BATCH_VALIDATOR_DEBT =
-  "JOURNEY_20_30_V1_REQUIRES_REFLECT_BUT_TRACK06_SOURCE_PRESERVES_REFLITA_INSIDE_APPLY" as const;
-
 const TRACK_06_ID = "track-06" as StudyTrackId;
 const track: StudyTrack = {
   id: TRACK_06_ID,
