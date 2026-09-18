@@ -67,6 +67,11 @@ export type JournalStackParamList = {
     entryId: JournalEntryId;
   };
 };
+export type StudiesStackParamList = {
+  StudiesHome: undefined;
+  StudyTrack: Readonly<{ trackId: string }>;
+  StudyDetail: Readonly<{ studyId: string }>;
+};
 
 export type MainTabParamList = {
   HomeTab: undefined;
@@ -78,6 +83,7 @@ export type MainTabParamList = {
 export type AppDrawerParamList = {
   MainTabs: NavigatorScreenParams<MainTabParamList> | undefined;
   Journal: NavigatorScreenParams<JournalStackParamList> | undefined;
+  Studies: NavigatorScreenParams<StudiesStackParamList> | undefined;
   Favorites: undefined;
   Progress: undefined;
   History: undefined;
@@ -127,3 +133,6 @@ export type HymnalStackScreenProps<
 export type JournalStackScreenProps<
   RouteName extends keyof JournalStackParamList,
 > = NativeStackScreenProps<JournalStackParamList, RouteName>;
+export type StudiesStackScreenProps<
+  RouteName extends keyof StudiesStackParamList,
+> = NativeStackScreenProps<StudiesStackParamList, RouteName>;
