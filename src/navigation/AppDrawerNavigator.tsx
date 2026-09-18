@@ -11,6 +11,7 @@ import { colors } from "../theme/colors";
 
 import AppDrawerContent from "./AppDrawerContent";
 import JournalNavigator from "./JournalNavigator";
+import StudiesNavigator from "./StudiesNavigator";
 import MainTabsNavigator from "./MainTabsNavigator";
 import { AppDrawer } from "./navigationFactories";
 import QuickActionSheet from "./QuickActionSheet";
@@ -93,6 +94,10 @@ export default function AppDrawerNavigator() {
             closeQuickActions();
             navigation.navigate("Favorites");
           };
+          const handleOpenStudies = () => {
+            closeQuickActions();
+            navigation.navigate("Studies");
+          };
 
           return (
             <>
@@ -105,6 +110,7 @@ export default function AppDrawerNavigator() {
                 onOpenProgress={handleOpenProgress}
                 onOpenHistory={handleOpenHistory}
                 onOpenJournal={handleOpenJournal}
+            onOpenStudies={handleOpenStudies}
                 onOpenFavorites={handleOpenFavorites}
               />
             </>
@@ -120,6 +126,11 @@ export default function AppDrawerNavigator() {
           drawerLabel: "Meu Diário",
           headerShown: false,
         }}
+      />
+      <AppDrawer.Screen
+        name="Studies"
+        component={StudiesNavigator}
+        options={{ drawerItemStyle: { display: "none" } }}
       />
 
       <AppDrawer.Screen

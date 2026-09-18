@@ -1123,7 +1123,7 @@ export default function HomeScreen() {
               iconSource={require("../../assets/home/icons/estudos_icone.png")}
               title="Estudos"
               subtitle="Aprofunde temas"
-              disabled
+              onPress={() => navigation.navigate("Studies")}
             />
 
             <QuickAccessCard
