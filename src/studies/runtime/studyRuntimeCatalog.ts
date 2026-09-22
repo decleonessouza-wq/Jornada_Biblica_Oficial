@@ -1,21 +1,17 @@
-import * as track01DraftBatchModule from "../content/track01DraftBatch";
-import * as track02DraftBatchModule from "../content/track02DraftBatch";
-import * as track03DraftBatchModule from "../content/track03DraftBatch";
-import * as track04DraftBatchModule from "../content/track04DraftBatch";
-import * as track05Study01DraftModule from "../content/track05Study01Draft";
+import type { StudyContentPackage } from "../content/studyContentPackage";
 import { validateStudyContentPackage } from "../content/studyContentValidator";
+import { studyReleaseManifest } from "../release/studyReleaseManifest";
 
-type RuntimeStudyContentPackage = Parameters<
-  typeof validateStudyContentPackage
->[0];
-
+type RuntimeStudyContentPackage = StudyContentPackage;
 type RuntimeStudyTrack = RuntimeStudyContentPackage["tracks"][number];
 type RuntimeStudy = RuntimeStudyContentPackage["studies"][number];
 type UnknownRecord = Record<string, unknown>;
 
+export type StudyRuntimeEditorialStatus = "DRAFT" | "PUBLISHED";
+
 export interface StudyRuntimeCandidate {
   readonly contentPackage: RuntimeStudyContentPackage;
-  readonly editorialStatus: string | null;
+  readonly editorialStatus: StudyRuntimeEditorialStatus;
   readonly publicAuthorDisplayName: string | null;
 }
 
@@ -35,105 +31,12 @@ const isRecord = (value: unknown): value is UnknownRecord =>
 
 const isPackageShape = (
   value: unknown,
-): value is RuntimeStudyContentPackage => {
-  if (!isRecord(value)) {
-    return false;
-  }
-
-  return Array.isArray(value.tracks) && Array.isArray(value.studies);
-};
-
-const readEditorialStatus = (value: unknown): string | null => {
-  if (!isRecord(value)) {
-    return null;
-  }
-
-  const status = value.editorialStatus;
-  return typeof status === "string" ? status : null;
-};
-
-const collectRecords = (root: unknown): UnknownRecord[] => {
-  const records: UnknownRecord[] = [];
-  const queue: unknown[] = [root];
-  const seen = new Set<object>();
-
-  while (queue.length > 0) {
-    const current = queue.shift();
-
-    if (Array.isArray(current)) {
-      if (seen.has(current)) {
-        continue;
-      }
-
-      seen.add(current);
-      queue.push(...current);
-      continue;
-    }
-
-    if (!isRecord(current)) {
-      continue;
-    }
-
-    if (seen.has(current)) {
-      continue;
-    }
-
-    seen.add(current);
-    records.push(current);
-    queue.push(...Object.values(current));
-  }
-
-  return records;
-};
-
-const moduleContainsDraftStatus = (
-  module: Readonly<Record<string, unknown>>,
-): boolean =>
-  collectRecords(module).some(
-    (record) => record.editorialStatus === "DRAFT",
-  );
-
-const readAuthorizedPublicAuthorDisplayName = (
-  module: Readonly<Record<string, unknown>>,
-): string | null => {
-  const names = new Set<string>();
-
-  for (const record of collectRecords(module)) {
-    if (record.publicAuthorDisplayAuthorization !== "AUTHORIZED") {
-      continue;
-    }
-
-    const name = record.publicAuthorDisplayName;
-    if (typeof name === "string" && name.trim().length > 0) {
-      names.add(name);
-    }
-  }
-
-  return names.size === 1 ? [...names][0] : null;
-};
-
-const packageContainsDraftStatus = (
-  contentPackage: RuntimeStudyContentPackage,
-): boolean => {
-  if (readEditorialStatus(contentPackage) === "DRAFT") {
-    return true;
-  }
-
-  return [...contentPackage.tracks, ...contentPackage.studies].some(
-    (item) => readEditorialStatus(item) === "DRAFT",
-  );
-};
-
-const isRuntimeValid = (
-  contentPackage: RuntimeStudyContentPackage,
-): boolean => {
-  try {
-    const validation = validateStudyContentPackage(contentPackage);
-    return validation.valid === true;
-  } catch {
-    return false;
-  }
-};
+): value is RuntimeStudyContentPackage =>
+  isRecord(value) &&
+  Array.isArray(value.tracks) &&
+  Array.isArray(value.studies) &&
+  Array.isArray(value.sections) &&
+  Array.isArray(value.references);
 
 const normalizeCandidate = (
   value: unknown,
@@ -142,48 +45,80 @@ const normalizeCandidate = (
     return null;
   }
 
-  const editorialStatus = value.editorialStatus;
-  if (editorialStatus !== null && typeof editorialStatus !== "string") {
+  if (
+    value.editorialStatus !== "DRAFT" &&
+    value.editorialStatus !== "PUBLISHED"
+  ) {
     return null;
   }
 
-  const publicAuthorDisplayName = value.publicAuthorDisplayName;
   if (
-    publicAuthorDisplayName !== null &&
-    typeof publicAuthorDisplayName !== "string"
+    value.publicAuthorDisplayName !== null &&
+    typeof value.publicAuthorDisplayName !== "string"
   ) {
     return null;
   }
 
   return {
     contentPackage: value.contentPackage,
-    editorialStatus,
-    publicAuthorDisplayName,
+    editorialStatus: value.editorialStatus,
+    publicAuthorDisplayName: value.publicAuthorDisplayName,
   };
 };
+
+const packageIsExplicitlyPublished = (
+  contentPackage: RuntimeStudyContentPackage,
+): boolean =>
+  contentPackage.tracks.every((track) => track.published) &&
+  contentPackage.studies.every((study) => study.published);
+
+const packageIsRuntimeValid = (
+  contentPackage: RuntimeStudyContentPackage,
+): boolean => {
+  try {
+    return validateStudyContentPackage(contentPackage).valid;
+  } catch {
+    return false;
+  }
+};
+
+const hasCrossPackageIdentityCollision = (
+  contentPackage: RuntimeStudyContentPackage,
+  seenTrackIds: ReadonlySet<string>,
+  seenTrackSlugs: ReadonlySet<string>,
+  seenStudyIds: ReadonlySet<string>,
+  seenStudySlugs: ReadonlySet<string>,
+): boolean =>
+  contentPackage.tracks.some(
+    (track) => seenTrackIds.has(track.id) || seenTrackSlugs.has(track.slug),
+  ) ||
+  contentPackage.studies.some(
+    (study) => seenStudyIds.has(study.id) || seenStudySlugs.has(study.slug),
+  );
 
 export const buildStudyRuntimeCatalog = (
   candidates: readonly unknown[],
 ): StudyRuntimeCatalog => {
   const acceptedCandidates: StudyRuntimeCandidate[] = [];
   const seenPackages = new Set<RuntimeStudyContentPackage>();
+  const seenTrackIds = new Set<string>();
+  const seenTrackSlugs = new Set<string>();
+  const seenStudyIds = new Set<string>();
+  const seenStudySlugs = new Set<string>();
 
   for (const rawCandidate of candidates) {
     try {
       const candidate = normalizeCandidate(rawCandidate);
-      if (!candidate) {
+
+      if (!candidate || candidate.editorialStatus !== "PUBLISHED") {
         continue;
       }
 
-      if (candidate.editorialStatus === "DRAFT") {
+      if (!packageIsExplicitlyPublished(candidate.contentPackage)) {
         continue;
       }
 
-      if (packageContainsDraftStatus(candidate.contentPackage)) {
-        continue;
-      }
-
-      if (!isRuntimeValid(candidate.contentPackage)) {
+      if (!packageIsRuntimeValid(candidate.contentPackage)) {
         continue;
       }
 
@@ -191,7 +126,27 @@ export const buildStudyRuntimeCatalog = (
         continue;
       }
 
+      if (
+        hasCrossPackageIdentityCollision(
+          candidate.contentPackage,
+          seenTrackIds,
+          seenTrackSlugs,
+          seenStudyIds,
+          seenStudySlugs,
+        )
+      ) {
+        continue;
+      }
+
       seenPackages.add(candidate.contentPackage);
+      candidate.contentPackage.tracks.forEach((track) => {
+        seenTrackIds.add(track.id);
+        seenTrackSlugs.add(track.slug);
+      });
+      candidate.contentPackage.studies.forEach((study) => {
+        seenStudyIds.add(study.id);
+        seenStudySlugs.add(study.slug);
+      });
       acceptedCandidates.push(candidate);
     } catch {
       // Fail closed: malformed or hostile candidates are never exposed.
@@ -201,13 +156,9 @@ export const buildStudyRuntimeCatalog = (
   const packages = Object.freeze(
     acceptedCandidates.map((candidate) => candidate.contentPackage),
   );
-
   const tracks = Object.freeze(
-    acceptedCandidates.flatMap(
-      (candidate) => candidate.contentPackage.tracks,
-    ),
+    acceptedCandidates.flatMap((candidate) => candidate.contentPackage.tracks),
   );
-
   const studies = Object.freeze(
     acceptedCandidates.flatMap((candidate) =>
       candidate.contentPackage.studies.map((study) =>
@@ -222,34 +173,17 @@ export const buildStudyRuntimeCatalog = (
   return Object.freeze({ packages, tracks, studies });
 };
 
-const canonicalContentModules: readonly Readonly<Record<string, unknown>>[] = [
-  track01DraftBatchModule,
-  track02DraftBatchModule,
-  track03DraftBatchModule,
-  track04DraftBatchModule,
-  track05Study01DraftModule,
-];
-
-const canonicalCandidates: StudyRuntimeCandidate[] =
-  canonicalContentModules.flatMap((module) => {
-    const editorialStatus = moduleContainsDraftStatus(module)
-      ? "DRAFT"
-      : null;
-    const publicAuthorDisplayName =
-      readAuthorizedPublicAuthorDisplayName(module);
-
-    return Object.values(module)
-      .filter(isPackageShape)
-      .map((contentPackage) => ({
-        contentPackage,
-        editorialStatus,
-        publicAuthorDisplayName,
-      }));
-  });
-
-export const studyRuntimeCatalog = buildStudyRuntimeCatalog(
-  canonicalCandidates,
+const releasedCandidates: readonly StudyRuntimeCandidate[] = Object.freeze(
+  studyReleaseManifest.map((entry) =>
+    Object.freeze({
+      contentPackage: entry.contentPackage,
+      editorialStatus: "PUBLISHED" as const,
+      publicAuthorDisplayName: entry.publicAuthorDisplayName,
+    }),
+  ),
 );
+
+export const studyRuntimeCatalog = buildStudyRuntimeCatalog(releasedCandidates);
 
 const readStringField = (value: unknown, key: string): string | null => {
   if (!isRecord(value)) {

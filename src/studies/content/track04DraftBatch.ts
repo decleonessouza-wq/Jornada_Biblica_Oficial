@@ -708,7 +708,7 @@ const rawSectionsByStudy = [
           }
         ],
         "order": 1,
-        "optional": true
+        "optional": false
       },
       {
         "id": "track-04-study-01-practical-truth-2",
@@ -1725,7 +1725,7 @@ const rawSectionsByStudy = [
           }
         ],
         "order": 1,
-        "optional": true
+        "optional": false
       },
       {
         "id": "track-04-study-02-practical-truth-2",
@@ -2674,7 +2674,7 @@ const rawSectionsByStudy = [
           }
         ],
         "order": 1,
-        "optional": true
+        "optional": false
       },
       {
         "id": "track-04-study-03-practical-truth-2",
@@ -3639,7 +3639,7 @@ const rawSectionsByStudy = [
           }
         ],
         "order": 1,
-        "optional": true
+        "optional": false
       },
       {
         "id": "track-04-study-04-practical-truth-2",
@@ -4580,7 +4580,7 @@ const rawSectionsByStudy = [
           }
         ],
         "order": 1,
-        "optional": true
+        "optional": false
       },
       {
         "id": "track-04-study-05-practical-truth-2",
@@ -5533,7 +5533,7 @@ const rawSectionsByStudy = [
           }
         ],
         "order": 1,
-        "optional": true
+        "optional": false
       },
       {
         "id": "track-04-study-06-practical-truth-2",
@@ -6474,7 +6474,7 @@ const rawSectionsByStudy = [
           }
         ],
         "order": 1,
-        "optional": true
+        "optional": false
       },
       {
         "id": "track-04-study-07-practical-truth-2",
@@ -7395,7 +7395,7 @@ const rawSectionsByStudy = [
           }
         ],
         "order": 1,
-        "optional": true
+        "optional": false
       },
       {
         "id": "track-04-study-08-practical-truth-2",
@@ -8320,7 +8320,7 @@ const rawSectionsByStudy = [
           }
         ],
         "order": 1,
-        "optional": true
+        "optional": false
       },
       {
         "id": "track-04-study-09-practical-truth-2",
@@ -9211,7 +9211,7 @@ const rawSectionsByStudy = [
           }
         ],
         "order": 1,
-        "optional": true
+        "optional": false
       },
       {
         "id": "track-04-study-10-practical-truth-2",
@@ -10080,7 +10080,7 @@ const rawSectionsByStudy = [
           }
         ],
         "order": 1,
-        "optional": true
+        "optional": false
       },
       {
         "id": "track-04-study-11-practical-truth-2",
@@ -10981,7 +10981,7 @@ const rawSectionsByStudy = [
           }
         ],
         "order": 1,
-        "optional": true
+        "optional": false
       },
       {
         "id": "track-04-study-12-practical-truth-2",
@@ -11810,7 +11810,7 @@ const rawSectionsByStudy = [
           }
         ],
         "order": 1,
-        "optional": true
+        "optional": false
       },
       {
         "id": "track-04-study-13-practical-truth-2",
@@ -12723,7 +12723,7 @@ const rawSectionsByStudy = [
           }
         ],
         "order": 1,
-        "optional": true
+        "optional": false
       },
       {
         "id": "track-04-study-14-practical-truth-2",
@@ -13592,7 +13592,7 @@ const rawSectionsByStudy = [
           }
         ],
         "order": 1,
-        "optional": true
+        "optional": false
       },
       {
         "id": "track-04-study-15-practical-truth-2",
@@ -14445,7 +14445,7 @@ const rawSectionsByStudy = [
           }
         ],
         "order": 1,
-        "optional": true
+        "optional": false
       },
       {
         "id": "track-04-study-16-practical-truth-2",
@@ -15294,7 +15294,7 @@ const rawSectionsByStudy = [
           }
         ],
         "order": 1,
-        "optional": true
+        "optional": false
       },
       {
         "id": "track-04-study-17-practical-truth-2",
@@ -16155,7 +16155,7 @@ const rawSectionsByStudy = [
           }
         ],
         "order": 1,
-        "optional": true
+        "optional": false
       },
       {
         "id": "track-04-study-18-practical-truth-2",

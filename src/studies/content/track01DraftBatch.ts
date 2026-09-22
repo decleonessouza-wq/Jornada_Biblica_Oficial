@@ -1,4 +1,16 @@
 /* eslint-disable max-len, quote-props */
+import type {
+  Study,
+  StudyId,
+  StudySection,
+  StudySectionId,
+  StudySlug,
+  StudyTrack,
+  StudyTrackId,
+  StudyTrackSlug,
+} from "../../domain/studies/study";
+import type { StudyContentPackage } from "./studyContentPackage";
+
 /**
  * P17-P2-A11 — Controlled B01 Track 1 DRAFT source integration.
  *
@@ -3588,3 +3600,177 @@ export const TRACK_01_DRAFT_BATCH_INTEGRATION = {
 
 export const track01DraftStudies = TRACK_01_DRAFT_BATCH_INTEGRATION.candidates;
 export type Track01DraftBatchIntegration = typeof TRACK_01_DRAFT_BATCH_INTEGRATION;
+
+const readTrack01CanonicalRequiredString = (
+  value: unknown,
+  field: string,
+): string => {
+  if (typeof value !== "string" || value.trim() === "") {
+    throw new Error(`TRACK01_CANONICAL_REQUIRED_STRING_INVALID:${field}`);
+  }
+
+  return value;
+};
+
+const readTrack01CanonicalTitle = (
+  candidate: Track01DraftCandidateSource,
+): string => {
+  const canonicalSource = candidate.payload["canonicalSource"];
+
+  if (
+    typeof canonicalSource !== "object" ||
+    canonicalSource === null ||
+    !("preambleLines" in canonicalSource)
+  ) {
+    throw new Error("TRACK01_CANONICAL_SOURCE_PREAMBLE_MISSING");
+  }
+
+  const preambleLines = (canonicalSource as { preambleLines?: unknown }).preambleLines;
+
+  if (
+    !Array.isArray(preambleLines) ||
+    preambleLines.length < 2 ||
+    !preambleLines.every((line) => typeof line === "string")
+  ) {
+    throw new Error("TRACK01_CANONICAL_SOURCE_PREAMBLE_INVALID");
+  }
+
+  const titleLines = (preambleLines as string[])
+    .slice(1)
+    .map((line) => line.trim())
+    .filter((line) => line !== "");
+
+  if (titleLines.length === 0) {
+    throw new Error("TRACK01_CANONICAL_TITLE_LINES_MISSING");
+  }
+
+  const firstLine = titleLines[0]
+    .replace(/^\s*\d{2}\s*(?:[-\u2013\u2014]\s*)?/, "")
+    .trim();
+
+  const title = [firstLine, ...titleLines.slice(1)]
+    .join(" ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (title === "") {
+    throw new Error("TRACK01_CANONICAL_TITLE_EMPTY");
+  }
+
+  return title;
+};
+
+const readTrack01CanonicalEstimatedMinutes = (
+  estimatedTime: unknown,
+): Readonly<{ minimum: number; maximum: number }> => {
+  const raw = readTrack01CanonicalRequiredString(
+    estimatedTime,
+    "study.estimatedTime",
+  );
+  const matches = raw.match(/\d+/g);
+
+  if (!matches || matches.length === 0) {
+    throw new Error("TRACK01_CANONICAL_ESTIMATED_MINUTES_MISSING");
+  }
+
+  const minimum = Number(matches[0]);
+  const maximum = Number(matches.length > 1 ? matches[1] : matches[0]);
+
+  if (
+    !Number.isFinite(minimum) ||
+    !Number.isFinite(maximum) ||
+    minimum <= 0 ||
+    maximum < minimum
+  ) {
+    throw new Error("TRACK01_CANONICAL_ESTIMATED_MINUTES_INVALID");
+  }
+
+  return Object.freeze({ minimum, maximum });
+};
+
+const track01CanonicalTrack: StudyTrack = Object.freeze({
+  id: "track-01" as StudyTrackId,
+  slug: "o-plano-eterno-de-deus" as StudyTrackSlug,
+  title: "O Plano Eterno de Deus",
+  description: "O Plano Eterno de Deus",
+  type: "FORMATION",
+  contentProfile: "TRACK_1_ORIGINAL_V1",
+  cardImage: "track-01-card",
+  heroImage: "track-01-hero",
+  order: 1,
+  published: false,
+});
+
+const track01CanonicalStudies: readonly Study[] = Object.freeze(
+  track01DraftStudies.map((candidate, index) => {
+    const study = candidate.payload.study;
+    const objective = readTrack01CanonicalRequiredString(
+      study["objective"],
+      `study[${index}].objective`,
+    );
+    const openingTakeaway =
+      typeof study["openingTakeaway"] === "string"
+        ? study["openingTakeaway"].trim()
+        : "";
+
+    return Object.freeze({
+      id: study.id as StudyId,
+      trackId: study.trackId as StudyTrackId,
+      number: study.number,
+      slug: study.slug as StudySlug,
+      title: readTrack01CanonicalTitle(candidate),
+      summary: openingTakeaway !== "" ? openingTakeaway : objective,
+      questionCentral: readTrack01CanonicalRequiredString(
+        study["questionCentral"],
+        `study[${index}].questionCentral`,
+      ),
+      objective,
+      estimatedMinutes: readTrack01CanonicalEstimatedMinutes(
+        study["estimatedTime"],
+      ),
+      heroImage: `track-01-study-${String(study.number).padStart(2, "0")}-hero`,
+      nextStudyId:
+        study.nextStudyId === null
+          ? null
+          : (study.nextStudyId as StudyId),
+      audienceLevel: "BEGINNER",
+      tags: Object.freeze([study.slug]),
+      published: study.published,
+    });
+  }),
+);
+
+const track01CanonicalSections: readonly StudySection[] = Object.freeze(
+  track01DraftStudies.flatMap((candidate) => {
+    const study = candidate.payload.study;
+
+    return candidate.payload.sections.map((section) => {
+      const normalizedType = section.type.toLowerCase().replace(/_/g, "-");
+
+      return Object.freeze({
+        id: `${study.id}-${normalizedType}-${section.order}` as StudySectionId,
+        studyId: study.id as StudyId,
+        type: section.type as StudySection["type"],
+        title: section.sourceHeading,
+        iconKey: normalizedType,
+        blocks: Object.freeze([
+          Object.freeze({
+            type: "PARAGRAPH" as const,
+            text: section.contentText,
+          }),
+        ]),
+        order: section.order,
+        optional: false,
+        collapsible: false,
+      });
+    });
+  }),
+);
+
+export const track01DraftBatchPackage: StudyContentPackage = Object.freeze({
+  contentVersion: "draft-track-01-studies-01-18-canonical-v1",
+  tracks: Object.freeze([track01CanonicalTrack]),
+  studies: track01CanonicalStudies,
+  sections: track01CanonicalSections,
+  references: Object.freeze([]),
+});

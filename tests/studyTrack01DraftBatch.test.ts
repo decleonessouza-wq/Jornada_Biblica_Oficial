@@ -1,5 +1,17 @@
 /* eslint-disable max-len */
-import { TRACK_01_DRAFT_BATCH_INTEGRATION, track01DraftStudies } from "../src/studies/content/track01DraftBatch";
+import {
+  TRACK_01_DRAFT_BATCH_INTEGRATION,
+  track01DraftBatchPackage,
+  track01DraftStudies,
+} from "../src/studies/content/track01DraftBatch";
+import {
+  validateStudyContentPackage,
+  validateStudyEditorialPackage,
+} from "../src/studies/content/studyContentValidator";
+import {
+  buildStudyRuntimeCatalog,
+  getRuntimeStudyCountForTrack,
+} from "../src/studies/runtime/studyRuntimeCatalog";
 
 describe("P17-P2-A11 Track 1 DRAFT batch source integration", () => {
   const batch = TRACK_01_DRAFT_BATCH_INTEGRATION;
@@ -122,5 +134,115 @@ describe("P17-P2-A11 Track 1 DRAFT batch source integration", () => {
     expect(payload.terminalCompletion?.trackCompleted).toBe(1);
     expect(payload.terminalCompletion?.completedStudyCount).toBe(18);
     expect(payload.terminalCompletion?.nextTrackId).toBe("track-02");
+  });
+});
+
+describe("P17-P2-A29-A56 canonical Track 01 package", () => {
+  it("materializes one DRAFT track, eighteen studies and 178 structured sections", () => {
+    expect(track01DraftBatchPackage.contentVersion).toBe(
+      "draft-track-01-studies-01-18-canonical-v1",
+    );
+    expect(track01DraftBatchPackage.tracks).toHaveLength(1);
+    expect(track01DraftBatchPackage.studies).toHaveLength(18);
+    expect(track01DraftBatchPackage.sections).toHaveLength(178);
+    expect(track01DraftBatchPackage.references).toHaveLength(0);
+
+    expect(track01DraftBatchPackage.tracks[0]).toMatchObject({
+      id: "track-01",
+      slug: "o-plano-eterno-de-deus",
+      title: "O Plano Eterno de Deus",
+      description: "O Plano Eterno de Deus",
+      type: "FORMATION",
+      contentProfile: "TRACK_1_ORIGINAL_V1",
+      cardImage: "track-01-card",
+      heroImage: "track-01-hero",
+      order: 1,
+      published: false,
+    });
+
+    expect(
+      track01DraftBatchPackage.studies.every((study) => study.published === false),
+    ).toBe(true);
+    expect(validateStudyEditorialPackage(track01DraftBatchPackage).valid).toBe(
+      true,
+    );
+  });
+
+  it("preserves candidate ids, continuity and section content exactly in the canonical projection", () => {
+    expect(track01DraftBatchPackage.studies.map((study) => study.id)).toEqual(
+      track01DraftStudies.map((candidate) => candidate.payload.study.id),
+    );
+    expect(
+      track01DraftBatchPackage.studies.map((study) => study.nextStudyId),
+    ).toEqual(
+      track01DraftStudies.map(
+        (candidate) => candidate.payload.study.nextStudyId,
+      ),
+    );
+
+    for (const candidate of track01DraftStudies) {
+      const studyId = candidate.payload.study.id;
+      const canonicalSections = track01DraftBatchPackage.sections.filter(
+        (section) => section.studyId === studyId,
+      );
+
+      expect(canonicalSections).toHaveLength(candidate.payload.sections.length);
+
+      candidate.payload.sections.forEach((sourceSection, index) => {
+        const canonicalSection = canonicalSections[index];
+        expect(canonicalSection?.type).toBe(sourceSection.type);
+        expect(canonicalSection?.order).toBe(sourceSection.order);
+        expect(canonicalSection?.title).toBe(sourceSection.sourceHeading);
+        expect(canonicalSection?.optional).toBe(false);
+        expect(canonicalSection?.collapsible).toBe(false);
+        expect(canonicalSection?.blocks).toEqual([
+          {
+            type: "PARAGRAPH",
+            text: sourceSection.contentText,
+          },
+        ]);
+      });
+    }
+  });
+
+  it("keeps an explicit DRAFT candidate gated while the released runtime exposes Track 01", () => {
+    const draftCatalog = buildStudyRuntimeCatalog([
+      {
+        contentPackage: track01DraftBatchPackage,
+        editorialStatus: "DRAFT",
+        publicAuthorDisplayName: null,
+      },
+    ]);
+
+    expect(draftCatalog.packages).toHaveLength(0);
+    expect(draftCatalog.tracks).toHaveLength(0);
+    expect(draftCatalog.studies).toHaveLength(0);
+    expect(getRuntimeStudyCountForTrack("track-01")).toBe(18);
+
+    const publishedPackage = {
+      ...track01DraftBatchPackage,
+      tracks: track01DraftBatchPackage.tracks.map((track) => ({
+        ...track,
+        published: true,
+      })),
+      studies: track01DraftBatchPackage.studies.map((study) => ({
+        ...study,
+        published: true,
+      })),
+    };
+
+    expect(validateStudyContentPackage(publishedPackage).valid).toBe(true);
+
+    const publishedCatalog = buildStudyRuntimeCatalog([
+      {
+        contentPackage: publishedPackage,
+        editorialStatus: "PUBLISHED",
+        publicAuthorDisplayName: null,
+      },
+    ]);
+
+    expect(publishedCatalog.packages).toHaveLength(1);
+    expect(publishedCatalog.tracks).toHaveLength(1);
+    expect(publishedCatalog.studies).toHaveLength(18);
   });
 });
