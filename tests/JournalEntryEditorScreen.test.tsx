@@ -59,6 +59,7 @@ const mockCreate = jest.fn();
 const mockCreateDraft = jest.fn();
 const mockCreateBibleDraft = jest.fn();
 const mockCreatePlanDraft = jest.fn();
+const mockCreateStudyDraft = jest.fn();
 const mockUpdateDraft = jest.fn();
 const mockPublishDraft = jest.fn();
 const mockUpdate = jest.fn();
@@ -106,6 +107,16 @@ const planSpecialDaySourceContext:
     promptSnapshot:
       "Contemple o nascimento de Cristo.",
     reference: null,
+  };
+
+const studySourceContext:
+  JournalEntryEditorSourceContext = {
+    sourceType: "STUDY",
+    trackId: "track-02",
+    studyId: "track-02-study-01",
+    sourceTitleSnapshot: "Deus, o Criador",
+    promptSnapshot:
+      "Em que área da minha vida tenho vivido mais como dono absoluto do que como alguém que recebeu tudo de Deus?",
   };
 
 const existingEntry = {
@@ -168,6 +179,16 @@ const planDraftEntry = {
   ],
 } as JournalEntryPersistenceRecord;
 
+const studyDraftEntry = {
+  ...draftEntry,
+  sourceType: "STUDY",
+  sourceTitleSnapshot:
+    studySourceContext.sourceTitleSnapshot,
+  promptSnapshot:
+    studySourceContext.promptSnapshot,
+  references: [],
+} as JournalEntryPersistenceRecord;
+
 function configureHub(): void {
   mockedGetPersonalPlatformHub.mockReturnValue({
     journalService: {
@@ -180,6 +201,8 @@ function configureHub(): void {
         mockCreateBibleDraft,
       createPlanDraft:
         mockCreatePlanDraft,
+      createStudyDraft:
+        mockCreateStudyDraft,
       updateDraft: mockUpdateDraft,
       publishDraft: mockPublishDraft,
       update: mockUpdate,
@@ -197,6 +220,7 @@ function renderEditor(
     JournalEntryEditorSourceContext,
 ) {
   const goBack = jest.fn();
+  const reset = jest.fn();
   const rootGoBack = jest.fn();
   const rootCanGoBack = jest.fn(
     () => true,
@@ -205,10 +229,12 @@ function renderEditor(
     canGoBack: rootCanGoBack,
     goBack: rootGoBack,
   };
+  const drawerNavigate = jest.fn();
   const drawerNavigation = {
     getParent: jest.fn(
       () => rootNavigation,
     ),
+    navigate: drawerNavigate,
   };
   const getParent = jest.fn(
     () => drawerNavigation,
@@ -218,6 +244,7 @@ function renderEditor(
     <JournalEntryEditorScreen
       navigation={{
         goBack,
+        reset,
         getParent,
       } as never}
       route={{
@@ -242,8 +269,10 @@ function renderEditor(
   return {
     ...view,
     goBack,
+    reset,
     rootGoBack,
     rootCanGoBack,
+    drawerNavigate,
   };
 }
 
@@ -283,6 +312,7 @@ describe(
       mockCreateDraft.mockReset();
       mockCreateBibleDraft.mockReset();
       mockCreatePlanDraft.mockReset();
+      mockCreateStudyDraft.mockReset();
       mockUpdateDraft.mockReset();
       mockPublishDraft.mockReset();
       mockUpdate.mockReset();
@@ -300,6 +330,9 @@ describe(
       );
       mockCreatePlanDraft.mockResolvedValue(
         planDraftEntry,
+      );
+      mockCreateStudyDraft.mockResolvedValue(
+        studyDraftEntry,
       );
       mockUpdateDraft.mockResolvedValue(
         draftEntry,
@@ -765,6 +798,123 @@ describe(
 
       expect(
         mockCreatePlanDraft,
+      ).not.toHaveBeenCalled();
+    });
+
+    it("opens STUDY context with the study title and editorial prompt without persisting first", () => {
+      const view = renderEditor(
+        undefined,
+        studySourceContext,
+      );
+
+      expect(
+        view.getByLabelText(
+          "Origem do estudo: Deus, o Criador",
+        ),
+      ).toBeTruthy();
+      expect(
+        view.getByText("Deus, o Criador"),
+      ).toBeTruthy();
+      expect(
+        view.getByText(
+          studySourceContext.promptSnapshot,
+        ),
+      ).toBeTruthy();
+      expect(
+        view.getByLabelText("Data do registro")
+          .props.value,
+      ).toBe("10/09/2026");
+      expect(
+        mockCreateStudyDraft,
+      ).not.toHaveBeenCalled();
+      expect(
+        mockCreateDraft,
+      ).not.toHaveBeenCalled();
+    });
+
+    it("saves STUDY context and returns explicitly to the same StudyDetail", async () => {
+      const view = renderEditor(
+        undefined,
+        studySourceContext,
+      );
+
+      fireEvent.changeText(
+        view.getByLabelText("Reflexão"),
+        "Minha resposta ao estudo.",
+      );
+
+      fireEvent.press(
+        view.getByLabelText(
+          "Salvar registro do diário",
+        ),
+      );
+
+      await waitFor(() => {
+        expect(
+          mockCreateStudyDraft,
+        ).toHaveBeenCalledWith({
+          entryDate: "2026-09-10",
+          reflectionText:
+            "Minha resposta ao estudo.",
+          gratitudeText: "",
+          sourceTitleSnapshot:
+            studySourceContext.sourceTitleSnapshot,
+          promptSnapshot:
+            studySourceContext.promptSnapshot,
+        });
+        expect(
+          mockPublishDraft,
+        ).toHaveBeenCalledWith(
+          draftId,
+          {
+            entryDate: "2026-09-10",
+            reflectionText:
+              "Minha resposta ao estudo.",
+            gratitudeText: "",
+          },
+        );
+        expect(
+          view.drawerNavigate,
+        ).toHaveBeenCalledWith(
+          "MainTabs",
+          {
+            screen: "StudiesTab",
+            params: {
+              screen: "StudyDetail",
+              params: {
+                studyId:
+                  "track-02-study-01",
+              },
+            },
+          },
+        );
+      });
+
+      expect(
+        mockCreateStudyDraft,
+      ).toHaveBeenCalledTimes(1);
+      expect(
+        mockCreatePlanDraft,
+      ).not.toHaveBeenCalled();
+      expect(
+        mockCreateBibleDraft,
+      ).not.toHaveBeenCalled();
+      expect(
+        mockCreateDraft,
+      ).not.toHaveBeenCalled();
+      expect(
+        view.reset,
+      ).toHaveBeenCalledWith({
+        index: 0,
+        routes: [{ name: "JournalHome" }],
+      });
+      expect(
+        view.reset.mock.invocationCallOrder[0]!,
+      ).toBeLessThan(
+        view.drawerNavigate.mock.invocationCallOrder[0]!,
+      );
+      expect(
+        view.goBack,
       ).not.toHaveBeenCalled();
     });
 

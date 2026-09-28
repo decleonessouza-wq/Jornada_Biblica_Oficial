@@ -19,6 +19,7 @@ import {
   SystemPersonalClock,
   SystemPersonalDatePolicy,
 } from "../src/services/personalPlatformDefaults";
+import { StudyProgressService } from "../src/services/studies/studyProgressService";
 import {
   createPersonalPlatformHub,
   getPersonalPlatformHub,
@@ -48,6 +49,9 @@ describe("Personal platform hub", () => {
     expect(hub.datePolicy).toBeInstanceOf(SystemPersonalDatePolicy);
     expect(hub.logger).toBeInstanceOf(NoopPersonalLogger);
     expect(hub.privacyPolicy).toBe(PERSONAL_PRIVACY_POLICY);
+    expect(hub.studyProgressService).toBeInstanceOf(
+      StudyProgressService,
+    );
     expect(mockBootstrapPersonalDatabase).not.toHaveBeenCalled();
   });
 

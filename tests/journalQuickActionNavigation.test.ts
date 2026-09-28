@@ -164,7 +164,7 @@ describe("Journal quick action navigation contract", () => {
     );
   });
 
-  it("keeps Journal outside MainTabs and preserves exactly four real tabs", () => {
+  it("keeps Journal outside MainTabs and retains StudiesTab as a hidden navigation route", () => {
     expect(mainTabsSource).not.toContain(
       'name="Journal"',
     );
@@ -175,7 +175,7 @@ describe("Journal quick action navigation contract", () => {
       "JournalScreen",
     );
 
-    const realTabNames = (
+    const registeredTabNames = (
       mainTabsSource.match(
         /name="[A-Za-z]+Tab"/g,
       ) ?? []
@@ -183,12 +183,16 @@ describe("Journal quick action navigation contract", () => {
       entry.slice(6, -1),
     );
 
-    expect(realTabNames).toEqual([
+    expect(registeredTabNames).toEqual([
       "HomeTab",
       "BibleTab",
+      "StudiesTab",
       "PlanTab",
       "HymnalTab",
     ]);
+    expect(mainTabsSource).toContain(
+      'tabBarButtonTestID: "main-tab-studies-hidden"',
+    );
   });
 
   it("preserves the central plus button as the QuickActionSheet trigger", () => {

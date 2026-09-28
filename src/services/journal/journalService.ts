@@ -56,6 +56,13 @@ export type CreatePlanJournalDraftInput =
     reference: BibleReference | null;
   }>;
 
+export type CreateStudyJournalDraftInput =
+  CreateJournalDraftInput &
+  Readonly<{
+    sourceTitleSnapshot: string;
+    promptSnapshot: string;
+  }>;
+
 export type UpdateJournalDraftInput =
   UpdateJournalEntryInput;
 
@@ -101,6 +108,18 @@ function assertJournalContentRequired(
     throw new Error(
       "PERSONAL_JOURNAL_ENTRY_CONTENT_REQUIRED",
     );
+  }
+}
+
+function assertStudySnapshotText(
+  value: unknown,
+  errorCode: string,
+): asserts value is string {
+  if (
+    typeof value !== "string" ||
+    value.trim().length === 0
+  ) {
+    throw new Error(errorCode);
   }
 }
 
@@ -633,6 +652,54 @@ export class JournalService {
       category: null,
       isPinned: false,
       references,
+      tags: [],
+      createdAtUtc: timestamp,
+      updatedAtUtc: timestamp,
+    };
+
+    await this.repository.create(draft);
+
+    return draft;
+  }
+
+  async createStudyDraft(
+    input: CreateStudyJournalDraftInput,
+  ): Promise<JournalEntryPersistenceRecord> {
+    assertStudySnapshotText(
+      input.sourceTitleSnapshot,
+      "PERSONAL_JOURNAL_STUDY_SOURCE_TITLE_INVALID",
+    );
+    assertStudySnapshotText(
+      input.promptSnapshot,
+      "PERSONAL_JOURNAL_STUDY_PROMPT_INVALID",
+    );
+
+    const now = this.clock.now();
+    const entryDate =
+      input.entryDate ??
+      this.datePolicy.toLocalDate(now);
+    const timestamp =
+      this.datePolicy.toUtcTimestamp(now);
+
+    const draft: JournalEntryPersistenceRecord = {
+      id: this.canonicalIdFactory.create(
+        "journal_entry",
+      ),
+      entryDate,
+      reflectionText: normalizeReflectionText(
+        input.reflectionText,
+      ),
+      gratitudeText: normalizeGratitudeText(
+        input.gratitudeText,
+      ),
+      status: "DRAFT",
+      sourceType: "STUDY",
+      sourceTitleSnapshot:
+        input.sourceTitleSnapshot,
+      promptSnapshot: input.promptSnapshot,
+      category: null,
+      isPinned: false,
+      references: [],
       tags: [],
       createdAtUtc: timestamp,
       updatedAtUtc: timestamp,

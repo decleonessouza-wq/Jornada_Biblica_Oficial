@@ -1,4 +1,8 @@
 import { getPersonalPlatformHub } from "../services/personalPlatformHub";
+import {
+  loadStudyContinuation,
+  type StudyContinuation,
+} from "../services/studies/studyContinuationService";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Alert,
@@ -277,6 +281,8 @@ export default function HomeScreen() {
   });
 
   const [homeDashboardV2, setHomeDashboardV2] = useState<HomeDashboardV2Snapshot | null>(null);
+  const [studyContinuation, setStudyContinuation] =
+    useState<StudyContinuation | null>(null);
 
   // ✅ banner de feedback (aparece sempre)
   const [banner, setBanner] = useState<BannerState>(null);
@@ -495,6 +501,21 @@ export default function HomeScreen() {
     }
   }, []);
 
+  const loadStudyContinuationState = useCallback(async () => {
+    try {
+      setStudyContinuation(await loadStudyContinuation());
+    } catch (err) {
+      console.log("Erro ao carregar continuidade de Estudos", err);
+      setStudyContinuation(null);
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      void loadStudyContinuationState();
+    }, [loadStudyContinuationState]),
+  );
+
   const loadVerseOfDayIfNeeded = useCallback(async () => {
     try {
       const hidden = await AsyncStorage.getItem(VERSE_HIDE_KEY);
@@ -517,6 +538,17 @@ export default function HomeScreen() {
       setShowVerseModal(false);
     }
   }, [today]);
+
+  function openStudyContinuation() {
+    if (!studyContinuation) return;
+
+    navigation.navigate("StudiesTab", {
+      screen: "StudyDetail",
+      params: {
+        studyId: studyContinuation.studyId,
+      },
+    });
+  }
 
   function openVerseOfDayInBible() {
     if (!verseOfDay) return;
@@ -1089,6 +1121,39 @@ export default function HomeScreen() {
           )}
 
           {/* ACESSOS RÁPIDOS 2x3 - CONTRATO OFICIAL */}
+          {studyContinuation && (
+            <TouchableOpacity
+              testID="home-continue-study"
+              style={styles.studyContinuationCard}
+              onPress={openStudyContinuation}
+              activeOpacity={0.86}
+              accessibilityRole="button"
+              accessibilityLabel={`Continuar estudo ${studyContinuation.title}. Em andamento, ${studyContinuation.readingProgress}%`}
+            >
+              <View style={styles.studyContinuationMain}>
+                <Text style={styles.studyContinuationEyebrow}>
+                  CONTINUAR ESTUDO
+                </Text>
+                <Text
+                  style={styles.studyContinuationTitle}
+                  numberOfLines={2}
+                >
+                  {studyContinuation.title}
+                </Text>
+                <Text style={styles.studyContinuationProgress}>
+                  Em andamento · {studyContinuation.readingProgress}%
+                </Text>
+              </View>
+              <Text
+                style={styles.studyContinuationChevron}
+                accessibilityElementsHidden
+                importantForAccessibility="no"
+              >
+                ›
+              </Text>
+            </TouchableOpacity>
+          )}
+
           <View style={styles.quickSectionHeader}>
             <View>
               <Text style={styles.quickSectionEyebrow}>NAVEGAÇÃO</Text>
@@ -1123,7 +1188,11 @@ export default function HomeScreen() {
               iconSource={require("../../assets/home/icons/estudos_icone.png")}
               title="Estudos"
               subtitle="Aprofunde temas"
-              onPress={() => navigation.navigate("Studies")}
+              onPress={() =>
+                navigation.navigate("StudiesTab", {
+                  screen: "StudiesHome",
+                })
+              }
             />
 
             <QuickAccessCard
@@ -1741,6 +1810,48 @@ const styles = StyleSheet.create({
   },
 
   /* ACESSOS RÁPIDOS 2x3 */
+  studyContinuationCard: {
+    minHeight: 96,
+    marginBottom: 16,
+    borderRadius: 18,
+    paddingHorizontal: 14,
+    paddingVertical: 13,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    backgroundColor: colors.primarySoft,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  studyContinuationMain: {
+    flex: 1,
+    minWidth: 0,
+  },
+  studyContinuationEyebrow: {
+    color: colors.secondaryPressed,
+    fontSize: 9,
+    fontWeight: "900",
+    letterSpacing: 1,
+  },
+  studyContinuationTitle: {
+    marginTop: 4,
+    color: colors.primary,
+    fontSize: 15,
+    lineHeight: 19,
+    fontWeight: "900",
+  },
+  studyContinuationProgress: {
+    marginTop: 5,
+    color: colors.textMuted,
+    fontSize: 11,
+    fontWeight: "700",
+  },
+  studyContinuationChevron: {
+    color: colors.primary,
+    fontSize: 28,
+    fontWeight: "500",
+  },
+
   quickSectionHeader: {
     marginTop: 2,
     marginBottom: 10,

@@ -773,18 +773,6 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 01/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
-            "type": "PARAGRAPH"
-          },
-          {
             "text": "Também não é uma reforma de aparência: abandonar alguns hábitos, adotar outros e aprender a parecer",
             "type": "PARAGRAPH"
           },
@@ -827,12 +815,8 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "Mas Jesus rapidamente leva a conversa para o ponto central: sem novo nascimento, ninguém vê o Reino de",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Deus.",
-            "type": "PARAGRAPH"
+            type: "PARAGRAPH",
+            text: "Mas Jesus rapidamente leva a conversa para o ponto central: sem novo nascimento, ninguém vê o Reino de Deus.",
           }
         ],
         "order": 5,
@@ -926,18 +910,6 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Deus prometia transformação interior.",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 01/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
             "type": "PARAGRAPH"
           },
           {
@@ -1077,18 +1049,6 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 01/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
-            "type": "PARAGRAPH"
-          },
-          {
             "text": "A nova vida é graça",
             "type": "PARAGRAPH"
           },
@@ -1210,18 +1170,6 @@ const rawSectionsByStudy = [
           },
           {
             "text": "crescimento no amor, na verdade e na obediência?",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 01/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
             "type": "PARAGRAPH"
           },
           {
@@ -1350,18 +1298,6 @@ const rawSectionsByStudy = [
             "text": "É uma caminhada de transformação.",
             "type": "PARAGRAPH"
           },
-          {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 01/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
-            "type": "PARAGRAPH"
-          }
         ],
         "order": 9,
         "optional": false
@@ -1398,7 +1334,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Conclusão",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "A pergunta principal não é apenas “sou religioso?”, mas “estou vivendo a nova vida que Deus",
@@ -1510,18 +1446,6 @@ const rawSectionsByStudy = [
         "type": "PRAYER",
         "title": "Ore",
         "blocks": [
-          {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 01/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
-            "type": "PARAGRAPH"
-          },
           {
             "text": "Oração",
             "type": "PARAGRAPH"
@@ -1673,18 +1597,6 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 01/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
-            "type": "PARAGRAPH"
-          },
-          {
             "text": "Tito 3:3-7",
             "type": "PARAGRAPH"
           },
@@ -1779,18 +1691,6 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Quando falham, imaginam que perderam qualquer possibilidade de se aproximar.",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 02/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
             "type": "PARAGRAPH"
           },
           {
@@ -1934,18 +1834,6 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 02/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
-            "type": "PARAGRAPH"
-          },
-          {
             "text": "OBSERVE 4. O resultado é paz com Deus",
             "type": "SUBHEADING"
           },
@@ -2086,18 +1974,6 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 02/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
-            "type": "PARAGRAPH"
-          },
-          {
             "text": "Santificação, que veremos no próximo estudo, fala do processo de transformação da vida.",
             "type": "PARAGRAPH"
           },
@@ -2224,18 +2100,6 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 02/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
-            "type": "PARAGRAPH"
-          },
-          {
             "text": "REFLITA 2. Confesse sem teatro",
             "type": "SUBHEADING"
           },
@@ -2351,7 +2215,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Conclusão",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "A fé cristã não começa dizendo “olhe o que consegui fazer”, mas “olhe o que Cristo fez e em",
@@ -2359,18 +2223,6 @@ const rawSectionsByStudy = [
           },
           {
             "text": "quem estou confiando”.",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 02/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
             "type": "PARAGRAPH"
           },
           {
@@ -2397,7 +2249,7 @@ const rawSectionsByStudy = [
         "blocks": [
           {
             "text": "Escreva duas frases:",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Tenho tentado provar meu valor diante de Deus quando...",
@@ -2539,18 +2391,6 @@ const rawSectionsByStudy = [
         "type": "GROUP_MODE",
         "title": "Modo Grupo",
         "blocks": [
-          {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 02/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
-            "type": "PARAGRAPH"
-          },
           {
             "items": [
               "Observe"
@@ -2743,18 +2583,6 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 03/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
-            "type": "PARAGRAPH"
-          },
-          {
             "text": "Buscamos santidade porque fomos alcançados por Ele e agora pertencemos a Cristo.",
             "type": "PARAGRAPH"
           },
@@ -2895,18 +2723,6 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 03/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
-            "type": "PARAGRAPH"
-          },
-          {
             "text": "Não estamos falando apenas do estilo de vida favorito de um líder religioso.",
             "type": "PARAGRAPH"
           },
@@ -3043,18 +2859,6 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 03/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
-            "type": "PARAGRAPH"
-          },
-          {
             "text": "Santidade possui direção positiva",
             "type": "PARAGRAPH"
           },
@@ -3181,18 +2985,6 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 03/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
-            "type": "PARAGRAPH"
-          },
-          {
             "text": "Talvez sua área hoje seja palavras, sexualidade, honestidade, orgulho, perdão ou disciplina.",
             "type": "PARAGRAPH"
           },
@@ -3308,7 +3100,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Conclusão",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Santidade é a graça de Deus formando, ao longo da caminhada, uma vida cada vez mais",
@@ -3316,18 +3108,6 @@ const rawSectionsByStudy = [
           },
           {
             "text": "coerente com Cristo.",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 03/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
             "type": "PARAGRAPH"
           },
           {
@@ -3358,7 +3138,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Escreva:",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "O que preciso abandonar?",
@@ -3494,18 +3274,6 @@ const rawSectionsByStudy = [
             "text": "nossa resposta fiel.",
             "type": "PARAGRAPH"
           },
-          {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 03/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
-            "type": "PARAGRAPH"
-          }
         ],
         "order": 15,
         "optional": false
@@ -3700,18 +3468,6 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 04/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
-            "type": "PARAGRAPH"
-          },
-          {
             "text": "O que perdi?",
             "type": "PARAGRAPH"
           },
@@ -3736,12 +3492,8 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "A Bíblia não apaga essas partes da história, mas oferece uma identidade mais profunda para quem está em",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Cristo.",
-            "type": "PARAGRAPH"
+            type: "PARAGRAPH",
+            text: "A Bíblia não apaga essas partes da história, mas oferece uma identidade mais profunda para quem está em Cristo.",
           },
           {
             "text": "Paulo fala de nenhuma condenação, adoção, herança e vida pelo Espírito.",
@@ -3770,12 +3522,8 @@ const rawSectionsByStudy = [
             "type": "SUBHEADING"
           },
           {
-            "text": "Romanos 8 começa com uma declaração de enorme força: nenhuma condenação há para os que estão em",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Cristo Jesus.",
-            "type": "PARAGRAPH"
+            type: "PARAGRAPH",
+            text: "Romanos 8 começa com uma declaração de enorme força: nenhuma condenação há para os que estão em Cristo Jesus.",
           },
           {
             "text": "Depois, Paulo descreve uma vida conduzida pelo Espírito e apresenta os cristãos como filhos de Deus.",
@@ -3853,18 +3601,6 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Ser filho não significa continuar indiferente ao modo de viver.",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 04/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
             "type": "PARAGRAPH"
           },
           {
@@ -4004,18 +3740,6 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 04/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
-            "type": "PARAGRAPH"
-          },
-          {
             "text": "ENTENDA 4. Igual valor não significa ausência de diferenças",
             "type": "PARAGRAPH"
           },
@@ -4142,18 +3866,6 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 04/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
-            "type": "PARAGRAPH"
-          },
-          {
             "text": "Arrependimento não pede que finjamos que não aconteceram.",
             "type": "PARAGRAPH"
           },
@@ -4253,7 +3965,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Conclusão",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Nossa identidade mais profunda não precisa ser inventada todos os dias; ela é recebida na",
@@ -4286,20 +3998,8 @@ const rawSectionsByStudy = [
         "title": "Pratique hoje",
         "blocks": [
           {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 04/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
-            "type": "PARAGRAPH"
-          },
-          {
             "text": "Complete três frases no Diário:",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Eu costumo medir meu valor por...",
@@ -4364,12 +4064,8 @@ const rawSectionsByStudy = [
         "title": "Registrar no Diário",
         "blocks": [
           {
-            "text": "Que rótulo antigo preciso deixar de usar como definição final de mim mesmo diante daquilo que",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Deus diz em Cristo?",
-            "type": "PARAGRAPH"
+            type: "PARAGRAPH",
+            text: "Que rótulo antigo preciso deixar de usar como definição final de mim mesmo diante daquilo que Deus diz em Cristo?",
           }
         ],
         "order": 13,
@@ -4459,18 +4155,6 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Como evitar transformar identidade em Cristo em simples autoestima religiosa?",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 04/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
             "type": "PARAGRAPH"
           },
           {
@@ -4641,18 +4325,6 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 05/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
-            "type": "PARAGRAPH"
-          },
-          {
             "text": "Essa diferença é importante.",
             "type": "PARAGRAPH"
           },
@@ -4786,18 +4458,6 @@ const rawSectionsByStudy = [
           },
           {
             "text": "É possível usar a Bíblia de maneira distorcida.",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 05/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
             "type": "PARAGRAPH"
           },
           {
@@ -4937,18 +4597,6 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 05/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
-            "type": "PARAGRAPH"
-          },
-          {
             "text": "2 Timóteo 2:22 manda fugir de paixões e seguir justiça junto com outras pessoas.",
             "type": "PARAGRAPH"
           },
@@ -5075,18 +4723,6 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 05/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
-            "type": "PARAGRAPH"
-          },
-          {
             "text": "Vigilância acontece antes",
             "type": "PARAGRAPH"
           },
@@ -5206,27 +4842,11 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Conclusão",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
-            "text": "A pergunta não é “sou forte o suficiente?”, mas “estou usando com humildade os caminhos que",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Deus colocou diante de mim?”",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 05/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
-            "type": "PARAGRAPH"
+            type: "PARAGRAPH",
+            text: "A pergunta não é “sou forte o suficiente?”, mas “estou usando com humildade os caminhos que Deus colocou diante de mim?”",
           },
           {
             "text": "Verdade Prática",
@@ -5388,18 +5008,6 @@ const rawSectionsByStudy = [
             "text": "Guarde essas passagens para consultar antes, não apenas depois, de uma situação de tentação.",
             "type": "PARAGRAPH"
           },
-          {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 05/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
-            "type": "PARAGRAPH"
-          }
         ],
         "order": 15,
         "optional": false
@@ -5463,12 +5071,8 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "Estudo 06 - O fruto do Espírito: quando o caráter de Cristo começa a aparecer em nós",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Pergunta central: O que é o fruto do Espírito e como ele cresce numa vida comum?",
-            "type": "PARAGRAPH"
+            type: "PARAGRAPH",
+            text: "Estudo 06 - O fruto do Espírito: quando o caráter de Cristo começa a aparecer em nós Pergunta central: O que é o fruto do Espírito e como ele cresce numa vida comum?",
           }
         ],
         "order": 17,
@@ -5595,18 +5199,6 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Mas Gálatas 5 nos leva para uma área igualmente importante: caráter.",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 06/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
             "type": "PARAGRAPH"
           },
           {
@@ -5750,18 +5342,6 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 06/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
-            "type": "PARAGRAPH"
-          },
-          {
             "text": "O fruto não cresce porque ficamos parados esperando sentir algo.",
             "type": "PARAGRAPH"
           },
@@ -5894,18 +5474,6 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 06/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
-            "type": "PARAGRAPH"
-          },
-          {
             "text": "As dificuldades também revelam onde precisamos crescer",
             "type": "PARAGRAPH"
           },
@@ -6028,18 +5596,6 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 06/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
-            "type": "PARAGRAPH"
-          },
-          {
             "text": "Talvez seja paciência com uma pessoa específica, domínio próprio com um hábito ou bondade em uma",
             "type": "PARAGRAPH"
           },
@@ -6143,7 +5699,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Conclusão",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "O Espírito deseja formar em nós não apenas pessoas que falam de Jesus, mas pessoas cujo",
@@ -6176,24 +5732,12 @@ const rawSectionsByStudy = [
         "title": "Pratique hoje",
         "blocks": [
           {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 06/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
-            "type": "PARAGRAPH"
-          },
-          {
             "text": "Leia Gálatas 5:22-23 e escolha uma característica.",
             "type": "PARAGRAPH"
           },
           {
             "text": "Escreva:",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Onde mais preciso crescer nisso?",
@@ -6343,18 +5887,6 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Qual contraste Paulo estabelece em Gálatas 5 entre obras da carne e fruto do Espírito?",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 06/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
             "type": "PARAGRAPH"
           },
           {
@@ -6535,18 +6067,6 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 07/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
-            "type": "PARAGRAPH"
-          },
-          {
             "text": "Há quem pense que perdão elimina consequências, denúncia ou limites.",
             "type": "PARAGRAPH"
           },
@@ -6691,18 +6211,6 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 07/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
-            "type": "PARAGRAPH"
-          },
-          {
             "text": "Receber graça muda relações",
             "type": "PARAGRAPH"
           },
@@ -6839,18 +6347,6 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 07/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
-            "type": "PARAGRAPH"
-          },
-          {
             "text": "Se houve crime, abuso ou risco, buscar ajuda, proteção e justiça pode ser necessário.",
             "type": "PARAGRAPH"
           },
@@ -6977,18 +6473,6 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 07/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
-            "type": "PARAGRAPH"
-          },
-          {
             "text": "REFLITA 3. Estabeleça limites quando necessário",
             "type": "SUBHEADING"
           },
@@ -7068,7 +6552,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Conclusão",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Perdoar é abrir mão da vingança sem abrir mão da verdade.",
@@ -7102,7 +6586,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Escreva três frases:",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "O que aconteceu foi...",
@@ -7126,18 +6610,6 @@ const rawSectionsByStudy = [
         "type": "REFLECTION_QUESTIONS",
         "title": "Para refletir",
         "blocks": [
-          {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 07/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
-            "type": "PARAGRAPH"
-          },
           {
             "items": [
               "Tenho confundido perdão com esquecimento?"
@@ -7305,18 +6777,6 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 07/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
-            "type": "PARAGRAPH"
-          },
-          {
             "text": "Mas oração é muito mais do que pedir ajuda em momentos difíceis.",
             "type": "PARAGRAPH"
           },
@@ -7460,18 +6920,6 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 08/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
-            "type": "PARAGRAPH"
-          },
-          {
             "text": "Ele fala de um Pai que já sabe do que precisamos.",
             "type": "PARAGRAPH"
           },
@@ -7608,18 +7056,6 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 08/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
-            "type": "PARAGRAPH"
-          },
-          {
             "text": "Podemos pedir",
             "type": "PARAGRAPH"
           },
@@ -7752,18 +7188,6 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 08/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
-            "type": "PARAGRAPH"
-          },
-          {
             "text": "Jesus pediu no Getsêmani e caminhou para a cruz.",
             "type": "PARAGRAPH"
           },
@@ -7890,18 +7314,6 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 08/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
-            "type": "PARAGRAPH"
-          },
-          {
             "text": "Comece alguns minutos dizendo quem Deus é",
             "type": "PARAGRAPH"
           },
@@ -7977,7 +7389,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Conclusão",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Orar é trazer toda a vida diante de Deus e aprender a confiar nele com palavras, silêncio,",
@@ -8015,7 +7427,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Ore uma frase sobre cada parte:",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "teu nome",
@@ -8031,18 +7443,6 @@ const rawSectionsByStudy = [
           },
           {
             "text": "meu pão",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 08/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
             "type": "PARAGRAPH"
           },
           {
@@ -8211,18 +7611,6 @@ const rawSectionsByStudy = [
             "text": "Que hábito simples de oração nosso grupo pode praticar nesta semana?",
             "type": "PARAGRAPH"
           },
-          {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 08/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
-            "type": "PARAGRAPH"
-          }
         ],
         "order": 16,
         "optional": false
@@ -8329,12 +7717,8 @@ const rawSectionsByStudy = [
         "title": "Verdade Prática",
         "blocks": [
           {
-            "text": "Ler a Bíblia não é procurar frases para confirmar tudo o que já pensamos; é permitir que a",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Palavra de Deus ilumine, corrija e forme nossa caminhada.",
-            "type": "PARAGRAPH"
+            type: "PARAGRAPH",
+            text: "Ler a Bíblia não é procurar frases para confirmar tudo o que já pensamos; é permitir que a Palavra de Deus ilumine, corrija e forme nossa caminhada.",
           }
         ],
         "order": 2,
@@ -8382,18 +7766,6 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Ela pede atenção.",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 09/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
             "type": "PARAGRAPH"
           },
           {
@@ -8539,18 +7911,6 @@ const rawSectionsByStudy = [
             "type": "SUBHEADING"
           },
           {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 09/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
-            "type": "PARAGRAPH"
-          },
-          {
             "text": "Um versículo pode ser verdadeiro e ainda ser mal usado quando arrancado de seu contexto.",
             "type": "PARAGRAPH"
           },
@@ -8678,18 +8038,6 @@ const rawSectionsByStudy = [
           },
           {
             "text": "No sentido bíblico, meditar é preencher a mente com a Palavra, repetir, pensar e responder.",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 09/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
             "type": "PARAGRAPH"
           },
           {
@@ -8825,18 +8173,6 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 09/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
-            "type": "PARAGRAPH"
-          },
-          {
             "text": "REFLITA 4. Volte aos textos conhecidos",
             "type": "SUBHEADING"
           },
@@ -8888,7 +8224,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Conclusão",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Ler bem a Bíblia é aprender a ouvir antes de responder.",
@@ -8926,7 +8262,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Anote apenas:",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Uma observação.",
@@ -8980,18 +8316,6 @@ const rawSectionsByStudy = [
             ],
             "type": "BULLET_LIST"
           },
-          {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 09/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
-            "type": "PARAGRAPH"
-          }
         ],
         "order": 12,
         "optional": false
@@ -9140,18 +8464,6 @@ const rawSectionsByStudy = [
             "text": "em motivo de culpa espiritual?",
             "type": "PARAGRAPH"
           },
-          {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 09/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
-            "type": "PARAGRAPH"
-          }
         ],
         "order": 17,
         "optional": false
@@ -9269,18 +8581,6 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Como se toda preocupação provasse ausência de fé.",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 10/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
             "type": "PARAGRAPH"
           },
           {
@@ -9419,18 +8719,6 @@ const rawSectionsByStudy = [
             "text": "Não precisamos sofrer antecipadamente por todos os futuros possíveis.",
             "type": "PARAGRAPH"
           },
-          {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 10/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
-            "type": "PARAGRAPH"
-          }
         ],
         "order": 6,
         "optional": false
@@ -9564,18 +8852,6 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 10/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
-            "type": "PARAGRAPH"
-          },
-          {
             "text": "+ APROFUNDE",
             "type": "PARAGRAPH"
           },
@@ -9702,18 +8978,6 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 10/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
-            "type": "PARAGRAPH"
-          },
-          {
             "text": "Proteja sua mente com sabedoria",
             "type": "PARAGRAPH"
           },
@@ -9753,7 +9017,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Conclusão",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "O amanhã não precisa consumir a graça que Deus está dando para hoje.",
@@ -9783,7 +9047,7 @@ const rawSectionsByStudy = [
         "blocks": [
           {
             "text": "Escreva duas colunas:",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Hoje eu posso agir em...",
@@ -9865,18 +9129,6 @@ const rawSectionsByStudy = [
         "type": "PRAYER",
         "title": "Ore",
         "blocks": [
-          {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 10/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
-            "type": "PARAGRAPH"
-          },
           {
             "text": "Oração",
             "type": "PARAGRAPH"
@@ -10028,18 +9280,6 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 10/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
-            "type": "PARAGRAPH"
-          },
-          {
             "text": "1 Pedro 5:6-7",
             "type": "PARAGRAPH"
           },
@@ -10146,18 +9386,6 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Uma oração que não terminou como esperávamos.",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 11/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
             "type": "PARAGRAPH"
           },
           {
@@ -10290,18 +9518,6 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Quando as circunstâncias não mudam imediatamente, a memória de quem Deus é se torna âncora.",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 11/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
             "type": "PARAGRAPH"
           },
           {
@@ -10441,18 +9657,6 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 11/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
-            "type": "PARAGRAPH"
-          },
-          {
             "text": "Às vezes presença é mais fiel que explicação",
             "type": "PARAGRAPH"
           },
@@ -10579,18 +9783,6 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 11/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
-            "type": "PARAGRAPH"
-          },
-          {
             "text": "Às vezes alguém pode apenas sentar, ouvir, levar uma refeição ou caminhar ao lado.",
             "type": "PARAGRAPH"
           },
@@ -10658,7 +9850,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Conclusão",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Fé no sofrimento não é entender tudo; muitas vezes é permanecer perto de Deus quando ainda",
@@ -10692,7 +9884,7 @@ const rawSectionsByStudy = [
         "blocks": [
           {
             "text": "Escreva um pequeno salmo pessoal com quatro linhas:",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Senhor, o que dói é...",
@@ -10731,18 +9923,6 @@ const rawSectionsByStudy = [
               "Alguém tentou explicar minha dor de maneira simplista?"
             ],
             "type": "BULLET_LIST"
-          },
-          {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 11/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
-            "type": "PARAGRAPH"
           },
           {
             "items": [
@@ -10895,18 +10075,6 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 11/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
-            "type": "PARAGRAPH"
-          },
-          {
             "text": "Próximo estudo",
             "type": "PARAGRAPH"
           },
@@ -11039,18 +10207,6 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Paulo não está dizendo que pode alcançar qualquer objetivo que imaginar.",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 12/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
             "type": "PARAGRAPH"
           },
           {
@@ -11326,18 +10482,6 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 12/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
-            "type": "PARAGRAPH"
-          },
-          {
             "text": "Não necessariamente.",
             "type": "PARAGRAPH"
           },
@@ -11470,18 +10614,6 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 12/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
-            "type": "PARAGRAPH"
-          },
-          {
             "text": "Paulo conheceu abundância e falta.",
             "type": "PARAGRAPH"
           },
@@ -11499,7 +10631,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Conclusão",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Contentamento é poder dizer: “Ainda há coisas que desejo, mas minha vida não está vazia",
@@ -11541,7 +10673,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Ore assim:",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Senhor, eu desejo isso, mas não quero que isso seja meu senhor.",
@@ -11643,18 +10775,6 @@ const rawSectionsByStudy = [
         "blocks": [
           {
             "text": "Filipenses 4:11-13 - Leia “tudo posso” dentro do contexto de contentamento.",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 12/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
             "type": "PARAGRAPH"
           },
           {
@@ -11871,18 +10991,6 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 13/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
-            "type": "PARAGRAPH"
-          },
-          {
             "text": "Abro um negócio?",
             "type": "PARAGRAPH"
           },
@@ -12023,18 +11131,6 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 13/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
-            "type": "PARAGRAPH"
-          },
-          {
             "text": "Decisões importantes não precisam ser solitárias",
             "type": "PARAGRAPH"
           },
@@ -12171,18 +11267,6 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 13/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
-            "type": "PARAGRAPH"
-          },
-          {
             "text": "Há diferença entre convicção pessoal e palavra explícita de Deus nas Escrituras.",
             "type": "PARAGRAPH"
           },
@@ -12309,18 +11393,6 @@ const rawSectionsByStudy = [
             "type": "SUBHEADING"
           },
           {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 13/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
-            "type": "PARAGRAPH"
-          },
-          {
             "text": "Se buscamos apenas quem confirma nossa vontade, não estamos realmente pedindo conselho.",
             "type": "PARAGRAPH"
           },
@@ -12392,7 +11464,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Conclusão",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Discernimento cristão é menos sobre descobrir uma senha secreta do futuro e mais sobre",
@@ -12426,7 +11498,7 @@ const rawSectionsByStudy = [
         "blocks": [
           {
             "text": "Pegue uma decisão real e responda:",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Existe algum princípio bíblico claro?",
@@ -12458,18 +11530,6 @@ const rawSectionsByStudy = [
         "type": "REFLECTION_QUESTIONS",
         "title": "Para refletir",
         "blocks": [
-          {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 13/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
-            "type": "PARAGRAPH"
-          },
           {
             "items": [
               "Tenho esperado sinais quando já possuo informação suficiente para decidir?"
@@ -12633,18 +11693,6 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 13/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
-            "type": "PARAGRAPH"
-          },
-          {
             "text": "Próximo estudo",
             "type": "PARAGRAPH"
           },
@@ -12784,18 +11832,6 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 14/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
-            "type": "PARAGRAPH"
-          },
-          {
             "text": "O Evangelho não promete convivência sem conflitos.",
             "type": "PARAGRAPH"
           },
@@ -12932,18 +11968,6 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 14/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
-            "type": "PARAGRAPH"
-          },
-          {
             "text": "Você é responsável pela sua parte",
             "type": "PARAGRAPH"
           },
@@ -13076,18 +12100,6 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 14/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
-            "type": "PARAGRAPH"
-          },
-          {
             "text": "Unidade não é silêncio diante do mal",
             "type": "PARAGRAPH"
           },
@@ -13214,18 +12226,6 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 14/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
-            "type": "PARAGRAPH"
-          },
-          {
             "text": "Romanos 12 lembra que paz não depende só de você.",
             "type": "PARAGRAPH"
           },
@@ -13265,7 +12265,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Conclusão",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Relacionamento saudável não é ausência de conflito; é aprender a lidar com diferenças e feridas",
@@ -13299,7 +12299,7 @@ const rawSectionsByStudy = [
         "blocks": [
           {
             "text": "Escolha uma relação importante e responda:",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "O que preciso agradecer?",
@@ -13385,18 +12385,6 @@ const rawSectionsByStudy = [
         "type": "PRAYER",
         "title": "Ore",
         "blocks": [
-          {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 14/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
-            "type": "PARAGRAPH"
-          },
           {
             "text": "Oração",
             "type": "PARAGRAPH"
@@ -13548,18 +12536,6 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 14/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
-            "type": "PARAGRAPH"
-          },
-          {
             "text": "Mateus 18:15-17",
             "type": "PARAGRAPH"
           }
@@ -13654,18 +12630,6 @@ const rawSectionsByStudy = [
           },
           {
             "text": "A Bíblia conhece esse poder.",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 15/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
             "type": "PARAGRAPH"
           },
           {
@@ -13937,18 +12901,6 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 15/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
-            "type": "PARAGRAPH"
-          },
-          {
             "text": "Palavras de fé precisam de verdade",
             "type": "PARAGRAPH"
           },
@@ -13966,7 +12918,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Pergunte antes de compartilhar:",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Isso é verdadeiro?",
@@ -14075,18 +13027,6 @@ const rawSectionsByStudy = [
             "type": "SUBHEADING"
           },
           {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 15/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
-            "type": "PARAGRAPH"
-          },
-          {
             "text": "Quando precisar confrontar, pergunte qual resultado deseja.",
             "type": "PARAGRAPH"
           },
@@ -14130,7 +13070,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Conclusão",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Antes de falar, vale perguntar: isso é verdadeiro, necessário, amoroso e útil neste momento?",
@@ -14160,7 +13100,7 @@ const rawSectionsByStudy = [
         "blocks": [
           {
             "text": "Hoje, pratique três ações:",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Não repasse uma informação desnecessária.",
@@ -14238,18 +13178,6 @@ const rawSectionsByStudy = [
         "type": "PRAYER",
         "title": "Ore",
         "blocks": [
-          {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 15/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
-            "type": "PARAGRAPH"
-          },
           {
             "text": "Oração",
             "type": "PARAGRAPH"
@@ -14401,18 +13329,6 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 15/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
-            "type": "PARAGRAPH"
-          },
-          {
             "text": "Mateus 12:33-37",
             "type": "PARAGRAPH"
           },
@@ -14507,18 +13423,6 @@ const rawSectionsByStudy = [
           },
           {
             "text": "E não oferece apenas uma aula.",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 16/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
             "type": "PARAGRAPH"
           },
           {
@@ -14654,18 +13558,6 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 16/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
-            "type": "PARAGRAPH"
-          },
-          {
             "text": "Dom é responsabilidade",
             "type": "PARAGRAPH"
           },
@@ -14791,18 +13683,6 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Serviço cristão é voluntário e responsável, não abuso espiritual.",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 16/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
             "type": "PARAGRAPH"
           },
           {
@@ -14932,18 +13812,6 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 16/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
-            "type": "PARAGRAPH"
-          },
-          {
             "text": "Pequenas ações podem ser culto vivido.",
             "type": "PARAGRAPH"
           },
@@ -14987,7 +13855,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Conclusão",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Grandeza cristã não sobe apenas para ser vista; ela também se ajoelha para cuidar.",
@@ -15091,18 +13959,6 @@ const rawSectionsByStudy = [
         "type": "PRAYER",
         "title": "Ore",
         "blocks": [
-          {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 16/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
-            "type": "PARAGRAPH"
-          },
           {
             "text": "Oração",
             "type": "PARAGRAPH"
@@ -15254,18 +14110,6 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 16/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
-            "type": "PARAGRAPH"
-          },
-          {
             "text": "Gálatas 5:13",
             "type": "PARAGRAPH"
           }
@@ -15356,18 +14200,6 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Status.",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 17/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
             "type": "PARAGRAPH"
           },
           {
@@ -15506,18 +14338,6 @@ const rawSectionsByStudy = [
             "text": "Não para construir celebridade do benfeitor.",
             "type": "PARAGRAPH"
           },
-          {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 17/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
-            "type": "PARAGRAPH"
-          }
         ],
         "order": 6,
         "optional": false
@@ -15651,18 +14471,6 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 17/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
-            "type": "PARAGRAPH"
-          },
-          {
             "text": "Há responsabilidades com família, dívidas e necessidades básicas.",
             "type": "PARAGRAPH"
           },
@@ -15789,18 +14597,6 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 17/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
-            "type": "PARAGRAPH"
-          },
-          {
             "text": "A comunidade cristã possui movimento de dar e receber.",
             "type": "PARAGRAPH"
           },
@@ -15844,7 +14640,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Conclusão",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Mãos abertas demonstram que recursos são ferramentas, não nosso senhor.",
@@ -15948,18 +14744,6 @@ const rawSectionsByStudy = [
         "type": "PRAYER",
         "title": "Ore",
         "blocks": [
-          {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 17/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
-            "type": "PARAGRAPH"
-          },
           {
             "text": "Oração",
             "type": "PARAGRAPH"
@@ -16111,18 +14895,6 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 17/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
-            "type": "PARAGRAPH"
-          },
-          {
             "text": "Lucas 12:13-21",
             "type": "PARAGRAPH"
           },
@@ -16213,18 +14985,6 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Há fases em que oração parece natural, a Bíblia fala com clareza e a comunidade anima.",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 18/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
             "type": "PARAGRAPH"
           },
           {
@@ -16364,18 +15124,6 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 18/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
-            "type": "PARAGRAPH"
-          },
-          {
             "text": "Esperança fortalece resistência",
             "type": "PARAGRAPH"
           },
@@ -16512,18 +15260,6 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 18/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
-            "type": "PARAGRAPH"
-          },
-          {
             "text": "Perseveramos em Cristo",
             "type": "PARAGRAPH"
           },
@@ -16650,18 +15386,6 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 18/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
-            "type": "PARAGRAPH"
-          },
-          {
             "text": "REFLITA 3. Não espere motivação perfeita para obedecer",
             "type": "SUBHEADING"
           },
@@ -16733,7 +15457,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Conclusão",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Não precisamos terminar a corrida hoje; precisamos continuar correndo com os olhos em Cristo.",
@@ -16767,7 +15491,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Escolha duas áreas:",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Uma em que você percebe crescimento.",
@@ -16802,18 +15526,6 @@ const rawSectionsByStudy = [
               "Tenho confundido descanso com fracasso?"
             ],
             "type": "BULLET_LIST"
-          },
-          {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 18/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
-            "type": "PARAGRAPH"
           },
           {
             "items": [
@@ -16904,12 +15616,8 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "Guarde essas passagens como marco de encerramento da Trilha 4 e lembrete para continuar sua",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Jornada.",
-            "type": "PARAGRAPH"
+            type: "PARAGRAPH",
+            text: "Guarde essas passagens como marco de encerramento da Trilha 4 e lembrete para continuar sua Jornada.",
           }
         ],
         "order": 15,
@@ -16975,18 +15683,6 @@ const rawSectionsByStudy = [
           },
           {
             "text": "perseverança.",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "BÍBLIA JORNADA",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Trilha 4  |  Estudo 18/18",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Conheça a Palavra | Entenda o contexto | Continue sua Jornada",
             "type": "PARAGRAPH"
           },
           {

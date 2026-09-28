@@ -23,6 +23,7 @@ import {
 import BibleNavigator from "./BibleNavigator";
 import CustomTabBar from "./CustomTabBar";
 import HymnalNavigator from "./HymnalNavigator";
+import StudiesNavigator from "./StudiesNavigator";
 import { MainTabs } from "./navigationFactories";
 
 const HEADER_ROW_HEIGHT = 56;
@@ -95,8 +96,10 @@ function MainTabsNavigatorContent({
           route.name === "BibleTab" &&
           focusedBibleRoute === "BibleReader";
 
+        const studiesFocused = route.name === "StudiesTab";
+
         return {
-          headerShown: !readerFocused,
+          headerShown: !readerFocused && !studiesFocused,
           header: () => (
             <AnimatedAppShellHeader
               onOpenDrawer={() =>
@@ -128,6 +131,15 @@ function MainTabsNavigatorContent({
         options={{
           title: "Bíblia",
           tabBarButtonTestID: "main-tab-bible",
+        }}
+      />
+
+      <MainTabs.Screen
+        name="StudiesTab"
+        component={StudiesNavigator}
+        options={{
+          title: "Estudos",
+          tabBarButtonTestID: "main-tab-studies-hidden",
         }}
       />
 

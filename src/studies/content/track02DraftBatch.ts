@@ -156,8 +156,8 @@ const rawStudies = [
     "trackId": "track-02",
     "number": 2,
     "slug": "deus-santo-quando-estar-perto-de",
-    "title": "Deus Santo: quando estar perto de",
-    "summary": "Deus muda a nossa vida",
+    "title": "Deus Santo: quando estar perto de Deus muda a nossa vida",
+    "summary": "Deus Santo: quando estar perto de Deus muda a nossa vida",
     "questionCentral": "O que significa dizer que Deus é santo - e o que acontece conosco quando realmente\ncompreendemos isso?",
     "objective": "Descobrir que a santidade revela quem Deus é, como devemos nos aproximar dele e por que\numa vida com Deus também começa a mudar nossa maneira de viver.",
     "estimatedMinutes": null,
@@ -169,8 +169,8 @@ const rawStudies = [
     "trackId": "track-02",
     "number": 3,
     "slug": "deus-justo-ninguem-e-invisivel-diante",
-    "title": "Deus Justo: ninguém é invisível diante",
-    "summary": "dele",
+    "title": "Deus Justo: ninguém é invisível diante dele",
+    "summary": "Deus Justo: ninguém é invisível diante dele",
     "questionCentral": "O que significa dizer que Deus é justo - e por que sua justiça é uma boa notícia em um mundo\ntão injusto?",
     "objective": "Compreender que Deus nunca age com corrupção, favoritismo ou injustiça. Sua justiça nos\nconfronta, protege a dignidade das pessoas e nos dá esperança de que o mal não ficará para\nsempre sem resposta.",
     "estimatedMinutes": null,
@@ -182,8 +182,8 @@ const rawStudies = [
     "trackId": "track-02",
     "number": 4,
     "slug": "deus-misericordioso-quando-deus-se",
-    "title": "Deus Misericordioso: quando Deus se",
-    "summary": "aproxima de quem precisa de graça",
+    "title": "Deus Misericordioso: quando Deus se aproxima de quem precisa de graça",
+    "summary": "Deus Misericordioso: quando Deus se aproxima de quem precisa de graça",
     "questionCentral": "O que significa a misericórdia de Deus - e por que Ele continua se aproximando de pessoas que\nnão merecem sua bondade?",
     "objective": "Compreender que a misericórdia de Deus não é fraqueza nem indiferença diante do pecado. É\na bondade de Deus alcançando pessoas necessitadas, oferecendo perdão, cuidado, paciência e\noportunidade de recomeço.",
     "estimatedMinutes": null,
@@ -195,8 +195,8 @@ const rawStudies = [
     "trackId": "track-02",
     "number": 5,
     "slug": "deus-fiel-quando-a-promessa-parece",
-    "title": "Deus Fiel: quando a promessa parece",
-    "summary": "demorar",
+    "title": "Deus Fiel: quando a promessa parece demorar",
+    "summary": "Deus Fiel: quando a promessa parece demorar",
     "questionCentral": "O que significa dizer que Deus é fiel - e como continuar confiando quando as circunstâncias\nparecem contradizer aquilo que Ele prometeu?",
     "objective": "Compreender que a fidelidade de Deus não depende das circunstâncias, das emoções ou da\nnossa capacidade de entender tudo. Deus permanece verdadeiro, cumpre sua Palavra e\ncontinua sendo digno de confiança mesmo quando ainda não conseguimos enxergar o que Ele\nestá fazendo.",
     "estimatedMinutes": null,
@@ -208,8 +208,8 @@ const rawStudies = [
     "trackId": "track-02",
     "number": 6,
     "slug": "deus-que-se-revela-o-deus-que-nao",
-    "title": "Deus que se revela: o Deus que não",
-    "summary": "permaneceu em silêncio",
+    "title": "Deus que se revela: o Deus que não permaneceu em silêncio",
+    "summary": "Deus que se revela: o Deus que não permaneceu em silêncio",
     "questionCentral": "Como podemos conhecer Deus - e de que maneira Ele decidiu se dar a conhecer à\nhumanidade?",
     "objective": "Compreender que não precisamos inventar quem Deus é. Ele se dá a conhecer por meio da\ncriação, de sua ação na história, de sua Palavra e, de maneira decisiva, em Jesus Cristo.",
     "estimatedMinutes": null,
@@ -221,8 +221,8 @@ const rawStudies = [
     "trackId": "track-02",
     "number": 7,
     "slug": "a-soberania-de-deus-quando-nao",
-    "title": "A soberania de Deus: quando não",
-    "summary": "temos o controle",
+    "title": "A soberania de Deus: quando não temos o controle",
+    "summary": "A soberania de Deus: quando não temos o controle",
     "questionCentral": "O que significa dizer que Deus é soberano - e como confiar nele sem transformar a fé em\nfatalismo ou passividade?",
     "objective": "Compreender que Deus continua sendo Senhor sobre a criação e a história, mesmo quando\nnão entendemos tudo, e que sua soberania não elimina nossas escolhas, nossa\nresponsabilidade, nossas orações nem a necessidade de agir.",
     "estimatedMinutes": null,
@@ -234,8 +234,8 @@ const rawStudies = [
     "trackId": "track-02",
     "number": 8,
     "slug": "o-amor-de-deus-um-amor-que-nao",
-    "title": "O amor de Deus: um amor que não",
-    "summary": "começa em nós",
+    "title": "O amor de Deus: um amor que não começa em nós",
+    "summary": "O amor de Deus: um amor que não começa em nós",
     "questionCentral": "O que a Bíblia quer dizer quando afirma que Deus é amor - e como esse amor transforma a\nmaneira como recebemos e oferecemos amor?",
     "objective": "Compreender que o amor de Deus nasce de seu próprio caráter, é demonstrado de maneira\ndecisiva em Cristo e não significa aprovação de tudo, mas uma bondade santa que busca nosso\nbem e nos ensina a amar.",
     "estimatedMinutes": null,
@@ -247,8 +247,8 @@ const rawStudies = [
     "trackId": "track-02",
     "number": 9,
     "slug": "justica-e-graca-deus-nao-ignora-o",
-    "title": "Justiça e graça: Deus não ignora o",
-    "summary": "pecado nem abandona o pecador",
+    "title": "Justiça e graça: Deus não ignora o pecado nem abandona o pecador",
+    "summary": "Justiça e graça: Deus não ignora o pecado nem abandona o pecador",
     "questionCentral": "Como justiça e graça se encontram em Deus - e por que a cruz ocupa o centro dessa resposta?",
     "objective": "Compreender que Deus não precisa escolher entre ser justo e ser gracioso. Na obra de Cristo, o\npecado é levado a sério e o pecador encontra perdão, reconciliação e uma nova vida que não\npode ser comprada por mérito.",
     "estimatedMinutes": null,
@@ -260,8 +260,8 @@ const rawStudies = [
     "trackId": "track-02",
     "number": 10,
     "slug": "pai-filho-e-espirito-santo-o-unico",
-    "title": "Pai, Filho e Espírito Santo: o único",
-    "summary": "Deus que se revelou dessa maneira",
+    "title": "Pai, Filho e Espírito Santo: o único Deus que se revelou dessa maneira",
+    "summary": "Pai, Filho e Espírito Santo: o único Deus que se revelou dessa maneira",
     "questionCentral": "Como a Bíblia apresenta um único Deus e, ao mesmo tempo, Pai, Filho e Espírito Santo?",
     "objective": "Compreender, sem complicação desnecessária, que a Bíblia ensina a existência de um único\nDeus e apresenta o Pai, o Filho e o Espírito Santo como distintos entre si e plenamente ligados\nà identidade e à obra divina.",
     "estimatedMinutes": null,
@@ -359,12 +359,8 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "Em Isaías 6, o profeta não recebe primeiro uma lista de comportamentos. Ele recebe uma visão. Ele vê o",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Senhor.",
-            "type": "PARAGRAPH"
+            type: "PARAGRAPH",
+            text: "Em Isaías 6, o profeta não recebe primeiro uma lista de comportamentos. Ele recebe uma visão. Ele vê o Senhor.",
           },
           {
             "text": "E, depois de enxergar Deus de uma maneira mais profunda, começa a enxergar a si mesmo de maneira",
@@ -2091,12 +2087,8 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "Miqueias 6:8 - Leia o chamado para praticar a justiça, amar a misericórdia e caminhar humildemente com",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Deus.",
-            "type": "PARAGRAPH"
+            type: "PARAGRAPH",
+            text: "Miqueias 6:8 - Leia o chamado para praticar a justiça, amar a misericórdia e caminhar humildemente com Deus.",
           },
           {
             "text": "Favoritos",
@@ -3783,12 +3775,8 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "Lamentações 3 nasceu em um ambiente de profunda dor. Mesmo assim, o escritor se lembra da fidelidade de",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Deus dentro da dor.",
-            "type": "PARAGRAPH"
+            type: "PARAGRAPH",
+            text: "Lamentações 3 nasceu em um ambiente de profunda dor. Mesmo assim, o escritor se lembra da fidelidade de Deus dentro da dor.",
           },
           {
             "text": "Esperança dentro da dor",
@@ -5161,12 +5149,8 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "Significa que nenhuma criatura, nenhum poder e nenhum acontecimento consegue finalmente arrancar de",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Deus o governo de sua própria história.",
-            "type": "PARAGRAPH"
+            type: "PARAGRAPH",
+            text: "Significa que nenhuma criatura, nenhum poder e nenhum acontecimento consegue finalmente arrancar de Deus o governo de sua própria história.",
           }
         ],
         "order": 4,
@@ -7257,12 +7241,8 @@ const rawSectionsByStudy = [
         "title": "Registrar no Diário",
         "blocks": [
           {
-            "text": "O que preciso parar de tentar pagar sozinho e colocar novamente diante da graça de Deus em",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Cristo?",
-            "type": "PARAGRAPH"
+            type: "PARAGRAPH",
+            text: "O que preciso parar de tentar pagar sozinho e colocar novamente diante da graça de Deus em Cristo?",
           }
         ],
         "order": 19,
@@ -7391,12 +7371,8 @@ const rawSectionsByStudy = [
             "type": "SUBHEADING"
           },
           {
-            "text": "Pergunta central: Como a Bíblia apresenta um único Deus e, ao mesmo tempo, Pai, Filho e",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Espírito Santo?",
-            "type": "PARAGRAPH"
+            type: "PARAGRAPH",
+            text: "Pergunta central: Como a Bíblia apresenta um único Deus e, ao mesmo tempo, Pai, Filho e Espírito Santo?",
           }
         ],
         "order": 23,
@@ -8200,12 +8176,8 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "A próxima Jornada começará perguntando: Quem é Jesus antes mesmo de chegarmos a",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Belém?",
-            "type": "PARAGRAPH"
+            type: "PARAGRAPH",
+            text: "A próxima Jornada começará perguntando: Quem é Jesus antes mesmo de chegarmos a Belém?",
           }
         ],
         "order": 24,

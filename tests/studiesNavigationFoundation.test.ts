@@ -2,28 +2,29 @@ import { readFileSync } from "fs";
 import { join } from "path";
 
 const root = process.cwd();
-const typesPath = join(root, "src", "navigation", "types.ts");
-const navigatorPath = join(
-  root,
-  "src",
-  "navigation",
-  "StudiesNavigator.tsx",
-);
+const read = (relativePath: string): string =>
+  readFileSync(join(root, relativePath), "utf8");
 
-const read = (path: string): string => readFileSync(path, "utf8");
+const typesSource = read("src/navigation/types.ts");
+const navigatorSource = read("src/navigation/StudiesNavigator.tsx");
+const detailSource = read("src/screens/StudyDetailScreen.tsx");
+const favoritesSource = read("src/screens/FavoritesScreen.tsx");
 
 describe("Studies navigation foundation", () => {
-  const typesSource = read(typesPath);
-  const navigatorSource = read(navigatorPath);
-
-  it("defines exactly the three internal Studies routes with identity-only params", () => {
+  it("defines exactly the three internal Studies routes with controlled return metadata", () => {
     expect(typesSource).toContain("export type StudiesStackParamList = {");
     expect(typesSource).toContain("StudiesHome: undefined;");
     expect(typesSource).toContain(
       "StudyTrack: Readonly<{ trackId: string }>;",
     );
     expect(typesSource).toContain(
-      "StudyDetail: Readonly<{ studyId: string }>;",
+      "StudyDetail: Readonly<{",
+    );
+    expect(typesSource).toContain(
+      "studyId: string;",
+    );
+    expect(typesSource).toContain(
+      "returnToFavorites?: boolean;",
     );
 
     expect(typesSource).not.toMatch(
@@ -34,7 +35,7 @@ describe("Studies navigation foundation", () => {
     );
   });
 
-  it("keeps Studies drawer-owned while keeping it out of Tabs and Root and preserving typed screen props", () => {
+  it("keeps Studies tab-owned while keeping it out of Drawer and Root", () => {
     expect(typesSource).toContain("export type StudiesStackScreenProps<");
     expect(typesSource).toContain(
       "NativeStackScreenProps<StudiesStackParamList, RouteName>",
@@ -53,10 +54,11 @@ describe("Studies navigation foundation", () => {
     expect(drawerBlock).toBeDefined();
     expect(tabBlock).toBeDefined();
     expect(rootBlock).toBeDefined();
-    expect(drawerBlock).toContain(
-      "Studies: NavigatorScreenParams<StudiesStackParamList> | undefined;",
+
+    expect(drawerBlock).not.toMatch(/\bStudies\s*:/);
+    expect(tabBlock).toContain(
+      "StudiesTab: NavigatorScreenParams<StudiesStackParamList> | undefined;",
     );
-    expect(tabBlock).not.toContain("Studies");
     expect(rootBlock).not.toContain("Studies");
   });
 
@@ -71,10 +73,10 @@ describe("Studies navigation foundation", () => {
       'import StudyDetailScreen from "../screens/StudyDetailScreen";',
     );
     expect(navigatorSource).toContain(
-      'createNativeStackNavigator<StudiesStackParamList>()',
+      "createNativeStackNavigator<StudiesStackParamList>()",
     );
-    expect(navigatorSource).toContain(
-      '<StudiesStack.Navigator initialRouteName="StudiesHome">',
+    expect(navigatorSource).toMatch(
+      /<StudiesStack\.Navigator[\s\S]*?initialRouteName="StudiesHome"/,
     );
 
     const registrations =
@@ -88,11 +90,54 @@ describe("Studies navigation foundation", () => {
       /component=\{StudyTrackScreen\}[\s\S]*?name="StudyTrack"/,
     );
     expect(navigatorSource).toMatch(
-      /component=\{StudyDetailScreen\}[\s\S]*?name="StudyDetail"/,
+      /name="StudyDetail"[\s\S]*?<StudyDetailScreen[\s\S]*?onOpenBibleReference=\{[\s\S]*?handleOpenBibleReference/,
+    );
+    expect(navigatorSource).toContain('title: "Biblioteca de Estudos"');
+  });
+
+  it("wires explicit Study Favorites entry and return without moving Studies into Drawer", () => {
+    expect(navigatorSource).toContain(
+      'navigation.navigate("Favorites")',
+    );
+    expect(navigatorSource).toContain(
+      "onRequestFavorites={",
+    );
+    expect(detailSource).toContain(
+      "route.params.returnToFavorites",
+    );
+    expect(detailSource).toContain(
+      'testID="study-favorite-button"',
+    );
+    expect(detailSource).toContain(
+      "resolveStudyKeepFavoriteReferences",
+    );
+    expect(detailSource).toContain(
+      'kind: "bible_reference"',
+    );
+    expect(detailSource).toContain(
+      'kind: "study"',
+    );
+    expect(detailSource).toContain(
+      "favoritesService.add(target, {",
+    );
+    expect(favoritesSource).toContain(
+      'screen: "StudiesTab"',
+    );
+    expect(favoritesSource).toContain(
+      'screen: "StudyDetail"',
+    );
+    expect(favoritesSource).toContain(
+      "returnToFavorites: true",
+    );
+    expect(favoritesSource).toContain(
+      "loadPreferredOfflineBibleVersion",
+    );
+    expect(favoritesSource).toContain(
+      "getJourneyBibleReaderRouteForReference",
     );
   });
 
-  it("does not add a fourth route, external wiring, or editorial-content bypass", () => {
+  it("keeps the Studies stack isolated from shell ownership and editorial source", () => {
     expect(navigatorSource).not.toContain("../studies/content/");
     expect(navigatorSource).not.toContain("AppDrawer");
     expect(navigatorSource).not.toContain("MainTabs");

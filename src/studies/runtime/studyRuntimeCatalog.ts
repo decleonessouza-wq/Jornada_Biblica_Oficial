@@ -205,3 +205,31 @@ export const getRuntimeStudyById = (
   studyRuntimeCatalog.studies.find(
     (entry) => readStringField(entry.content, "id") === studyId,
   ) ?? null;
+type RuntimeStudySection =
+  RuntimeStudyContentPackage["sections"][number];
+type RuntimeStudyReference =
+  RuntimeStudyContentPackage["references"][number];
+
+export const getRuntimeStudySections = (
+  studyId: string,
+): readonly RuntimeStudySection[] =>
+  Object.freeze(
+    studyRuntimeCatalog.packages
+      .flatMap((contentPackage) =>
+        contentPackage.sections.filter(
+          (section) => section.studyId === studyId,
+        ),
+      )
+      .sort((left, right) => left.order - right.order),
+  );
+
+export const getRuntimeStudyReferences = (
+  studyId: string,
+): readonly RuntimeStudyReference[] =>
+  Object.freeze(
+    studyRuntimeCatalog.packages.flatMap((contentPackage) =>
+      contentPackage.references.filter(
+        (reference) => reference.studyId === studyId,
+      ),
+    ),
+  );

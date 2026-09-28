@@ -1,5 +1,10 @@
 import { useState } from "react";
 
+import {
+  loadStudyContinuation,
+  type StudyContinuation,
+} from "../services/studies/studyContinuationService";
+
 import DedicationScreen from "../screens/DedicationScreen";
 import FavoritesScreen from "../screens/FavoritesScreen";
 import HistoryScreen from "../screens/HistoryScreen";
@@ -11,16 +16,27 @@ import { colors } from "../theme/colors";
 
 import AppDrawerContent from "./AppDrawerContent";
 import JournalNavigator from "./JournalNavigator";
-import StudiesNavigator from "./StudiesNavigator";
 import MainTabsNavigator from "./MainTabsNavigator";
 import { AppDrawer } from "./navigationFactories";
 import QuickActionSheet from "./QuickActionSheet";
 
 export default function AppDrawerNavigator() {
   const [quickActionsVisible, setQuickActionsVisible] = useState(false);
+  const [studyContinuation, setStudyContinuation] =
+    useState<StudyContinuation | null>(null);
+
+  const refreshStudyContinuation = async () => {
+    try {
+      setStudyContinuation(await loadStudyContinuation());
+    } catch {
+      setStudyContinuation(null);
+    }
+  };
 
   const openQuickActions = () => {
-    setQuickActionsVisible(true);
+    void refreshStudyContinuation().finally(() => {
+      setQuickActionsVisible(true);
+    });
   };
 
   const closeQuickActions = () => {
@@ -94,9 +110,29 @@ export default function AppDrawerNavigator() {
             closeQuickActions();
             navigation.navigate("Favorites");
           };
+
           const handleOpenStudies = () => {
             closeQuickActions();
-            navigation.navigate("Studies");
+
+            if (studyContinuation) {
+              navigation.navigate("MainTabs", {
+                screen: "StudiesTab",
+                params: {
+                  screen: "StudyDetail",
+                  params: {
+                    studyId: studyContinuation.studyId,
+                  },
+                },
+              });
+              return;
+            }
+
+            navigation.navigate("MainTabs", {
+              screen: "StudiesTab",
+              params: {
+                screen: "StudiesHome",
+              },
+            });
           };
 
           return (
@@ -110,7 +146,12 @@ export default function AppDrawerNavigator() {
                 onOpenProgress={handleOpenProgress}
                 onOpenHistory={handleOpenHistory}
                 onOpenJournal={handleOpenJournal}
-            onOpenStudies={handleOpenStudies}
+                studyActionLabel={
+                  studyContinuation
+                    ? "Continuar estudo"
+                    : "Abrir Estudos"
+                }
+                onOpenStudies={handleOpenStudies}
                 onOpenFavorites={handleOpenFavorites}
               />
             </>
@@ -126,11 +167,6 @@ export default function AppDrawerNavigator() {
           drawerLabel: "Meu Diário",
           headerShown: false,
         }}
-      />
-      <AppDrawer.Screen
-        name="Studies"
-        component={StudiesNavigator}
-        options={{ drawerItemStyle: { display: "none" } }}
       />
 
       <AppDrawer.Screen

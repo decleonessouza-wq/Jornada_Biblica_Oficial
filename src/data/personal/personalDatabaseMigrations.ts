@@ -238,7 +238,41 @@ ON personal_journal_reference_passages (
 );
 `);
     },
-  },] as const;
+  },
+  {
+    version: 7,
+    up: async (database) => {
+      await database.execAsync(`
+CREATE TABLE personal_study_progress (
+  study_id TEXT PRIMARY KEY NOT NULL,
+  state TEXT NOT NULL
+    CHECK (state IN ('NOT_STARTED', 'IN_PROGRESS', 'COMPLETED')),
+  last_section_key TEXT NULL,
+  reading_progress INTEGER NOT NULL
+    CHECK (reading_progress BETWEEN 0 AND 100),
+  started_at_utc TEXT NULL,
+  last_opened_at_utc TEXT NULL,
+  completed_at_utc TEXT NULL
+);
+`);
+    },
+  },
+  {
+    version: 8,
+    up: async (database) => {
+      await database.execAsync(`
+CREATE TABLE personal_favorite_study_origins (
+  favorite_id TEXT NOT NULL,
+  study_id TEXT NOT NULL,
+  PRIMARY KEY (favorite_id, study_id),
+  FOREIGN KEY (favorite_id)
+    REFERENCES personal_favorites (id)
+    ON DELETE CASCADE
+);
+`);
+    },
+  },
+] as const;
 
 export async function getPersonalDatabaseUserVersion(
   database: SQLiteDatabase,

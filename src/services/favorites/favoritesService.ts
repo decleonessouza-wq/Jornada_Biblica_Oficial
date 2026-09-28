@@ -1,5 +1,6 @@
 import type {
   Favorite,
+  FavoriteOriginContext,
   FavoriteTarget,
 } from "../../domain/favorites/favorite";
 import type { PersonalCanonicalIdFactory } from "../../domain/personal/personalIdentity";
@@ -7,6 +8,7 @@ import type {
   PersonalClock,
   PersonalDatePolicy,
 } from "../../domain/personal/personalTime";
+import type { StudyId } from "../../domain/studies/study";
 import type {
   FavoritePersistenceRecord,
   FavoritesRepository,
@@ -55,8 +57,35 @@ export class FavoritesService {
     return record !== null;
   }
 
+  private async persistOrigin(
+    target: FavoriteTarget,
+    origin: FavoriteOriginContext | undefined,
+  ): Promise<void> {
+    if (!origin) {
+      return;
+    }
+
+    const targetKey = encodeFavoriteTargetKey(target);
+    const record = await this.repository.findByTarget(
+      target.kind,
+      targetKey,
+    );
+
+    if (!record) {
+      throw new Error(
+        "FAVORITE_TARGET_NOT_FOUND_AFTER_ADD",
+      );
+    }
+
+    await this.repository.addStudyOrigin({
+      favoriteId: record.id,
+      studyId: origin.studyId,
+    });
+  }
+
   async add(
     target: FavoriteTarget,
+    origin?: FavoriteOriginContext,
   ): Promise<void> {
     const targetKey = encodeFavoriteTargetKey(target);
 
@@ -68,6 +97,8 @@ export class FavoritesService {
         this.clock.now(),
       ),
     });
+
+    await this.persistOrigin(target, origin);
   }
 
   async remove(
@@ -83,6 +114,7 @@ export class FavoritesService {
 
   async toggle(
     target: FavoriteTarget,
+    origin?: FavoriteOriginContext,
   ): Promise<boolean> {
     const targetKey = encodeFavoriteTargetKey(target);
     const existing = await this.repository.findByTarget(
@@ -108,6 +140,28 @@ export class FavoritesService {
       ),
     });
 
+    await this.persistOrigin(target, origin);
+
     return true;
+  }
+
+  async listStudyOrigins(
+    target: FavoriteTarget,
+  ): Promise<readonly StudyId[]> {
+    const targetKey = encodeFavoriteTargetKey(target);
+    const record = await this.repository.findByTarget(
+      target.kind,
+      targetKey,
+    );
+
+    if (!record) {
+      return [];
+    }
+
+    const origins = await this.repository.listStudyOrigins(
+      record.id,
+    );
+
+    return origins.map((origin) => origin.studyId);
   }
 }

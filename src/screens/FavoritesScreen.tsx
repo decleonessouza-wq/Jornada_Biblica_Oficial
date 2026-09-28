@@ -5,6 +5,10 @@ import React, {
   useState,
 } from "react";
 import { useFocusEffect } from "@react-navigation/native";
+
+import {
+  loadPreferredOfflineBibleVersion,
+} from "../bible/state/bibleReaderPreferencesStore";
 import {
   ActivityIndicator,
   ImageBackground,
@@ -15,16 +19,21 @@ import {
   View,
 } from "react-native";
 
+import { formatBibleReference } from "../domain/bible/bibleReferenceFormatter";
 import type { Favorite } from "../domain/favorites/favorite";
 import {
   HARPA_CRISTA_JORNADA_EDITION_METADATA,
 } from "../hymnal/catalog/harpaCristaEditionMetadata";
 import type { AppDrawerScreenProps } from "../navigation/types";
+import {
+  getJourneyBibleReaderRouteForReference,
+} from "../services/journeyBibleReaderAdapter";
 import { getPersonalPlatformHub } from "../services/personalPlatformHub";
+import { getRuntimeStudyById } from "../studies/runtime/studyRuntimeCatalog";
 import { colors } from "../theme/colors";
 
 type FavoritesScreenProps = AppDrawerScreenProps<"Favorites">;
-type FavoriteFilter = "all" | "bible_verse" | "hymn";
+type FavoriteFilter = "all" | "bible" | "study" | "hymn";
 type LoadStatus = "loading" | "ready" | "error";
 
 const FILTERS: readonly Readonly<{
@@ -32,20 +41,25 @@ const FILTERS: readonly Readonly<{
   label: string;
 }>[] = [
   { key: "all", label: "Todos" },
-  { key: "bible_verse", label: "Bíblia" },
+  { key: "bible", label: "Bíblia" },
+  { key: "study", label: "Estudos" },
   { key: "hymn", label: "Harpa" },
 ];
 
 function getEmptyMessage(filter: FavoriteFilter): string {
-  if (filter === "bible_verse") {
+  if (filter === "bible") {
     return "Você ainda não marcou nenhum texto bíblico como favorito.";
+  }
+
+  if (filter === "study") {
+    return "Você ainda não marcou nenhum estudo como favorito.";
   }
 
   if (filter === "hymn") {
     return "Você ainda não marcou nenhum hino como favorito.";
   }
 
-  return "Seus textos e hinos favoritos aparecerão aqui.";
+  return "Seus textos, estudos e hinos favoritos aparecerão aqui.";
 }
 
 export default function FavoritesScreen({
@@ -98,13 +112,21 @@ export default function FavoritesScreen({
       return favorites;
     }
 
+    if (filter === "bible") {
+      return favorites.filter(
+        (favorite) =>
+          favorite.target.kind === "bible_verse" ||
+          favorite.target.kind === "bible_reference",
+      );
+    }
+
     return favorites.filter(
       (favorite) => favorite.target.kind === filter,
     );
   }, [favorites, filter]);
 
   const openFavorite = useCallback(
-    (favorite: Favorite) => {
+    async (favorite: Favorite) => {
       if (favorite.target.kind === "bible_verse") {
         navigation.navigate("MainTabs", {
           screen: "BibleTab",
@@ -119,6 +141,56 @@ export default function FavoritesScreen({
             },
           },
         });
+        return;
+      }
+
+      if (favorite.target.kind === "bible_reference") {
+        try {
+          const versionId =
+            await loadPreferredOfflineBibleVersion();
+          const route =
+            getJourneyBibleReaderRouteForReference({
+              reference: favorite.target.reference,
+              versionId,
+              passageIndex: 0,
+            });
+
+          if (!route.ok) {
+            return;
+          }
+
+          navigation.navigate("MainTabs", {
+            screen: "BibleTab",
+            params: {
+              screen: "BibleReader",
+              params: {
+                ...route.routeParams,
+                returnToFavorites: true,
+              },
+            },
+          });
+        } catch {
+          return;
+        }
+
+        return;
+      }
+
+      if (favorite.target.kind === "study") {
+        navigation.navigate("MainTabs", {
+          screen: "StudiesTab",
+          params: {
+            screen: "StudyDetail",
+            params: {
+              studyId: favorite.target.studyId,
+              returnToFavorites: true,
+            },
+          },
+        });
+        return;
+      }
+
+      if (favorite.target.kind !== "hymn") {
         return;
       }
 
@@ -156,7 +228,7 @@ export default function FavoritesScreen({
             <Text style={styles.heroEyebrow}>FAVORITOS</Text>
             <Text style={styles.heroTitle}>Favoritos</Text>
             <Text style={styles.heroSubtitle}>
-              Seus textos e hinos marcados em um só lugar
+              Seus textos, estudos e hinos marcados em um só lugar
             </Text>
           </View>
         </ImageBackground>
@@ -277,6 +349,90 @@ export default function FavoritesScreen({
                       </Text>
                     </Pressable>
                   );
+                }
+
+                if (
+                  favorite.target.kind === "bible_reference"
+                ) {
+                  const reference = formatBibleReference(
+                    favorite.target.reference,
+                  );
+
+                  return (
+                    <Pressable
+                      key={favorite.id}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Abrir favorito bíblico ${reference}`}
+                      onPress={() => {
+                        void openFavorite(favorite);
+                      }}
+                      style={({ pressed }) => [
+                        styles.favoriteCard,
+                        pressed && styles.favoriteCardPressed,
+                      ]}
+                      testID={`favorite-bible-reference-${favorite.id}`}
+                    >
+                      <View style={styles.cardTopLine}>
+                        <View style={styles.kindBadge}>
+                          <Text style={styles.kindBadgeText}>
+                            Bíblia
+                          </Text>
+                        </View>
+                        <Text style={styles.openHint}>Abrir</Text>
+                      </View>
+                      <Text style={styles.favoriteTitle}>
+                        {reference}
+                      </Text>
+                      <Text style={styles.favoriteMeta}>
+                        Referência bíblica
+                      </Text>
+                    </Pressable>
+                  );
+                }
+
+                if (favorite.target.kind === "study") {
+                  const runtimeStudy =
+                    getRuntimeStudyById(
+                      favorite.target.studyId,
+                    );
+                  const studyTitle =
+                    runtimeStudy?.content.title ??
+                    "Estudo indisponível";
+
+                  return (
+                    <Pressable
+                      key={favorite.id}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Abrir estudo favorito ${studyTitle}`}
+                      onPress={() => {
+                        void openFavorite(favorite);
+                      }}
+                      style={({ pressed }) => [
+                        styles.favoriteCard,
+                        pressed && styles.favoriteCardPressed,
+                      ]}
+                      testID={`favorite-study-${favorite.target.studyId}`}
+                    >
+                      <View style={styles.cardTopLine}>
+                        <View style={styles.kindBadge}>
+                          <Text style={styles.kindBadgeText}>
+                            Estudos
+                          </Text>
+                        </View>
+                        <Text style={styles.openHint}>Abrir</Text>
+                      </View>
+                      <Text style={styles.favoriteTitle}>
+                        {studyTitle}
+                      </Text>
+                      <Text style={styles.favoriteMeta}>
+                        Estudo bíblico
+                      </Text>
+                    </Pressable>
+                  );
+                }
+
+                if (favorite.target.kind !== "hymn") {
+                  return null;
                 }
 
                 const hymnLabel =

@@ -938,12 +938,22 @@ export const track05Study01Draft = {
       "iconKey": "continue_jornada",
       "blocks": [
         {
-          "type": "PARAGRAPH",
-          "text": "1. Releia João 3:16, Romanos 3:23-24 e Efésios 2:8-9, observando o que cada texto mostra sobre a necessidade humana e a iniciativa de Deus.\n2. Retome as seis perguntas da aplicação final e identifique qual delas mais exige uma resposta prática hoje.\n3. Ore pedindo que sua confiança permaneça na obra de Cristo e que sua fé produza frutos visíveis em sua vida.\n4. Compartilhe com alguém, de forma simples, aquilo que o estudo apresenta sobre o que Cristo fez pela salvação."
+          type: "NUMBERED_LIST",
+          items: [
+            "Releia João 3:16, Romanos 3:23-24 e Efésios 2:8-9, observando o que cada texto mostra sobre a necessidade humana e a iniciativa de Deus.",
+            "Retome as seis perguntas da aplicação final e identifique qual delas mais exige uma resposta prática hoje.",
+            "Ore pedindo que sua confiança permaneça na obra de Cristo e que sua fé produza frutos visíveis em sua vida.",
+            "Compartilhe com alguém, de forma simples, aquilo que o estudo apresenta sobre o que Cristo fez pela salvação.",
+          ],
         },
         {
-          "type": "PARAGRAPH",
-          "text": "1. Releia João 3:16, Romanos 3:23-24 e Efésios 2:8-9, observando o que cada texto mostra sobre a necessidade humana e a iniciativa de Deus.\n2. Retome as seis perguntas da aplicação final e identifique qual delas mais exige uma resposta prática hoje.\n3. Ore pedindo que sua confiança permaneça na obra de Cristo e que sua fé produza frutos visíveis em sua vida.\n4. Compartilhe com alguém, de forma simples, aquilo que o estudo apresenta sobre o que Cristo fez pela salvação."
+          type: "NUMBERED_LIST",
+          items: [
+            "Releia João 3:16, Romanos 3:23-24 e Efésios 2:8-9, observando o que cada texto mostra sobre a necessidade humana e a iniciativa de Deus.",
+            "Retome as seis perguntas da aplicação final e identifique qual delas mais exige uma resposta prática hoje.",
+            "Ore pedindo que sua confiança permaneça na obra de Cristo e que sua fé produza frutos visíveis em sua vida.",
+            "Compartilhe com alguém, de forma simples, aquilo que o estudo apresenta sobre o que Cristo fez pela salvação.",
+          ],
         },
         {
           "type": "CALLOUT",

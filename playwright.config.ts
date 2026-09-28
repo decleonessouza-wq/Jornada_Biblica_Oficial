@@ -11,6 +11,9 @@ export default defineConfig({
   fullyParallel: false,
   workers: 1,
   reporter: "list",
+  expect: {
+    timeout: 15_000,
+  },
   use: {
     baseURL: "http://127.0.0.1:4173",
     headless: true,

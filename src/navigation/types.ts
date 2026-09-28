@@ -49,6 +49,13 @@ export type JournalEntryEditorSourceContext =
       sourceTitleSnapshot: string;
       promptSnapshot: string;
       reference: BibleReference | null;
+    }>
+  | Readonly<{
+      sourceType: "STUDY";
+      trackId: string;
+      studyId: string;
+      sourceTitleSnapshot: string;
+      promptSnapshot: string;
     }>;
 
 export type JournalStackParamList = {
@@ -67,15 +74,20 @@ export type JournalStackParamList = {
     entryId: JournalEntryId;
   };
 };
+
 export type StudiesStackParamList = {
   StudiesHome: undefined;
   StudyTrack: Readonly<{ trackId: string }>;
-  StudyDetail: Readonly<{ studyId: string }>;
+  StudyDetail: Readonly<{
+    studyId: string;
+    returnToFavorites?: boolean;
+  }>;
 };
 
 export type MainTabParamList = {
   HomeTab: undefined;
   BibleTab: NavigatorScreenParams<BibleStackParamList> | undefined;
+  StudiesTab: NavigatorScreenParams<StudiesStackParamList> | undefined;
   PlanTab: undefined;
   HymnalTab: NavigatorScreenParams<HymnalStackParamList> | undefined;
 };
@@ -83,7 +95,6 @@ export type MainTabParamList = {
 export type AppDrawerParamList = {
   MainTabs: NavigatorScreenParams<MainTabParamList> | undefined;
   Journal: NavigatorScreenParams<JournalStackParamList> | undefined;
-  Studies: NavigatorScreenParams<StudiesStackParamList> | undefined;
   Favorites: undefined;
   Progress: undefined;
   History: undefined;
@@ -133,6 +144,7 @@ export type HymnalStackScreenProps<
 export type JournalStackScreenProps<
   RouteName extends keyof JournalStackParamList,
 > = NativeStackScreenProps<JournalStackParamList, RouteName>;
+
 export type StudiesStackScreenProps<
   RouteName extends keyof StudiesStackParamList,
 > = NativeStackScreenProps<StudiesStackParamList, RouteName>;

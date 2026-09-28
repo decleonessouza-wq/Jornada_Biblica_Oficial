@@ -789,12 +789,8 @@ const rawSectionsByStudy = [
         "title": "Antes de entender",
         "blocks": [
           {
-            "text": "Quando pensamos em Jesus, muitas vezes começamos pela manjedoura. Belém é importante, mas o",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Evangelho de João começa muito antes.",
-            "type": "PARAGRAPH"
+            type: "PARAGRAPH",
+            text: "Quando pensamos em Jesus, muitas vezes começamos pela manjedoura. Belém é importante, mas o Evangelho de João começa muito antes.",
           },
           {
             "text": "João não começa com Maria, José ou os pastores. Ele começa com uma frase que nos leva ao próprio início",
@@ -1231,12 +1227,8 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "Estudo 02 - Filho de Deus: uma identidade que muda tudo. O que significa chamar Jesus de Filho de",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Deus?",
-            "type": "PARAGRAPH"
+            type: "PARAGRAPH",
+            text: "Estudo 02 - Filho de Deus: uma identidade que muda tudo. O que significa chamar Jesus de Filho de Deus?",
           }
         ],
         "order": 19,
@@ -1358,12 +1350,8 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "Entre nós, um filho começa a existir depois dos pais. Por isso alguém pode imaginar que Jesus foi criado por",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Deus e depois recebeu o título de Filho. O Novo Testamento não o apresenta assim.",
-            "type": "PARAGRAPH"
+            type: "PARAGRAPH",
+            text: "Entre nós, um filho começa a existir depois dos pais. Por isso alguém pode imaginar que Jesus foi criado por Deus e depois recebeu o título de Filho. O Novo Testamento não o apresenta assim.",
           },
           {
             "text": "O Filho já existia antes de seu nascimento humano e possui uma relação única com o Pai. Precisamos deixar",
@@ -1398,12 +1386,8 @@ const rawSectionsByStudy = [
         "title": "Observe",
         "blocks": [
           {
-            "text": "Em Mateus 16, Jesus pergunta aos discípulos quem eles dizem que Ele é. Pedro responde: “Tu és o Cristo, o",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Filho do Deus vivo.”. A fé precisa sair da opinião da multidão e chegar a uma resposta pessoal.",
-            "type": "PARAGRAPH"
+            type: "PARAGRAPH",
+            text: "Em Mateus 16, Jesus pergunta aos discípulos quem eles dizem que Ele é. Pedro responde: “Tu és o Cristo, o Filho do Deus vivo.”. A fé precisa sair da opinião da multidão e chegar a uma resposta pessoal.",
           },
           {
             "text": "No batismo e na transfiguração, a voz do Pai identifica Jesus como seu Filho amado. O título não nasce",
@@ -1512,16 +1496,8 @@ const rawSectionsByStudy = [
         "title": "Cuidado para não confundir",
         "blocks": [
           {
-            "text": "Algumas leituras usam “Filho de Deus” para diminuir Jesus a um ser celestial abaixo de Deus. O conjunto do",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Novo Testamento, porém, fala do Filho de maneira muito mais elevada. João 1, João 5, Colossenses 1 e",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Hebreus 1 precisam permanecer na conversa.",
-            "type": "PARAGRAPH"
+            type: "PARAGRAPH",
+            text: "Algumas leituras usam “Filho de Deus” para diminuir Jesus a um ser celestial abaixo de Deus. O conjunto do Novo Testamento, porém, fala do Filho de maneira muito mais elevada. João 1, João 5, Colossenses 1 e Hebreus 1 precisam permanecer na conversa.",
           }
         ],
         "order": 9,
@@ -1939,12 +1915,8 @@ const rawSectionsByStudy = [
         "title": "Observe",
         "blocks": [
           {
-            "text": "Marcos 10 acontece a caminho de Jerusalém. Jesus anuncia sua morte e ressurreição. Logo depois, Tiago e",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "João pedem lugares de destaque. Eles imaginam glória antes de entender a cruz.",
-            "type": "PARAGRAPH"
+            type: "PARAGRAPH",
+            text: "Marcos 10 acontece a caminho de Jerusalém. Jesus anuncia sua morte e ressurreição. Logo depois, Tiago e João pedem lugares de destaque. Eles imaginam glória antes de entender a cruz.",
           },
           {
             "text": "Jesus responde redefinindo grandeza: os governantes dominam, mas entre seus discípulos não deve ser",
@@ -2049,12 +2021,8 @@ const rawSectionsByStudy = [
         "title": "Cuidado para não confundir",
         "blocks": [
           {
-            "text": "“Carregar a cruz” não significa aceitar violência doméstica, exploração ou manipulação religiosa. A entrega de",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Jesus é voluntária e pertence à sua missão única. Serviço cristão nunca é licença para alguém impor",
-            "type": "PARAGRAPH"
+            type: "PARAGRAPH",
+            text: "“Carregar a cruz” não significa aceitar violência doméstica, exploração ou manipulação religiosa. A entrega de Jesus é voluntária e pertence à sua missão única. Serviço cristão nunca é licença para alguém impor",
           },
           {
             "text": "sofrimento ao outro.",
@@ -2075,12 +2043,8 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "recebendo domínio do Ancião de Dias. A imagem contrasta reinos desumanos com um governo recebido de",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Deus. Quando Jesus retoma essa linguagem, coloca-se dentro dessa esperança.",
-            "type": "PARAGRAPH"
+            type: "PARAGRAPH",
+            text: "recebendo domínio do Ancião de Dias. A imagem contrasta reinos desumanos com um governo recebido de Deus. Quando Jesus retoma essa linguagem, coloca-se dentro dessa esperança.",
           }
         ],
         "order": 10,
@@ -2484,12 +2448,8 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "Mateus 16 mostra que reconhecer o título ainda não significa compreender a missão. Pedro chama Jesus de",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Cristo, mas rejeita a ideia da cruz. Ele queria Messias sem sofrimento.",
-            "type": "PARAGRAPH"
+            type: "PARAGRAPH",
+            text: "Mateus 16 mostra que reconhecer o título ainda não significa compreender a missão. Pedro chama Jesus de Cristo, mas rejeita a ideia da cruz. Ele queria Messias sem sofrimento.",
           },
           {
             "text": "Atos 2 conecta Jesus à promessa feita a Davi, à ressurreição e à exaltação. O Messias crucificado não foi",
@@ -2534,12 +2494,8 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "O Reino de Jesus é maior do que um projeto nacional. Muitos esperavam libertação política imediata de",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Roma. Jesus anuncia um Reino que alcança pecado, morte e pessoas de todas as nações.",
-            "type": "PARAGRAPH"
+            type: "PARAGRAPH",
+            text: "O Reino de Jesus é maior do que um projeto nacional. Muitos esperavam libertação política imediata de Roma. Jesus anuncia um Reino que alcança pecado, morte e pessoas de todas as nações.",
           },
           {
             "text": "A cruz parecia contradizer a ideia de vitória, mas se torna justamente o caminho da redenção. O Rei vence de",
@@ -2969,16 +2925,8 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "Mesmo assim, o Novo Testamento chama Jesus repetidamente de Cordeiro. João Batista o apresenta como",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Cordeiro de Deus. Pedro fala de sangue precioso como de cordeiro sem defeito. Apocalipse mostra um",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Cordeiro que foi morto e está no centro da adoração celestial.",
-            "type": "PARAGRAPH"
+            type: "PARAGRAPH",
+            text: "Mesmo assim, o Novo Testamento chama Jesus repetidamente de Cordeiro. João Batista o apresenta como Cordeiro de Deus. Pedro fala de sangue precioso como de cordeiro sem defeito. Apocalipse mostra um Cordeiro que foi morto e está no centro da adoração celestial.",
           },
           {
             "text": "A imagem une entrega e vitória de uma forma que só faz sentido quando olhamos para toda a história",
@@ -3928,12 +3876,8 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "Estudo 07 - Senhor: quando Jesus deixa de ser apenas parte da vida. O que significa confessar que",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Jesus é Senhor?",
-            "type": "PARAGRAPH"
+            type: "PARAGRAPH",
+            text: "Estudo 07 - Senhor: quando Jesus deixa de ser apenas parte da vida. O que significa confessar que Jesus é Senhor?",
           }
         ],
         "order": 19,
@@ -4055,12 +3999,8 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "Filipenses 2 apresenta o Cristo que se humilha até a morte e depois é exaltado. Toda língua confessará que",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Jesus Cristo é Senhor.",
-            "type": "PARAGRAPH"
+            type: "PARAGRAPH",
+            text: "Filipenses 2 apresenta o Cristo que se humilha até a morte e depois é exaltado. Toda língua confessará que Jesus Cristo é Senhor.",
           },
           {
             "text": "Essa confissão não serve apenas para o culto. Ela alcança nossa lealdade, nossas escolhas e nossa identidade.",
@@ -4161,12 +4101,8 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "1 Coríntios 8:6 fala de um Deus, o Pai, e de um Senhor, Jesus Cristo, dentro da fé cristã no único Deus. A",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Igreja não está adicionando um ídolo ao lado de Deus.",
-            "type": "PARAGRAPH"
+            type: "PARAGRAPH",
+            text: "1 Coríntios 8:6 fala de um Deus, o Pai, e de um Senhor, Jesus Cristo, dentro da fé cristã no único Deus. A Igreja não está adicionando um ídolo ao lado de Deus.",
           },
           {
             "text": "Obediência não compra salvação. Obedecemos porque fomos alcançados pela graça e recebemos um novo",
@@ -4584,16 +4520,8 @@ const rawSectionsByStudy = [
         "title": "Antes de entender",
         "blocks": [
           {
-            "text": "Para muitos leitores de hoje, a expressão Sumo Sacerdote parece distante. Para os primeiros leitores de",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Hebreus, porém, ela carregava uma história inteira de templo, sacrifícios, mediação e acesso à presença de",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Deus.",
-            "type": "PARAGRAPH"
+            type: "PARAGRAPH",
+            text: "Para muitos leitores de hoje, a expressão Sumo Sacerdote parece distante. Para os primeiros leitores de Hebreus, porém, ela carregava uma história inteira de templo, sacrifícios, mediação e acesso à presença de Deus.",
           },
           {
             "text": "Hebreus afirma que Jesus é o Sumo Sacerdote maior e definitivo. Ele não apenas oferece um sacrifício;",
@@ -4760,12 +4688,8 @@ const rawSectionsByStudy = [
         "title": "+ Aprofunde",
         "blocks": [
           {
-            "text": "Hebreus fala de Jesus como sacerdote “segundo a ordem de Melquisedeque”. O autor usa Gênesis 14 e",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Salmo 110 para mostrar um sacerdócio que não depende da linhagem levítica comum. O centro não é",
-            "type": "PARAGRAPH"
+            type: "PARAGRAPH",
+            text: "Hebreus fala de Jesus como sacerdote “segundo a ordem de Melquisedeque”. O autor usa Gênesis 14 e Salmo 110 para mostrar um sacerdócio que não depende da linhagem levítica comum. O centro não é",
           },
           {
             "text": "especular sobre cada detalhe de Melquisedeque, mas mostrar a superioridade e permanência do sacerdócio",
@@ -5010,12 +4934,8 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "Estudo 09 - Encarnação: Deus entrou em nossa história. O que realmente significa afirmar que o",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Filho de Deus se tornou humano?",
-            "type": "PARAGRAPH"
+            type: "PARAGRAPH",
+            text: "Estudo 09 - Encarnação: Deus entrou em nossa história. O que realmente significa afirmar que o Filho de Deus se tornou humano?",
           }
         ],
         "order": 19,
@@ -5289,12 +5209,8 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "Lucas diz que Ele crescia em sabedoria, e o Novo Testamento também afirma sua identidade divina. Onde a",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Bíblia não explica todos os detalhes, precisamos ser humildes.",
-            "type": "PARAGRAPH"
+            type: "PARAGRAPH",
+            text: "Lucas diz que Ele crescia em sabedoria, e o Novo Testamento também afirma sua identidade divina. Onde a Bíblia não explica todos os detalhes, precisamos ser humildes.",
           }
         ],
         "order": 10,
@@ -5307,12 +5223,8 @@ const rawSectionsByStudy = [
         "title": "Aplique",
         "blocks": [
           {
-            "text": "Deus não está distante da experiência humana. Jesus conheceu cansaço, lágrimas e dor. Você pode levar a",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Ele uma espiritualidade humana, sem fingir que não sente.",
-            "type": "PARAGRAPH"
+            type: "PARAGRAPH",
+            text: "Deus não está distante da experiência humana. Jesus conheceu cansaço, lágrimas e dor. Você pode levar a Ele uma espiritualidade humana, sem fingir que não sente.",
           },
           {
             "text": "Honre seu corpo. Ele não é seu deus, mas faz parte da vida recebida de Deus. Descanso, sexualidade,",
@@ -5694,12 +5606,8 @@ const rawSectionsByStudy = [
         "title": "Observe",
         "blocks": [
           {
-            "text": "Marcos 1 funciona quase como uma amostra do ministério de Jesus. Ele anuncia o Evangelho: o Reino de",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Deus chegou perto, e a resposta é arrependimento e fé.",
-            "type": "PARAGRAPH"
+            type: "PARAGRAPH",
+            text: "Marcos 1 funciona quase como uma amostra do ministério de Jesus. Ele anuncia o Evangelho: o Reino de Deus chegou perto, e a resposta é arrependimento e fé.",
           },
           {
             "text": "Jesus chama pessoas para segui-lo. Não forma apenas ouvintes; forma discípulos que aprendem sua vida e",
@@ -7351,12 +7259,8 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "Pai e Filho não são adversários. A cruz não é um Pai cruel contra um Filho sem vontade. Jesus se entrega, e",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Deus está em Cristo reconciliando o mundo consigo.",
-            "type": "PARAGRAPH"
+            type: "PARAGRAPH",
+            text: "Pai e Filho não são adversários. A cruz não é um Pai cruel contra um Filho sem vontade. Jesus se entrega, e Deus está em Cristo reconciliando o mundo consigo.",
           },
           {
             "text": "Romanos 5 liga a cruz ao amor de Deus. Quando nossas emoções oscilam, a cruz permanece como um fato",
@@ -8200,12 +8104,8 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "Estudo 15 - Ascensão: o Cristo exaltado que continua sua obra. Por que a ascensão importa para a",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Igreja hoje?",
-            "type": "PARAGRAPH"
+            type: "PARAGRAPH",
+            text: "Estudo 15 - Ascensão: o Cristo exaltado que continua sua obra. Por que a ascensão importa para a Igreja hoje?",
           }
         ],
         "order": 19,
@@ -8774,12 +8674,8 @@ const rawSectionsByStudy = [
         "title": "Texto Áureo",
         "blocks": [
           {
-            "text": "“Cristo Jesus é quem morreu ou, antes, quem ressuscitou dentre os mortos, o qual está à direita de",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Deus e também intercede por nós.” Romanos 8:34",
-            "type": "PARAGRAPH"
+            type: "PARAGRAPH",
+            text: "“Cristo Jesus é quem morreu ou, antes, quem ressuscitou dentre os mortos, o qual está à direita de Deus e também intercede por nós.” Romanos 8:34",
           }
         ],
         "order": 1,
@@ -9086,12 +8982,8 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "Segurança em Cristo não é licença para cair; é esperança para levantar e continuar caminhando com",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Ele.",
-            "type": "PARAGRAPH"
+            type: "PARAGRAPH",
+            text: "Segurança em Cristo não é licença para cair; é esperança para levantar e continuar caminhando com Ele.",
           }
         ],
         "order": 11,
@@ -9427,12 +9319,8 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "Sinais, guerras, anticristo, tribulação, arrebatamento e datas costumam ocupar a conversa. Mas quando o",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Novo Testamento fala da volta de Cristo, seu objetivo principal não é alimentar ansiedade.",
-            "type": "PARAGRAPH"
+            type: "PARAGRAPH",
+            text: "Sinais, guerras, anticristo, tribulação, arrebatamento e datas costumam ocupar a conversa. Mas quando o Novo Testamento fala da volta de Cristo, seu objetivo principal não é alimentar ansiedade.",
           },
           {
             "text": "Em 1 Tessalonicenses 4, Paulo escreve para consolar cristãos preocupados com pessoas queridas que haviam",
@@ -10122,12 +10010,8 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "Ao ensinar “venha o teu Reino”, Jesus mostra que ainda aguardamos algo. Oramos para que a vontade de",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Deus seja feita plenamente porque isso ainda não acontece em toda parte.",
-            "type": "PARAGRAPH"
+            type: "PARAGRAPH",
+            text: "Ao ensinar “venha o teu Reino”, Jesus mostra que ainda aguardamos algo. Oramos para que a vontade de Deus seja feita plenamente porque isso ainda não acontece em toda parte.",
           },
           {
             "text": "A nova criação de Apocalipse mostra a plenitude: morte, luto e dor terminam. O Reino não culmina em uma",
@@ -10200,12 +10084,8 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "fariseus e sua própria presença no meio deles é significativa. Não precisamos construir a ideia de que o",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Reino seja apenas uma experiência interior.",
-            "type": "PARAGRAPH"
+            type: "PARAGRAPH",
+            text: "fariseus e sua própria presença no meio deles é significativa. Não precisamos construir a ideia de que o Reino seja apenas uma experiência interior.",
           }
         ],
         "order": 10,

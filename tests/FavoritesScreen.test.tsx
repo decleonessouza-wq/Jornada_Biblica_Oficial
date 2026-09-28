@@ -10,6 +10,10 @@ import {
   useFocusEffect,
 } from "@react-navigation/native";
 
+import {
+  loadPreferredOfflineBibleVersion,
+} from "../src/bible/state/bibleReaderPreferencesStore";
+
 import type {
   Favorite,
 } from "../src/domain/favorites/favorite";
@@ -21,6 +25,13 @@ import FavoritesScreen from "../src/screens/FavoritesScreen";
 jest.mock("@react-navigation/native", () => ({
   useFocusEffect: jest.fn(),
 }));
+
+jest.mock(
+  "../src/bible/state/bibleReaderPreferencesStore",
+  () => ({
+    loadPreferredOfflineBibleVersion: jest.fn(),
+  }),
+);
 
 jest.mock(
   "../src/services/personalPlatformHub",
@@ -38,6 +49,10 @@ const mockedGetPersonalPlatformHub =
   getPersonalPlatformHub as jest.MockedFunction<
     typeof getPersonalPlatformHub
   >;
+const mockedLoadPreferredOfflineBibleVersion =
+  loadPreferredOfflineBibleVersion as jest.MockedFunction<
+    typeof loadPreferredOfflineBibleVersion
+  >;
 
 const mockFavoritesList = jest.fn();
 
@@ -51,6 +66,39 @@ const bibleFavorite = {
     verse: 16,
   },
   createdAtUtc: "2026-09-09T13:00:00.000Z",
+} as unknown as Favorite;
+
+const bibleReferenceFavorite = {
+  id: "favorite-bible-reference",
+  target: {
+    kind: "bible_reference",
+    reference: {
+      passages: [
+        {
+          kind: "VERSE_RANGE",
+          bookId: "JHN",
+          start: {
+            chapter: 3,
+            verse: 16,
+          },
+          end: {
+            chapter: 3,
+            verse: 18,
+          },
+        },
+      ],
+    },
+  },
+  createdAtUtc: "2026-09-09T12:30:00.000Z",
+} as unknown as Favorite;
+
+const studyFavorite = {
+  id: "favorite-study",
+  target: {
+    kind: "study",
+    studyId: "track-01-study-01",
+  },
+  createdAtUtc: "2026-09-09T12:15:00.000Z",
 } as unknown as Favorite;
 
 const hymnFavorite = {
@@ -114,6 +162,10 @@ describe("FavoritesScreen", () => {
     mockFavoritesList.mockReset();
     mockedUseFocusEffect.mockReset();
     mockedGetPersonalPlatformHub.mockReset();
+    mockedLoadPreferredOfflineBibleVersion.mockReset();
+    mockedLoadPreferredOfflineBibleVersion.mockResolvedValue(
+      "BLIVRE",
+    );
     configureHub();
   });
 
@@ -151,7 +203,7 @@ describe("FavoritesScreen", () => {
     await waitFor(() => {
       expect(
         view.getByText(
-          "Seus textos e hinos favoritos aparecerão aqui.",
+          "Seus textos, estudos e hinos favoritos aparecerão aqui.",
         ),
       ).toBeTruthy();
     });
@@ -239,6 +291,72 @@ describe("FavoritesScreen", () => {
     ).toBeNull();
   });
 
+  it("Bíblia filter includes canonical Bible references and excludes Studies", async () => {
+    mockFavoritesList.mockResolvedValue([
+      bibleFavorite,
+      bibleReferenceFavorite,
+      studyFavorite,
+      hymnFavorite,
+    ]);
+
+    const view = renderFavorites();
+    await runFocusEffect();
+
+    await waitFor(() => {
+      expect(
+        view.getByTestId(
+          "favorite-bible-reference-favorite-bible-reference",
+        ),
+      ).toBeTruthy();
+    });
+
+    fireEvent.press(
+      view.getByLabelText(
+        "Filtrar favoritos por Bíblia",
+      ),
+    );
+
+    expect(
+      view.getByText("JHN 3:16"),
+    ).toBeTruthy();
+    expect(
+      view.getByTestId(
+        "favorite-bible-reference-favorite-bible-reference",
+      ),
+    ).toBeTruthy();
+    expect(
+      view.queryByTestId(
+        "favorite-study-track-01-study-01",
+      ),
+    ).toBeNull();
+  });
+
+  it("Estudos filter shows only STUDY favorites", async () => {
+    mockFavoritesList.mockResolvedValue([
+      bibleFavorite,
+      studyFavorite,
+      hymnFavorite,
+    ]);
+
+    const view = renderFavorites();
+    await runFocusEffect();
+
+    fireEvent.press(
+      view.getByLabelText(
+        "Filtrar favoritos por Estudos",
+      ),
+    );
+
+    expect(
+      view.getByTestId(
+        "favorite-study-track-01-study-01",
+      ),
+    ).toBeTruthy();
+    expect(
+      view.queryByText("JHN 3:16"),
+    ).toBeNull();
+  });
+
   it("Harpa filter shows only hymn favorites", async () => {
     mockFavoritesList.mockResolvedValue([
       bibleFavorite,
@@ -308,6 +426,76 @@ describe("FavoritesScreen", () => {
     );
   });
 
+  it("opens a canonical Bible reference with the preferred offline version and Favorites return", async () => {
+    mockFavoritesList.mockResolvedValue([
+      bibleReferenceFavorite,
+    ]);
+
+    const view = renderFavorites();
+    await runFocusEffect();
+
+    const card = await waitFor(() =>
+      view.getByTestId(
+        "favorite-bible-reference-favorite-bible-reference",
+      ),
+    );
+
+    fireEvent.press(card);
+
+    await waitFor(() => {
+      expect(
+        mockedLoadPreferredOfflineBibleVersion,
+      ).toHaveBeenCalledTimes(1);
+      expect(view.navigate).toHaveBeenCalledWith(
+        "MainTabs",
+        {
+          screen: "BibleTab",
+          params: {
+            screen: "BibleReader",
+            params: {
+              versionId: "BLIVRE",
+              bookId: "JHN",
+              chapter: 3,
+              verse: 16,
+              returnToFavorites: true,
+            },
+          },
+        },
+      );
+    });
+  });
+
+  it("opens a STUDY favorite in StudyDetail with explicit Favorites return", async () => {
+    mockFavoritesList.mockResolvedValue([
+      studyFavorite,
+    ]);
+
+    const view = renderFavorites();
+    await runFocusEffect();
+
+    fireEvent.press(
+      await waitFor(() =>
+        view.getByTestId(
+          "favorite-study-track-01-study-01",
+        ),
+      ),
+    );
+
+    expect(view.navigate).toHaveBeenCalledWith(
+      "MainTabs",
+      {
+        screen: "StudiesTab",
+        params: {
+          screen: "StudyDetail",
+          params: {
+            studyId: "track-01-study-01",
+            returnToFavorites: true,
+          },
+        },
+      },
+    );
+  });
+
   it("opens a hymn favorite through the existing nested reader route", async () => {
     mockFavoritesList.mockResolvedValue([
       hymnFavorite,
@@ -365,6 +553,11 @@ describe("FavoritesScreen", () => {
     expect(
       view.getByLabelText(
         "Filtrar favoritos por Bíblia",
+      ),
+    ).toBeTruthy();
+    expect(
+      view.getByLabelText(
+        "Filtrar favoritos por Estudos",
       ),
     ).toBeTruthy();
     expect(
