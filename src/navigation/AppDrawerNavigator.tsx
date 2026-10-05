@@ -1,5 +1,10 @@
 import { useState } from "react";
 
+import {
+  loadStudyContinuation,
+  type StudyContinuation,
+} from "../services/studies/studyContinuationService";
+
 import DedicationScreen from "../screens/DedicationScreen";
 import FavoritesScreen from "../screens/FavoritesScreen";
 import HistoryScreen from "../screens/HistoryScreen";
@@ -17,9 +22,21 @@ import QuickActionSheet from "./QuickActionSheet";
 
 export default function AppDrawerNavigator() {
   const [quickActionsVisible, setQuickActionsVisible] = useState(false);
+  const [studyContinuation, setStudyContinuation] =
+    useState<StudyContinuation | null>(null);
+
+  const refreshStudyContinuation = async () => {
+    try {
+      setStudyContinuation(await loadStudyContinuation());
+    } catch {
+      setStudyContinuation(null);
+    }
+  };
 
   const openQuickActions = () => {
-    setQuickActionsVisible(true);
+    void refreshStudyContinuation().finally(() => {
+      setQuickActionsVisible(true);
+    });
   };
 
   const closeQuickActions = () => {
@@ -94,6 +111,30 @@ export default function AppDrawerNavigator() {
             navigation.navigate("Favorites");
           };
 
+          const handleOpenStudies = () => {
+            closeQuickActions();
+
+            if (studyContinuation) {
+              navigation.navigate("MainTabs", {
+                screen: "StudiesTab",
+                params: {
+                  screen: "StudyDetail",
+                  params: {
+                    studyId: studyContinuation.studyId,
+                  },
+                },
+              });
+              return;
+            }
+
+            navigation.navigate("MainTabs", {
+              screen: "StudiesTab",
+              params: {
+                screen: "StudiesHome",
+              },
+            });
+          };
+
           return (
             <>
               <MainTabsNavigator onQuickAction={openQuickActions} />
@@ -105,6 +146,12 @@ export default function AppDrawerNavigator() {
                 onOpenProgress={handleOpenProgress}
                 onOpenHistory={handleOpenHistory}
                 onOpenJournal={handleOpenJournal}
+                studyActionLabel={
+                  studyContinuation
+                    ? "Continuar estudo"
+                    : "Abrir Estudos"
+                }
+                onOpenStudies={handleOpenStudies}
                 onOpenFavorites={handleOpenFavorites}
               />
             </>

@@ -88,8 +88,8 @@ describe("Personal database migrations", () => {
     jest.resetModules();
   });
 
-  it("locks the Personal SQLite schema at version 6", () => {
-    expect(PERSONAL_DATABASE_SCHEMA_VERSION).toBe(6);
+  it("locks the Personal SQLite schema at version 11", () => {
+    expect(PERSONAL_DATABASE_SCHEMA_VERSION).toBe(11);
   });
 
   it("migrates a fresh logical database from v0 through v1, v2, v3 and v4", async () => {
@@ -311,19 +311,22 @@ describe("Personal database migrations", () => {
     );
   });
 
-  it("migrates a fresh logical database through current v6", async () => {
+  it("migrates a fresh logical database through current v11", async () => {
     const fake = createFakeDatabase(0);
-    const migrations = loadMigrationsWithSchemaVersion(6);
+    const migrations = loadMigrationsWithSchemaVersion(11);
 
     await migrations.runPersonalDatabaseMigrations(fake.database);
 
-    expect(fake.withTransactionAsync).toHaveBeenCalledTimes(6);
-    expect(fake.execAsync).toHaveBeenCalledTimes(11);
+    expect(fake.withTransactionAsync).toHaveBeenCalledTimes(11);
+    expect(fake.execAsync).toHaveBeenCalledTimes(21);
     expect(fake.execAsync).toHaveBeenCalledWith(
-      "PRAGMA user_version = 6;",
+      "PRAGMA user_version = 10;",
     );
-    expect(fake.getFirstAsync).toHaveBeenCalledTimes(8);
-    expect(fake.getUserVersion()).toBe(6);
+    expect(fake.execAsync).toHaveBeenCalledWith(
+      "PRAGMA user_version = 11;",
+    );
+    expect(fake.getFirstAsync).toHaveBeenCalledTimes(13);
+    expect(fake.getUserVersion()).toBe(11);
   });
 
   it("migrates an existing v4 database to v5 in one transaction", async () => {
@@ -415,6 +418,119 @@ describe("Personal database migrations", () => {
     expect(ddlSql).not.toMatch(/INSERT\s+INTO/i);
     expect(ddlSql).not.toMatch(/UPDATE\s+/i);
     expect(ddlSql).not.toMatch(/DELETE\s+FROM/i);
+  });
+  it("migrates an existing v6 database to v7 in one transaction", async () => {
+    const fake = createFakeDatabase(6);
+    const migrations = loadMigrationsWithSchemaVersion(7);
+
+    await migrations.runPersonalDatabaseMigrations(fake.database);
+
+    expect(fake.withTransactionAsync).toHaveBeenCalledTimes(1);
+    expect(fake.execAsync).toHaveBeenCalledTimes(2);
+    expect(fake.execAsync).toHaveBeenCalledWith(
+      "PRAGMA user_version = 7;",
+    );
+    expect(fake.getFirstAsync).toHaveBeenCalledTimes(3);
+    expect(fake.getUserVersion()).toBe(7);
+  });
+
+  it("creates only the StudyProgress table in v7 with the approved checks", async () => {
+    const fake = createFakeDatabase(6);
+    const migrations = loadMigrationsWithSchemaVersion(7);
+
+    await migrations.runPersonalDatabaseMigrations(fake.database);
+
+    const ddlSql = getSingleMigrationDdl(fake.execAsync);
+
+    expect(ddlSql).toMatch(
+      /CREATE TABLE personal_study_progress\s*\(/,
+    );
+    expect(ddlSql).toMatch(
+      /study_id TEXT PRIMARY KEY NOT NULL/,
+    );
+    expect(ddlSql).toMatch(
+      /state TEXT NOT NULL\s+CHECK \(state IN \('NOT_STARTED', 'IN_PROGRESS', 'COMPLETED'\)\)/,
+    );
+    expect(ddlSql).toMatch(/last_section_key TEXT NULL/);
+    expect(ddlSql).toMatch(
+      /reading_progress INTEGER NOT NULL\s+CHECK \(reading_progress BETWEEN 0 AND 100\)/,
+    );
+    expect(ddlSql).toMatch(/started_at_utc TEXT NULL/);
+    expect(ddlSql).toMatch(/last_opened_at_utc TEXT NULL/);
+    expect(ddlSql).toMatch(/completed_at_utc TEXT NULL/);
+    expect(ddlSql).not.toMatch(/\btrack_id\b/i);
+    expect(ddlSql).not.toMatch(/\bFOREIGN\s+KEY\b/i);
+    expect(ddlSql).not.toMatch(/IF\s+NOT\s+EXISTS/i);
+    expect(ddlSql).not.toMatch(/CREATE\s+INDEX/i);
+  });
+
+  it("migrates an existing v7 database to v8 in one transaction", async () => {
+    const fake = createFakeDatabase(7);
+    const migrations = loadMigrationsWithSchemaVersion(8);
+
+    await migrations.runPersonalDatabaseMigrations(fake.database);
+
+    expect(fake.withTransactionAsync).toHaveBeenCalledTimes(1);
+    expect(fake.execAsync).toHaveBeenCalledTimes(2);
+    expect(fake.execAsync).toHaveBeenCalledWith(
+      "PRAGMA user_version = 8;",
+    );
+    expect(fake.getFirstAsync).toHaveBeenCalledTimes(3);
+    expect(fake.getUserVersion()).toBe(8);
+  });
+
+  it("adds only the favorite study-origin relation in v8", async () => {
+    const fake = createFakeDatabase(7);
+    const migrations = loadMigrationsWithSchemaVersion(8);
+
+    await migrations.runPersonalDatabaseMigrations(fake.database);
+
+    const ddlSql = getSingleMigrationDdl(fake.execAsync);
+
+    expect(ddlSql).toMatch(
+      /CREATE TABLE personal_favorite_study_origins\s*\(/,
+    );
+    expect(ddlSql).toMatch(/favorite_id TEXT NOT NULL/);
+    expect(ddlSql).toMatch(/study_id TEXT NOT NULL/);
+    expect(ddlSql).toMatch(
+      /PRIMARY KEY \(favorite_id, study_id\)/,
+    );
+    expect(ddlSql).toMatch(
+      /FOREIGN KEY \(favorite_id\)\s+REFERENCES personal_favorites \(id\)\s+ON DELETE CASCADE/,
+    );
+    expect(ddlSql).not.toMatch(
+      /FOREIGN KEY \(study_id\)/,
+    );
+    expect(ddlSql).not.toMatch(
+      /ALTER\s+TABLE\s+personal_favorites/i,
+    );
+    expect(ddlSql).not.toMatch(
+      /source_title|content_body|prompt_snapshot/i,
+    );
+    expect(ddlSql).not.toMatch(/IF\s+NOT\s+EXISTS/i);
+  });
+
+  it("preserves idempotence when schema support is pinned to v8", async () => {
+    const fake = createFakeDatabase(8);
+    const migrations = loadMigrationsWithSchemaVersion(8);
+
+    await migrations.runPersonalDatabaseMigrations(fake.database);
+
+    expect(fake.getFirstAsync).toHaveBeenCalledTimes(1);
+    expect(fake.withTransactionAsync).not.toHaveBeenCalled();
+    expect(fake.execAsync).not.toHaveBeenCalled();
+  });
+
+  it("preserves fail-closed behavior when schema support is pinned to v8", async () => {
+    const fake = createFakeDatabase(9);
+    const migrations = loadMigrationsWithSchemaVersion(8);
+
+    await expect(
+      migrations.runPersonalDatabaseMigrations(fake.database),
+    ).rejects.toThrow("PERSONAL_DATABASE_NEWER_THAN_SUPPORTED");
+
+    expect(fake.withTransactionAsync).not.toHaveBeenCalled();
+    expect(fake.execAsync).not.toHaveBeenCalled();
   });
   it("is idempotent when the database is already at v6", async () => {
     const fake = createFakeDatabase(6);
@@ -523,16 +639,85 @@ describe("Personal database migrations", () => {
     expect(fake.getUserVersion()).toBe(4);
   });
 
-  it("fails closed when the next required sequential migration step is missing", async () => {
-    const fake = createFakeDatabase(0);
-    const migrations = loadMigrationsWithSchemaVersion(7);
+  it("migrates an existing v8 database to v9 in one transaction", async () => {
+    const fake = createFakeDatabase(8);
+    const migrations = loadMigrationsWithSchemaVersion(9);
+
+    await migrations.runPersonalDatabaseMigrations(fake.database);
+
+    expect(fake.withTransactionAsync).toHaveBeenCalledTimes(1);
+    expect(fake.execAsync).toHaveBeenCalledTimes(2);
+    expect(fake.execAsync).toHaveBeenCalledWith(
+      "PRAGMA user_version = 9;",
+    );
+    expect(fake.getFirstAsync).toHaveBeenCalledTimes(3);
+    expect(fake.getUserVersion()).toBe(9);
+  });
+
+  it("creates only the DevotionalProgress table in v9 with the approved checks", async () => {
+    const fake = createFakeDatabase(8);
+    const migrations = loadMigrationsWithSchemaVersion(9);
+
+    await migrations.runPersonalDatabaseMigrations(fake.database);
+
+    const ddlSql = getSingleMigrationDdl(fake.execAsync);
+
+    expect(ddlSql).toMatch(
+      /CREATE TABLE personal_devotional_progress\s*\(/,
+    );
+    expect(ddlSql).toMatch(
+      /devotional_id TEXT PRIMARY KEY NOT NULL/,
+    );
+    expect(ddlSql).toMatch(
+      /state TEXT NOT NULL\s+CHECK \(state IN \('NOT_STARTED', 'IN_PROGRESS', 'COMPLETED'\)\)/,
+    );
+    expect(ddlSql).toMatch(/last_block_id TEXT NULL/);
+    expect(ddlSql).toMatch(
+      /reading_progress INTEGER NOT NULL\s+CHECK \(reading_progress BETWEEN 0 AND 100\)/,
+    );
+    expect(ddlSql).toMatch(/started_at_utc TEXT NULL/);
+    expect(ddlSql).toMatch(/last_opened_at_utc TEXT NULL/);
+    expect(ddlSql).toMatch(/completed_at_utc TEXT NULL/);
+    expect(ddlSql).not.toMatch(/\bpersonal_study_progress\b/i);
+    expect(ddlSql).not.toMatch(/\bFOREIGN\s+KEY\b/i);
+    expect(ddlSql).not.toMatch(/IF\s+NOT\s+EXISTS/i);
+    expect(ddlSql).not.toMatch(/CREATE\s+INDEX/i);
+    expect(ddlSql).not.toMatch(/ALTER\s+TABLE/i);
+  });
+
+  it("is idempotent when the database is already at current v11", async () => {
+    const fake = createFakeDatabase(11);
+    const migrations = loadMigrationsWithSchemaVersion(11);
+
+    await migrations.runPersonalDatabaseMigrations(fake.database);
+
+    expect(fake.getFirstAsync).toHaveBeenCalledTimes(1);
+    expect(fake.withTransactionAsync).not.toHaveBeenCalled();
+    expect(fake.execAsync).not.toHaveBeenCalled();
+  });
+
+  it("fails closed when the database is newer than supported current v11", async () => {
+    const fake = createFakeDatabase(12);
+    const migrations = loadMigrationsWithSchemaVersion(11);
 
     await expect(
       migrations.runPersonalDatabaseMigrations(fake.database),
-    ).rejects.toThrow("PERSONAL_DATABASE_MIGRATION_MISSING:7");
+    ).rejects.toThrow("PERSONAL_DATABASE_NEWER_THAN_SUPPORTED");
 
-    expect(fake.withTransactionAsync).toHaveBeenCalledTimes(6);
-    expect(fake.execAsync).toHaveBeenCalledTimes(11);
+    expect(fake.withTransactionAsync).not.toHaveBeenCalled();
+    expect(fake.execAsync).not.toHaveBeenCalled();
+  });
+
+  it("fails closed when the next required sequential migration step is missing", async () => {
+    const fake = createFakeDatabase(0);
+    const migrations = loadMigrationsWithSchemaVersion(12);
+
+    await expect(
+      migrations.runPersonalDatabaseMigrations(fake.database),
+    ).rejects.toThrow("PERSONAL_DATABASE_MIGRATION_MISSING:12");
+
+    expect(fake.withTransactionAsync).toHaveBeenCalledTimes(11);
+    expect(fake.execAsync).toHaveBeenCalledTimes(21);
     expect(fake.execAsync).toHaveBeenCalledWith(
       "PRAGMA user_version = 1;",
     );
@@ -551,6 +736,223 @@ describe("Personal database migrations", () => {
     expect(fake.execAsync).toHaveBeenCalledWith(
       "PRAGMA user_version = 6;",
     );
-    expect(fake.getUserVersion()).toBe(6);
+    expect(fake.execAsync).toHaveBeenCalledWith(
+      "PRAGMA user_version = 7;",
+    );
+    expect(fake.execAsync).toHaveBeenCalledWith(
+      "PRAGMA user_version = 8;",
+    );
+    expect(fake.execAsync).toHaveBeenCalledWith(
+      "PRAGMA user_version = 9;",
+    );
+    expect(fake.execAsync).toHaveBeenCalledWith(
+      "PRAGMA user_version = 10;",
+    );
+    expect(fake.execAsync).toHaveBeenCalledWith(
+      "PRAGMA user_version = 11;",
+    );
+    expect(fake.getUserVersion()).toBe(11);
+  });
+});
+
+describe("Personal SQLite devotional favorite origin migration v10", () => {
+  afterEach(() => {
+    jest.dontMock("../src/data/personal/personalDatabaseSchema");
+    jest.resetModules();
+  });
+
+  it("migrates an existing v9 database to v10 in one transaction and creates only the devotional favorite origin table", async () => {
+    const fake = createFakeDatabase(9);
+    const migrations = loadMigrationsWithSchemaVersion(10);
+
+    await migrations.runPersonalDatabaseMigrations(
+      fake.database,
+    );
+
+    expect(
+      fake.withTransactionAsync,
+    ).toHaveBeenCalledTimes(1);
+
+    const ddlCalls = fake.execAsync.mock.calls
+      .map(([sql]) => String(sql))
+      .filter(
+        (sql) =>
+          !/^PRAGMA\s+user_version\s*=/i.test(
+            sql.trim(),
+          ),
+      );
+
+    expect(ddlCalls).toHaveLength(1);
+
+    const ddl = ddlCalls[0] ?? "";
+
+    expect(ddl).toMatch(
+      /CREATE TABLE personal_favorite_devotional_origins\s*\(/,
+    );
+    expect(ddl).toContain(
+      "favorite_id TEXT NOT NULL",
+    );
+    expect(ddl).toContain(
+      "devotional_id TEXT NOT NULL",
+    );
+    expect(ddl).toContain(
+      "PRIMARY KEY (favorite_id, devotional_id)",
+    );
+    expect(ddl).toContain(
+      "REFERENCES personal_favorites (id)",
+    );
+    expect(ddl).toContain("ON DELETE CASCADE");
+    expect(ddl).not.toContain(
+      "personal_favorite_study_origins",
+    );
+    expect(fake.execAsync).toHaveBeenCalledWith(
+      "PRAGMA user_version = 10;",
+    );
+    expect(fake.getUserVersion()).toBe(10);
+  });
+
+  it("is idempotent when the database is already at v10", async () => {
+    const fake = createFakeDatabase(10);
+    const migrations = loadMigrationsWithSchemaVersion(10);
+
+    await migrations.runPersonalDatabaseMigrations(
+      fake.database,
+    );
+
+    expect(
+      fake.withTransactionAsync,
+    ).not.toHaveBeenCalled();
+    expect(fake.getUserVersion()).toBe(10);
+  });
+});
+
+describe("Personal SQLite devotional journal source migration v11", () => {
+  afterEach(() => {
+    jest.dontMock("../src/data/personal/personalDatabaseSchema");
+    jest.resetModules();
+  });
+
+  it("migrates an existing v10 database to v11 in one transaction", async () => {
+    const fake = createFakeDatabase(10);
+    const migrations = loadMigrationsWithSchemaVersion(11);
+
+    await migrations.runPersonalDatabaseMigrations(
+      fake.database,
+    );
+
+    expect(
+      fake.withTransactionAsync,
+    ).toHaveBeenCalledTimes(1);
+    expect(fake.execAsync).toHaveBeenCalledTimes(2);
+    expect(fake.execAsync).toHaveBeenCalledWith(
+      "PRAGMA user_version = 11;",
+    );
+    expect(fake.getFirstAsync).toHaveBeenCalledTimes(3);
+    expect(fake.getUserVersion()).toBe(11);
+  });
+
+  it("rebuilds the journal source check for DEVOTIONAL while preserving all current columns", async () => {
+    const fake = createFakeDatabase(10);
+    const migrations = loadMigrationsWithSchemaVersion(11);
+
+    await migrations.runPersonalDatabaseMigrations(
+      fake.database,
+    );
+
+    const ddl = getSingleMigrationDdl(fake.execAsync);
+
+    expect(ddl).toMatch(
+      /ALTER TABLE personal_journal_entries\s+RENAME TO personal_journal_entries_v10;/,
+    );
+    expect(ddl).toMatch(
+      /source_type TEXT NOT NULL DEFAULT 'FREE'\s+CHECK \(\s*source_type IN \(\s*'FREE',\s*'BIBLE',\s*'PLAN',\s*'STUDY',\s*'DEVOTIONAL',\s*'HYMN',\s*'HOME_GRATITUDE'\s*\)\s*\)/,
+    );
+    expect(ddl).toMatch(/source_title_snapshot TEXT NULL/);
+    expect(ddl).toMatch(/prompt_snapshot TEXT NULL/);
+    expect(ddl).toMatch(/reflection_text TEXT NULL/);
+    expect(ddl).toMatch(/gratitude_text TEXT NULL/);
+    expect(ddl).toMatch(/created_at_utc TEXT NOT NULL/);
+    expect(ddl).toMatch(/updated_at_utc TEXT NOT NULL/);
+    expect(ddl).toMatch(
+      /category TEXT NULL\s+CHECK \(\s*category IS NULL\s+OR category IN \(\s*'REFLECTION',\s*'PRAYER',\s*'GRATITUDE',\s*'LEARNING',\s*'PROMISE',\s*'DECISION',\s*'QUESTION',\s*'TESTIMONY'\s*\)\s*\)/,
+    );
+    expect(ddl).toMatch(
+      /is_pinned INTEGER NOT NULL DEFAULT 0\s+CHECK \(is_pinned IN \(0, 1\)\)/,
+    );
+    expect(ddl).toMatch(
+      /CHECK \(\s*status = 'DRAFT'\s+OR length\(trim\(coalesce\(reflection_text, ''\)\)\) > 0\s+OR length\(trim\(coalesce\(gratitude_text, ''\)\)\) > 0\s*\)/,
+    );
+  });
+
+  it("copies journal entries references passages and tag relations before removing the v10 tables", async () => {
+    const fake = createFakeDatabase(10);
+    const migrations = loadMigrationsWithSchemaVersion(11);
+
+    await migrations.runPersonalDatabaseMigrations(
+      fake.database,
+    );
+
+    const ddl = getSingleMigrationDdl(fake.execAsync);
+
+    expect(ddl).toMatch(
+      /INSERT INTO personal_journal_entries \([\s\S]*?\)\s*SELECT[\s\S]*?FROM personal_journal_entries_v10;/,
+    );
+    expect(ddl).toMatch(
+      /INSERT INTO personal_journal_entry_references \([\s\S]*?\)\s*SELECT[\s\S]*?FROM personal_journal_entry_references_v10;/,
+    );
+    expect(ddl).toMatch(
+      /INSERT INTO personal_journal_reference_passages \([\s\S]*?\)\s*SELECT[\s\S]*?FROM personal_journal_reference_passages_v10;/,
+    );
+    expect(ddl).toMatch(
+      /INSERT INTO personal_journal_entry_tags \([\s\S]*?\)\s*SELECT[\s\S]*?FROM personal_journal_entry_tags_v10;/,
+    );
+    expect(ddl).not.toMatch(
+      /CREATE TABLE personal_journal_tags\s*\(/,
+    );
+    expect(ddl).not.toMatch(
+      /DROP TABLE personal_journal_tags;/,
+    );
+  });
+
+  it("recreates the journal foreign keys and all six current journal indexes", async () => {
+    const fake = createFakeDatabase(10);
+    const migrations = loadMigrationsWithSchemaVersion(11);
+
+    await migrations.runPersonalDatabaseMigrations(
+      fake.database,
+    );
+
+    const ddl = getSingleMigrationDdl(fake.execAsync);
+
+    expect(ddl).toMatch(
+      /FOREIGN KEY \(entry_id\)\s+REFERENCES personal_journal_entries \(id\)\s+ON DELETE CASCADE/,
+    );
+    expect(ddl).toMatch(
+      /FOREIGN KEY \(reference_id\)\s+REFERENCES personal_journal_entry_references \(id\)\s+ON DELETE CASCADE/,
+    );
+    expect(ddl).toMatch(
+      /FOREIGN KEY \(tag_id\)\s+REFERENCES personal_journal_tags \(id\)\s+ON DELETE CASCADE/,
+    );
+    expect(
+      (ddl.match(/CREATE INDEX\s+/g) ?? []).length,
+    ).toBe(6);
+    expect(ddl).toContain(
+      "idx_personal_journal_entries_entry_date_id",
+    );
+    expect(ddl).toContain(
+      "idx_personal_journal_entries_status_entry_date_id",
+    );
+    expect(ddl).toContain(
+      "idx_personal_journal_entries_status_category_entry_date_id",
+    );
+    expect(ddl).toContain(
+      "idx_personal_journal_entries_status_is_pinned_entry_date_id",
+    );
+    expect(ddl).toContain(
+      "idx_personal_journal_entry_tags_tag_id_entry_id",
+    );
+    expect(ddl).toContain(
+      "idx_personal_journal_reference_passages_book_chapter_verse_reference",
+    );
   });
 });

@@ -16,6 +16,8 @@ export type QuickActionSheetProps = {
   onOpenProgress: () => void;
   onOpenHistory: () => void;
   onOpenJournal: () => void;
+  studyActionLabel: "Continuar estudo" | "Abrir Estudos";
+  onOpenStudies: () => void;
   onOpenFavorites: () => void;
 };
 
@@ -50,6 +52,8 @@ export default function QuickActionSheet({
   onOpenProgress,
   onOpenHistory,
   onOpenJournal,
+  studyActionLabel,
+  onOpenStudies,
   onOpenFavorites,
 }: QuickActionSheetProps) {
   const insets = useSafeAreaInsets();
@@ -102,6 +106,10 @@ export default function QuickActionSheet({
             <QuickActionButton
               label="Abrir Diário"
               onPress={onOpenJournal}
+            />
+            <QuickActionButton
+              label={studyActionLabel}
+              onPress={onOpenStudies}
             />
 
             <QuickActionButton

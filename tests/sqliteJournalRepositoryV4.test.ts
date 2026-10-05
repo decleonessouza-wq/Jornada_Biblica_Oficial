@@ -246,6 +246,35 @@ describe("SQLiteJournalRepository v4", () => {
     });
   });
 
+  it("accepts DEVOTIONAL as a canonical persisted source type", async () => {
+    const harness = createHarness();
+
+    harness.getFirstAsync.mockResolvedValueOnce(
+      entryRow({
+        source_type: "DEVOTIONAL",
+        source_title_snapshot:
+          "Devocional de teste",
+        prompt_snapshot:
+          "O que este devocional despertou em você?",
+      }),
+    );
+    harness.getAllAsync
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([]);
+
+    await expect(
+      harness.repository.findById(ENTRY_ID),
+    ).resolves.toEqual(
+      expect.objectContaining({
+        sourceType: "DEVOTIONAL",
+        sourceTitleSnapshot:
+          "Devocional de teste",
+        promptSnapshot:
+          "O que este devocional despertou em você?",
+      }),
+    );
+  });
+
   it("creates a basic legacy JournalEntry with exact v4 defaults and no relational writes", async () => {
     const harness = createHarness();
     harness.runAsync.mockResolvedValue({

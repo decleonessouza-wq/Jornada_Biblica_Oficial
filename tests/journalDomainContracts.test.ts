@@ -64,6 +64,7 @@ describe("Journal domain contracts", () => {
       "BIBLE",
       "PLAN",
       "STUDY",
+      "DEVOTIONAL",
       "HYMN",
       "HOME_GRATITUDE",
     ]);

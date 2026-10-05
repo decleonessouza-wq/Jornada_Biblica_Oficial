@@ -102,7 +102,7 @@ describe("journal navigation contract", () => {
     );
   });
 
-  it("keeps the bottom navigation at exactly four approved tabs", () => {
+  it("keeps four visible bottom destinations while retaining StudiesTab as a hidden navigation route", () => {
     const tabNames = Array.from(
       mainTabsNavigator.matchAll(
         /<MainTabs\.Screen\s+name="([^"]+)"/g,
@@ -113,12 +113,16 @@ describe("journal navigation contract", () => {
     expect(tabNames).toEqual([
       "HomeTab",
       "BibleTab",
+      "StudiesTab",
       "PlanTab",
       "HymnalTab",
     ]);
     expect(
       mainTabsNavigator.match(/<MainTabs\.Screen/g),
-    ).toHaveLength(4);
+    ).toHaveLength(5);
+    expect(mainTabsNavigator).toContain(
+      'tabBarButtonTestID: "main-tab-studies-hidden"',
+    );
     expect(mainTabsNavigator).not.toContain(
       'name="Journal"',
     );
@@ -213,6 +217,41 @@ describe("journal navigation contract", () => {
     );
     expect(journalService).not.toMatch(
       /progressStore|addCompletedDay|COMPLETED_DAYS_KEY/,
+    );
+  });
+
+  it("accepts explicit DEVOTIONAL source context while keeping the source id navigation-only", () => {
+    expect(navigationTypes).toContain(
+      'import type { DevotionalId } from "../domain/devotionals/devotional";',
+    );
+    expect(navigationTypes).toContain(
+      'sourceType: "DEVOTIONAL";',
+    );
+    expect(navigationTypes).toContain(
+      "devotionalId: DevotionalId;",
+    );
+    expect(navigationTypes).toContain(
+      "sourceTitleSnapshot: string;",
+    );
+    expect(navigationTypes).toContain(
+      "promptSnapshot: string;",
+    );
+
+    const journalService = readSource(
+      "src/services/journal/journalService.ts",
+    );
+
+    expect(journalService).toContain(
+      "async createDevotionalDraft(",
+    );
+    expect(journalService).toContain(
+      'sourceType: "DEVOTIONAL"',
+    );
+    expect(journalService).not.toMatch(
+      /devotionalId/,
+    );
+    expect(journalService).not.toMatch(
+      /progressStore|completedAtUtc|readingProgress/,
     );
   });
 

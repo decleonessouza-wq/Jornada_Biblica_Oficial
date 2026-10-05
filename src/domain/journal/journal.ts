@@ -46,6 +46,7 @@ export const JOURNAL_SOURCE_TYPES = [
   "BIBLE",
   "PLAN",
   "STUDY",
+  "DEVOTIONAL",
   "HYMN",
   "HOME_GRATITUDE",
 ] as const;

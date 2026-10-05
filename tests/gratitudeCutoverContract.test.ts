@@ -3,7 +3,7 @@ const fs = jest.requireActual<{
 }>("fs");
 
 function readSource(path: string): string {
-  return fs.readFileSync(path, "utf8");
+  return fs.readFileSync(path, "utf8").replace(/\r\n?/g, "\n");
 }
 
 describe("P16-P8 gratitude cutover contracts", () => {

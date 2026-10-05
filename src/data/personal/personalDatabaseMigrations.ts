@@ -238,7 +238,284 @@ ON personal_journal_reference_passages (
 );
 `);
     },
-  },] as const;
+  },
+  {
+    version: 7,
+    up: async (database) => {
+      await database.execAsync(`
+CREATE TABLE personal_study_progress (
+  study_id TEXT PRIMARY KEY NOT NULL,
+  state TEXT NOT NULL
+    CHECK (state IN ('NOT_STARTED', 'IN_PROGRESS', 'COMPLETED')),
+  last_section_key TEXT NULL,
+  reading_progress INTEGER NOT NULL
+    CHECK (reading_progress BETWEEN 0 AND 100),
+  started_at_utc TEXT NULL,
+  last_opened_at_utc TEXT NULL,
+  completed_at_utc TEXT NULL
+);
+`);
+    },
+  },
+  {
+    version: 8,
+    up: async (database) => {
+      await database.execAsync(`
+CREATE TABLE personal_favorite_study_origins (
+  favorite_id TEXT NOT NULL,
+  study_id TEXT NOT NULL,
+  PRIMARY KEY (favorite_id, study_id),
+  FOREIGN KEY (favorite_id)
+    REFERENCES personal_favorites (id)
+    ON DELETE CASCADE
+);
+`);
+    },
+  },
+  {
+    version: 9,
+    up: async (database) => {
+      await database.execAsync(`
+CREATE TABLE personal_devotional_progress (
+  devotional_id TEXT PRIMARY KEY NOT NULL,
+  state TEXT NOT NULL
+    CHECK (state IN ('NOT_STARTED', 'IN_PROGRESS', 'COMPLETED')),
+  last_block_id TEXT NULL,
+  reading_progress INTEGER NOT NULL
+    CHECK (reading_progress BETWEEN 0 AND 100),
+  started_at_utc TEXT NULL,
+  last_opened_at_utc TEXT NULL,
+  completed_at_utc TEXT NULL
+);
+`);
+    },
+  },
+  {
+    version: 10,
+    async up(database) {
+      await database.execAsync(`
+CREATE TABLE personal_favorite_devotional_origins (
+  favorite_id TEXT NOT NULL,
+  devotional_id TEXT NOT NULL,
+  PRIMARY KEY (favorite_id, devotional_id),
+  FOREIGN KEY (favorite_id)
+    REFERENCES personal_favorites (id)
+    ON DELETE CASCADE
+);
+`);
+    },
+  },
+  {
+    version: 11,
+    async up(database) {
+      await database.execAsync(`
+ALTER TABLE personal_journal_reference_passages
+RENAME TO personal_journal_reference_passages_v10;
+
+ALTER TABLE personal_journal_entry_tags
+RENAME TO personal_journal_entry_tags_v10;
+
+ALTER TABLE personal_journal_entry_references
+RENAME TO personal_journal_entry_references_v10;
+
+ALTER TABLE personal_journal_entries
+RENAME TO personal_journal_entries_v10;
+
+CREATE TABLE personal_journal_entries (
+  id TEXT PRIMARY KEY NOT NULL,
+  entry_date TEXT NOT NULL,
+  reflection_text TEXT NULL,
+  gratitude_text TEXT NULL,
+  status TEXT NOT NULL DEFAULT 'ACTIVE'
+    CHECK (status IN ('ACTIVE', 'DRAFT', 'TRASHED')),
+  source_type TEXT NOT NULL DEFAULT 'FREE'
+    CHECK (
+      source_type IN (
+        'FREE',
+        'BIBLE',
+        'PLAN',
+        'STUDY',
+        'DEVOTIONAL',
+        'HYMN',
+        'HOME_GRATITUDE'
+      )
+    ),
+  source_title_snapshot TEXT NULL,
+  prompt_snapshot TEXT NULL,
+  created_at_utc TEXT NOT NULL,
+  updated_at_utc TEXT NOT NULL,
+  category TEXT NULL
+    CHECK (
+      category IS NULL
+      OR category IN (
+        'REFLECTION',
+        'PRAYER',
+        'GRATITUDE',
+        'LEARNING',
+        'PROMISE',
+        'DECISION',
+        'QUESTION',
+        'TESTIMONY'
+      )
+    ),
+  is_pinned INTEGER NOT NULL DEFAULT 0
+    CHECK (is_pinned IN (0, 1)),
+  CHECK (
+    status = 'DRAFT'
+    OR length(trim(coalesce(reflection_text, ''))) > 0
+    OR length(trim(coalesce(gratitude_text, ''))) > 0
+  )
+);
+
+INSERT INTO personal_journal_entries (
+  id,
+  entry_date,
+  reflection_text,
+  gratitude_text,
+  status,
+  source_type,
+  source_title_snapshot,
+  prompt_snapshot,
+  created_at_utc,
+  updated_at_utc,
+  category,
+  is_pinned
+)
+SELECT
+  id,
+  entry_date,
+  reflection_text,
+  gratitude_text,
+  status,
+  source_type,
+  source_title_snapshot,
+  prompt_snapshot,
+  created_at_utc,
+  updated_at_utc,
+  category,
+  is_pinned
+FROM personal_journal_entries_v10;
+
+CREATE TABLE personal_journal_entry_references (
+  id TEXT PRIMARY KEY NOT NULL,
+  entry_id TEXT NOT NULL,
+  position INTEGER NOT NULL CHECK (position >= 0),
+  UNIQUE (entry_id, position),
+  FOREIGN KEY (entry_id)
+    REFERENCES personal_journal_entries (id)
+    ON DELETE CASCADE
+);
+
+INSERT INTO personal_journal_entry_references (
+  id,
+  entry_id,
+  position
+)
+SELECT
+  id,
+  entry_id,
+  position
+FROM personal_journal_entry_references_v10;
+
+CREATE TABLE personal_journal_reference_passages (
+  reference_id TEXT NOT NULL,
+  position INTEGER NOT NULL CHECK (position >= 0),
+  kind TEXT NOT NULL
+    CHECK (
+      kind IN (
+        'WHOLE_BOOK',
+        'CHAPTER',
+        'CHAPTER_RANGE',
+        'VERSE',
+        'VERSE_RANGE'
+      )
+    ),
+  book_id TEXT NOT NULL,
+  start_chapter INTEGER NULL,
+  start_verse INTEGER NULL,
+  end_chapter INTEGER NULL,
+  end_verse INTEGER NULL,
+  PRIMARY KEY (reference_id, position),
+  FOREIGN KEY (reference_id)
+    REFERENCES personal_journal_entry_references (id)
+    ON DELETE CASCADE
+);
+
+INSERT INTO personal_journal_reference_passages (
+  reference_id,
+  position,
+  kind,
+  book_id,
+  start_chapter,
+  start_verse,
+  end_chapter,
+  end_verse
+)
+SELECT
+  reference_id,
+  position,
+  kind,
+  book_id,
+  start_chapter,
+  start_verse,
+  end_chapter,
+  end_verse
+FROM personal_journal_reference_passages_v10;
+
+CREATE TABLE personal_journal_entry_tags (
+  entry_id TEXT NOT NULL,
+  tag_id TEXT NOT NULL,
+  PRIMARY KEY (entry_id, tag_id),
+  FOREIGN KEY (entry_id)
+    REFERENCES personal_journal_entries (id)
+    ON DELETE CASCADE,
+  FOREIGN KEY (tag_id)
+    REFERENCES personal_journal_tags (id)
+    ON DELETE CASCADE
+);
+
+INSERT INTO personal_journal_entry_tags (
+  entry_id,
+  tag_id
+)
+SELECT
+  entry_id,
+  tag_id
+FROM personal_journal_entry_tags_v10;
+
+DROP TABLE personal_journal_reference_passages_v10;
+DROP TABLE personal_journal_entry_tags_v10;
+DROP TABLE personal_journal_entry_references_v10;
+DROP TABLE personal_journal_entries_v10;
+
+CREATE INDEX idx_personal_journal_entries_entry_date_id
+ON personal_journal_entries (entry_date DESC, id DESC);
+
+CREATE INDEX idx_personal_journal_entries_status_entry_date_id
+ON personal_journal_entries (status, entry_date DESC, id DESC);
+
+CREATE INDEX idx_personal_journal_entries_status_category_entry_date_id
+ON personal_journal_entries (status, category, entry_date DESC, id DESC);
+
+CREATE INDEX idx_personal_journal_entries_status_is_pinned_entry_date_id
+ON personal_journal_entries (status, is_pinned DESC, entry_date DESC, id DESC);
+
+CREATE INDEX idx_personal_journal_entry_tags_tag_id_entry_id
+ON personal_journal_entry_tags (tag_id, entry_id);
+
+CREATE INDEX idx_personal_journal_reference_passages_book_chapter_verse_reference
+ON personal_journal_reference_passages (
+  book_id,
+  start_chapter,
+  start_verse,
+  end_chapter,
+  end_verse,
+  reference_id
+);
+`);
+    },
+  },
+] as const;
 
 export async function getPersonalDatabaseUserVersion(
   database: SQLiteDatabase,

@@ -10,6 +10,7 @@ import type { OfflineBibleReaderRouteParams } from "../bible/reader/bibleReaderC
 import type {
   BibleReference,
 } from "../domain/bible/bibleReference";
+import type { DevotionalId } from "../domain/devotionals/devotional";
 import type { JournalEntryId } from "../domain/journal/journal";
 import type {
   PersonalLocalDate,
@@ -49,6 +50,19 @@ export type JournalEntryEditorSourceContext =
       sourceTitleSnapshot: string;
       promptSnapshot: string;
       reference: BibleReference | null;
+    }>
+  | Readonly<{
+      sourceType: "STUDY";
+      trackId: string;
+      studyId: string;
+      sourceTitleSnapshot: string;
+      promptSnapshot: string;
+    }>
+  | Readonly<{
+      sourceType: "DEVOTIONAL";
+      devotionalId: DevotionalId;
+      sourceTitleSnapshot: string;
+      promptSnapshot: string;
     }>;
 
 export type JournalStackParamList = {
@@ -68,9 +82,23 @@ export type JournalStackParamList = {
   };
 };
 
+export type StudiesStackParamList = {
+  StudiesHome: undefined;
+  StudyTrack: Readonly<{ trackId: string }>;
+  StudyDetail: Readonly<{
+    studyId: string;
+    returnToFavorites?: boolean;
+  }>;
+  DevotionalDetail: Readonly<{
+    devotionalId: DevotionalId;
+    returnToFavorites?: boolean;
+  }>;
+};
+
 export type MainTabParamList = {
   HomeTab: undefined;
   BibleTab: NavigatorScreenParams<BibleStackParamList> | undefined;
+  StudiesTab: NavigatorScreenParams<StudiesStackParamList> | undefined;
   PlanTab: undefined;
   HymnalTab: NavigatorScreenParams<HymnalStackParamList> | undefined;
 };
@@ -127,3 +155,7 @@ export type HymnalStackScreenProps<
 export type JournalStackScreenProps<
   RouteName extends keyof JournalStackParamList,
 > = NativeStackScreenProps<JournalStackParamList, RouteName>;
+
+export type StudiesStackScreenProps<
+  RouteName extends keyof StudiesStackParamList,
+> = NativeStackScreenProps<StudiesStackParamList, RouteName>;

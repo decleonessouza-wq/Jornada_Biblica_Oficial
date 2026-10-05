@@ -274,6 +274,14 @@ export default function JournalEntryEditorScreen({
     routeSourceContext?.sourceType === "PLAN"
       ? routeSourceContext
       : null;
+  const routeStudyContext =
+    routeSourceContext?.sourceType === "STUDY"
+      ? routeSourceContext
+      : null;
+  const routeDevotionalContext =
+    routeSourceContext?.sourceType === "DEVOTIONAL"
+      ? routeSourceContext
+      : null;
   const loadGenerationRef = useRef(0);
   const submitLockRef = useRef(false);
   const mountedRef = useRef(true);
@@ -330,6 +338,39 @@ export default function JournalEntryEditorScreen({
   ] = useState<BibleReference | null>(
     routePlanContext?.reference ?? null,
   );
+  const [
+    studySourceActive,
+    setStudySourceActive,
+  ] = useState(routeStudyContext !== null);
+  const [
+    studySourceTitleSnapshot,
+    setStudySourceTitleSnapshot,
+  ] = useState<string | null>(
+    routeStudyContext?.sourceTitleSnapshot ?? null,
+  );
+  const [
+    studyPromptSnapshot,
+    setStudyPromptSnapshot,
+  ] = useState<string | null>(
+    routeStudyContext?.promptSnapshot ?? null,
+  );
+  const [
+    devotionalSourceActive,
+    setDevotionalSourceActive,
+  ] = useState(routeDevotionalContext !== null);
+  const [
+    devotionalSourceTitleSnapshot,
+    setDevotionalSourceTitleSnapshot,
+  ] = useState<string | null>(
+    routeDevotionalContext?.sourceTitleSnapshot ??
+      null,
+  );
+  const [
+    devotionalPromptSnapshot,
+    setDevotionalPromptSnapshot,
+  ] = useState<string | null>(
+    routeDevotionalContext?.promptSnapshot ?? null,
+  );
   const [loadedStatus, setLoadedStatus] =
     useState<"ACTIVE" | "DRAFT" | null>(null);
   const [loadStatus, setLoadStatus] =
@@ -378,6 +419,27 @@ export default function JournalEntryEditorScreen({
       );
       setPlanContextReference(
         routePlanContext?.reference ?? null,
+      );
+      setStudySourceActive(
+        routeStudyContext !== null,
+      );
+      setStudySourceTitleSnapshot(
+        routeStudyContext?.sourceTitleSnapshot ??
+          null,
+      );
+      setStudyPromptSnapshot(
+        routeStudyContext?.promptSnapshot ?? null,
+      );
+      setDevotionalSourceActive(
+        routeDevotionalContext !== null,
+      );
+      setDevotionalSourceTitleSnapshot(
+        routeDevotionalContext
+          ?.sourceTitleSnapshot ?? null,
+      );
+      setDevotionalPromptSnapshot(
+        routeDevotionalContext?.promptSnapshot ??
+          null,
       );
 
       const initialEntryDate =
@@ -458,6 +520,32 @@ export default function JournalEntryEditorScreen({
           ? entry.references[0].reference
           : null,
       );
+      setStudySourceActive(
+        entry.sourceType === "STUDY",
+      );
+      setStudySourceTitleSnapshot(
+        entry.sourceType === "STUDY"
+          ? entry.sourceTitleSnapshot
+          : null,
+      );
+      setStudyPromptSnapshot(
+        entry.sourceType === "STUDY"
+          ? entry.promptSnapshot
+          : null,
+      );
+      setDevotionalSourceActive(
+        entry.sourceType === "DEVOTIONAL",
+      );
+      setDevotionalSourceTitleSnapshot(
+        entry.sourceType === "DEVOTIONAL"
+          ? entry.sourceTitleSnapshot
+          : null,
+      );
+      setDevotionalPromptSnapshot(
+        entry.sourceType === "DEVOTIONAL"
+          ? entry.promptSnapshot
+          : null,
+      );
       setTagsInput(
         formatTagNames(entry.tags),
       );
@@ -487,7 +575,9 @@ export default function JournalEntryEditorScreen({
   }, [
     routeBibleReference,
     routeEntryId,
+    routeDevotionalContext,
     routePlanContext,
+    routeStudyContext,
   ]);
 
   useEffect(() => {
@@ -539,8 +629,28 @@ export default function JournalEntryEditorScreen({
 
               if (draftId === null) {
                 const draft =
-                  routePlanContext !== null
-                    ? await journalService.createPlanDraft(
+                  routeDevotionalContext !== null
+                    ? await journalService.createDevotionalDraft(
+                        {
+                          ...contentSnapshot,
+                          sourceTitleSnapshot:
+                            routeDevotionalContext.sourceTitleSnapshot,
+                          promptSnapshot:
+                            routeDevotionalContext.promptSnapshot,
+                        },
+                      )
+                    : routeStudyContext !== null
+                    ? await journalService.createStudyDraft(
+                        {
+                          ...contentSnapshot,
+                          sourceTitleSnapshot:
+                            routeStudyContext.sourceTitleSnapshot,
+                          promptSnapshot:
+                            routeStudyContext.promptSnapshot,
+                        },
+                      )
+                    : routePlanContext !== null
+                      ? await journalService.createPlanDraft(
                         {
                           ...contentSnapshot,
                           sourceTitleSnapshot:
@@ -598,7 +708,9 @@ export default function JournalEntryEditorScreen({
     [
       bibleContextReference,
       loadedStatus,
+      routeDevotionalContext,
       routePlanContext,
+      routeStudyContext,
       saving,
     ],
   );
@@ -740,6 +852,60 @@ export default function JournalEntryEditorScreen({
           setLoadedStatus("ACTIVE");
         }
       } else if (
+        routeDevotionalContext !== null
+      ) {
+        const draft =
+          await journalService.createDevotionalDraft({
+            ...input,
+            sourceTitleSnapshot:
+              routeDevotionalContext.sourceTitleSnapshot,
+            promptSnapshot:
+              routeDevotionalContext.promptSnapshot,
+          });
+
+        savedEntryId = draft.id;
+        draftEntryIdRef.current = draft.id;
+
+        await journalService.publishDraft(
+          savedEntryId,
+          input,
+        );
+
+        draftEntryIdRef.current = null;
+        activeEntryIdRef.current =
+          savedEntryId;
+
+        if (mountedRef.current) {
+          setLoadedStatus("ACTIVE");
+        }
+      } else if (
+        routeStudyContext !== null
+      ) {
+        const draft =
+          await journalService.createStudyDraft({
+            ...input,
+            sourceTitleSnapshot:
+              routeStudyContext.sourceTitleSnapshot,
+            promptSnapshot:
+              routeStudyContext.promptSnapshot,
+          });
+
+        savedEntryId = draft.id;
+        draftEntryIdRef.current = draft.id;
+
+        await journalService.publishDraft(
+          savedEntryId,
+          input,
+        );
+
+        draftEntryIdRef.current = null;
+        activeEntryIdRef.current =
+          savedEntryId;
+
+        if (mountedRef.current) {
+          setLoadedStatus("ACTIVE");
+        }
+      } else if (
         routePlanContext !== null
       ) {
         const draft =
@@ -816,6 +982,48 @@ export default function JournalEntryEditorScreen({
 
       hasUserEditedRef.current = false;
 
+      if (routeDevotionalContext !== null) {
+        const drawerNavigation =
+          navigation.getParent();
+
+        if (drawerNavigation) {
+          drawerNavigation.navigate("MainTabs", {
+            screen: "StudiesTab",
+            params: {
+              screen: "DevotionalDetail",
+              params: {
+                devotionalId:
+                  routeDevotionalContext.devotionalId,
+              },
+            },
+          });
+          return;
+        }
+      }
+
+      if (routeStudyContext !== null) {
+        const drawerNavigation =
+          navigation.getParent();
+
+        if (drawerNavigation) {
+          navigation.reset({
+            index: 0,
+            routes: [{ name: "JournalHome" }],
+          });
+          drawerNavigation.navigate("MainTabs", {
+            screen: "StudiesTab",
+            params: {
+              screen: "StudyDetail",
+              params: {
+                studyId:
+                  routeStudyContext.studyId,
+              },
+            },
+          });
+          return;
+        }
+      }
+
       if (routePlanContext !== null) {
         const drawerNavigation =
           navigation.getParent();
@@ -852,7 +1060,9 @@ export default function JournalEntryEditorScreen({
     navigation,
     reflectionText,
     routeEntryId,
+    routeDevotionalContext,
     routePlanContext,
+    routeStudyContext,
     tagsInput,
   ]);
 
@@ -951,6 +1161,66 @@ export default function JournalEntryEditorScreen({
 
         {loadStatus === "ready" && (
           <View style={styles.formCard}>
+            {devotionalSourceActive && (
+              <View
+                accessibilityLabel={`Origem do devocional: ${
+                  devotionalSourceTitleSnapshot ??
+                  "Devocional"
+                }`}
+                style={styles.bibleContextCard}
+              >
+                <Text
+                  style={styles.bibleContextEyebrow}
+                >
+                  ORIGEM DO DEVOCIONAL
+                </Text>
+                <Text
+                  style={styles.bibleContextTitle}
+                >
+                  {devotionalSourceTitleSnapshot ??
+                    "Devocional"}
+                </Text>
+
+                {devotionalPromptSnapshot !== null && (
+                  <Text
+                    style={styles.bibleContextText}
+                  >
+                    {devotionalPromptSnapshot}
+                  </Text>
+                )}
+              </View>
+            )}
+
+            {studySourceActive && (
+              <View
+                accessibilityLabel={`Origem do estudo: ${
+                  studySourceTitleSnapshot ??
+                  "Estudo bíblico"
+                }`}
+                style={styles.bibleContextCard}
+              >
+                <Text
+                  style={styles.bibleContextEyebrow}
+                >
+                  ORIGEM DO ESTUDO
+                </Text>
+                <Text
+                  style={styles.bibleContextTitle}
+                >
+                  {studySourceTitleSnapshot ??
+                    "Estudo bíblico"}
+                </Text>
+
+                {studyPromptSnapshot !== null && (
+                  <Text
+                    style={styles.bibleContextText}
+                  >
+                    {studyPromptSnapshot}
+                  </Text>
+                )}
+              </View>
+            )}
+
             {planSourceActive && (
               <View
                 accessibilityLabel={`Origem do plano: ${

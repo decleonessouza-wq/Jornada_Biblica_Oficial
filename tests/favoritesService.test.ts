@@ -2,6 +2,7 @@ import type {
   FavoriteId,
   FavoriteTarget,
 } from "../src/domain/favorites/favorite";
+import type { DevotionalId } from "../src/domain/devotionals/devotional";
 import type {
   PersonalCanonicalIdFactory,
 } from "../src/domain/personal/personalIdentity";
@@ -39,17 +40,32 @@ const hymnTarget = {
   hymnId: "harpa-crista-jornada-v1:15",
 } as FavoriteTarget;
 
+const DEVOTIONAL_ID =
+  "track-05-devotional-service-test" as DevotionalId;
+const devotionalTarget = {
+  kind: "devotional",
+  devotionalId: DEVOTIONAL_ID,
+} as FavoriteTarget;
+
 function createHarness() {
   const list = jest.fn();
   const findByTarget = jest.fn();
   const add = jest.fn();
   const remove = jest.fn();
+  const addStudyOrigin = jest.fn();
+  const listStudyOrigins = jest.fn();
+  const addDevotionalOrigin = jest.fn();
+  const listDevotionalOrigins = jest.fn();
 
   const repository = {
     list,
     findByTarget,
     add,
     remove,
+    addStudyOrigin,
+    listStudyOrigins,
+    addDevotionalOrigin,
+    listDevotionalOrigins,
   } as unknown as FavoritesRepository;
 
   const createId = jest.fn(() => FAVORITE_ID);
@@ -82,6 +98,10 @@ function createHarness() {
     findByTarget,
     add,
     remove,
+    addStudyOrigin,
+    listStudyOrigins,
+    addDevotionalOrigin,
+    listDevotionalOrigins,
     createId,
     now,
     toUtcTimestamp,
@@ -236,4 +256,60 @@ describe("FavoritesService", () => {
       createdAtUtc: CREATED_AT,
     });
   });
+  it("persists devotional origin separately after adding a canonical favorite", async () => {
+    const harness = createHarness();
+    const record = recordFor(
+      FAVORITE_ID,
+      devotionalTarget,
+      CREATED_AT,
+    );
+
+    harness.findByTarget.mockResolvedValue(record);
+
+    await harness.service.add(
+      devotionalTarget,
+      {
+        kind: "devotional",
+        devotionalId: DEVOTIONAL_ID,
+      },
+    );
+
+    expect(
+      harness.addDevotionalOrigin,
+    ).toHaveBeenCalledWith({
+      favoriteId: FAVORITE_ID,
+      devotionalId: DEVOTIONAL_ID,
+    });
+    expect(
+      harness.addStudyOrigin,
+    ).not.toHaveBeenCalled();
+  });
+
+  it("lists persisted devotional origins without changing favorite identity", async () => {
+    const harness = createHarness();
+    const record = recordFor(
+      FAVORITE_ID,
+      devotionalTarget,
+      CREATED_AT,
+    );
+
+    harness.findByTarget.mockResolvedValue(record);
+    harness.listDevotionalOrigins.mockResolvedValue([
+      {
+        favoriteId: FAVORITE_ID,
+        devotionalId: DEVOTIONAL_ID,
+      },
+    ]);
+
+    await expect(
+      harness.service.listDevotionalOrigins(
+        devotionalTarget,
+      ),
+    ).resolves.toEqual([DEVOTIONAL_ID]);
+
+    expect(
+      harness.listDevotionalOrigins,
+    ).toHaveBeenCalledWith(FAVORITE_ID);
+  });
+
 });

@@ -18,6 +18,11 @@ const hymnTarget = {
   hymnId: "harpa-crista-jornada-v1:15",
 } as FavoriteTarget;
 
+const devotionalTarget = {
+  kind: "devotional",
+  devotionalId: "track-05-devotional-test",
+} as FavoriteTarget;
+
 describe("favoriteTargetKeyCodec", () => {
   it("round-trips a Bible verse target", () => {
     const encoded = encodeFavoriteTargetKey(bibleTarget);
@@ -82,4 +87,37 @@ describe("favoriteTargetKeyCodec", () => {
       ),
     ).toThrow("FAVORITE_TARGET_KEY_INVALID");
   });
+  it("round-trips a devotional target with stable v1 identity", () => {
+    const encoded = encodeFavoriteTargetKey(
+      devotionalTarget,
+    );
+
+    expect(encoded).toBe(
+      JSON.stringify([
+        "v1",
+        "devotional",
+        "track-05-devotional-test",
+      ]),
+    );
+    expect(
+      decodeFavoriteTargetKey(
+        "devotional",
+        encoded,
+      ),
+    ).toEqual(devotionalTarget);
+  });
+
+  it("fails closed for malformed devotional ids", () => {
+    expect(() =>
+      decodeFavoriteTargetKey(
+        "devotional",
+        JSON.stringify([
+          "v1",
+          "devotional",
+          "",
+        ]),
+      ),
+    ).toThrow("FAVORITE_TARGET_KEY_INVALID");
+  });
+
 });
