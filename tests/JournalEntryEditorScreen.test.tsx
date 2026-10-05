@@ -1531,3 +1531,39 @@ describe(
     });
   },
 );
+describe("A14-A7 Devotional Journal editor wiring", () => {
+  it("routes DEVOTIONAL context through createDevotionalDraft without coercing it into Study", () => {
+    const source = fs.readFileSync(
+      "src/screens/JournalEntryEditorScreen.tsx",
+      "utf8",
+    );
+
+    expect(source).toContain(
+      'routeSourceContext?.sourceType === "DEVOTIONAL"',
+    );
+    expect(source).toContain(
+      "journalService.createDevotionalDraft",
+    );
+    expect(source).toContain(
+      'screen: "DevotionalDetail"',
+    );
+    expect(source).toContain(
+      "routeDevotionalContext.devotionalId",
+    );
+    expect(source).toContain(
+      "ORIGEM DO DEVOCIONAL",
+    );
+
+    const devotionalAutosaveBranch =
+      source.match(
+        /routeDevotionalContext !== null[\s\S]*?: routeStudyContext !== null/,
+      )?.[0] ?? "";
+
+    expect(devotionalAutosaveBranch).toContain(
+      "createDevotionalDraft",
+    );
+    expect(devotionalAutosaveBranch).not.toContain(
+      "createStudyDraft",
+    );
+  });
+});

@@ -30,7 +30,7 @@ const section = (
 });
 
 describe("studyBibleReferenceResolver", () => {
-  it("resolves exactly the 58 released studies with explicit BIBLE_READING and leaves Track 1 unavailable", () => {
+  it("resolves exactly the 66 released studies with explicit BIBLE_READING and leaves Track 1 unavailable", () => {
     const before = JSON.stringify(studyRuntimeCatalog.packages);
 
     const results = studyRuntimeCatalog.studies.map(
@@ -47,8 +47,8 @@ describe("studyBibleReferenceResolver", () => {
       (entry) => !entry.result.ok,
     );
 
-    expect(studyRuntimeCatalog.studies).toHaveLength(76);
-    expect(resolved).toHaveLength(58);
+    expect(studyRuntimeCatalog.studies).toHaveLength(84);
+    expect(resolved).toHaveLength(66);
     expect(unresolved).toHaveLength(18);
 
     expect(
@@ -348,7 +348,7 @@ describe("studyBibleReferenceResolver", () => {
       }),
     );
 
-    expect(runtimeLinks).toHaveLength(76);
+    expect(runtimeLinks).toHaveLength(84);
     expect(
       runtimeLinks.every(({ links }) => links.length > 0),
     ).toBe(true);

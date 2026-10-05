@@ -63,6 +63,13 @@ export type CreateStudyJournalDraftInput =
     promptSnapshot: string;
   }>;
 
+export type CreateDevotionalJournalDraftInput =
+  CreateJournalDraftInput &
+  Readonly<{
+    sourceTitleSnapshot: string;
+    promptSnapshot: string;
+  }>;
+
 export type UpdateJournalDraftInput =
   UpdateJournalEntryInput;
 
@@ -694,6 +701,54 @@ export class JournalService {
       ),
       status: "DRAFT",
       sourceType: "STUDY",
+      sourceTitleSnapshot:
+        input.sourceTitleSnapshot,
+      promptSnapshot: input.promptSnapshot,
+      category: null,
+      isPinned: false,
+      references: [],
+      tags: [],
+      createdAtUtc: timestamp,
+      updatedAtUtc: timestamp,
+    };
+
+    await this.repository.create(draft);
+
+    return draft;
+  }
+
+  async createDevotionalDraft(
+    input: CreateDevotionalJournalDraftInput,
+  ): Promise<JournalEntryPersistenceRecord> {
+    assertStudySnapshotText(
+      input.sourceTitleSnapshot,
+      "PERSONAL_JOURNAL_DEVOTIONAL_SOURCE_TITLE_INVALID",
+    );
+    assertStudySnapshotText(
+      input.promptSnapshot,
+      "PERSONAL_JOURNAL_DEVOTIONAL_PROMPT_INVALID",
+    );
+
+    const now = this.clock.now();
+    const entryDate =
+      input.entryDate ??
+      this.datePolicy.toLocalDate(now);
+    const timestamp =
+      this.datePolicy.toUtcTimestamp(now);
+
+    const draft: JournalEntryPersistenceRecord = {
+      id: this.canonicalIdFactory.create(
+        "journal_entry",
+      ),
+      entryDate,
+      reflectionText: normalizeReflectionText(
+        input.reflectionText,
+      ),
+      gratitudeText: normalizeGratitudeText(
+        input.gratitudeText,
+      ),
+      status: "DRAFT",
+      sourceType: "DEVOTIONAL",
       sourceTitleSnapshot:
         input.sourceTitleSnapshot,
       promptSnapshot: input.promptSnapshot,

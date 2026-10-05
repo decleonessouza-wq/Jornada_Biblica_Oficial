@@ -200,7 +200,9 @@ const parseCandidate = (
     }> => {
   const cleaned = cleanCandidateText(sourceText);
   const parserInput =
-    normalizeKnownBookLabelVariant(cleaned);
+    normalizeKnownBookLabelVariant(
+      cleaned.replace(/[\u2013\u2014\u2212]/g, "-"),
+    );
   const direct = parseBibleReference(parserInput);
 
   if (direct.ok) {

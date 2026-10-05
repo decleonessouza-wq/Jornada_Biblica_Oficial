@@ -11,9 +11,11 @@ import {
 
 import StudiesScrollHeader from "../components/StudiesScrollHeader";
 import { useAppShellChrome } from "../navigation/AppShellChromeContext";
+import type { DevotionalProgress } from "../domain/devotionals/devotionalProgress";
 import type { StudyProgress } from "../domain/studies/studyProgress";
 import type { StudiesStackScreenProps } from "../navigation/types";
 import { getPersonalPlatformHub } from "../services/personalPlatformHub";
+import { devotionalRuntimeCatalog } from "../devotionals/runtime/devotionalRuntimeCatalog";
 import { studyTrackPresentationCatalog } from "../studies/presentation/studyTrackPresentationCatalog";
 import { studyRuntimeCatalog } from "../studies/runtime/studyRuntimeCatalog";
 import { colors } from "../theme/colors";
@@ -75,6 +77,20 @@ const getStudyProgressLabel = (
   return `Em andamento · ${progress.readingProgress}%`;
 };
 
+const getDevotionalProgressLabel = (
+  progress: DevotionalProgress | undefined,
+): string | null => {
+  if (!progress || progress.state === "NOT_STARTED") {
+    return null;
+  }
+
+  if (progress.state === "COMPLETED") {
+    return "Concluído";
+  }
+
+  return `Em andamento · ${progress.readingProgress}%`;
+};
+
 export const getStudyTrackEmptyStateCopy = (
   trackId: string,
 ): Readonly<{
@@ -95,11 +111,21 @@ export const getStudyTrackEmptyStateCopy = (
 
 export default function StudyTrackScreen({ navigation, route }: Props) {
   const { handleScroll, resetChrome } = useAppShellChrome();
+  const personalPlatformHub =
+    getPersonalPlatformHub();
   const studyProgressService =
-    getPersonalPlatformHub().studyProgressService;
+    personalPlatformHub.studyProgressService;
+  const devotionalProgressService =
+    personalPlatformHub.devotionalProgressService;
   const [progressByStudyId, setProgressByStudyId] = useState<
     ReadonlyMap<string, StudyProgress>
   >(() => new Map());
+  const [
+    progressByDevotionalId,
+    setProgressByDevotionalId,
+  ] = useState<ReadonlyMap<string, DevotionalProgress>>(
+    () => new Map(),
+  );
 
   useFocusEffect(
     useCallback(() => {
@@ -125,10 +151,41 @@ export default function StudyTrackScreen({ navigation, route }: Props) {
         })
         .catch(() => undefined);
 
+      if (
+        route.params.trackId === "track-05" &&
+        devotionalRuntimeCatalog.devotionals.length > 0 &&
+        devotionalProgressService !== undefined
+      ) {
+        void devotionalProgressService
+          .list()
+          .then((progressEntries) => {
+            if (!active) {
+              return;
+            }
+
+            setProgressByDevotionalId(
+              new Map(
+                progressEntries.map((progress) => [
+                  progress.devotionalId,
+                  progress,
+                ]),
+              ),
+            );
+          })
+          .catch(() => undefined);
+      } else {
+        setProgressByDevotionalId(new Map());
+      }
+
       return () => {
         active = false;
       };
-    }, [resetChrome, studyProgressService]),
+    }, [
+      devotionalProgressService,
+      resetChrome,
+      route.params.trackId,
+      studyProgressService,
+    ]),
   );
 
   const handleBack = useCallback(() => {
@@ -168,6 +225,12 @@ export default function StudyTrackScreen({ navigation, route }: Props) {
   const studies = studyRuntimeCatalog.studies
     .filter((entry) => entry.content.trackId === trackId)
     .sort((left, right) => left.content.number - right.content.number);
+  const devotionals =
+    trackId === "track-05"
+      ? devotionalRuntimeCatalog.devotionals
+      : [];
+  const runtimeItemCount =
+    studies.length + devotionals.length;
 
   const description =
     APPROVED_TRACK_DESCRIPTIONS[
@@ -221,8 +284,14 @@ export default function StudyTrackScreen({ navigation, route }: Props) {
                         style={styles.count}
                         testID="study-track-runtime-count"
                       >
-                        {studies.length}{" "}
-                        {studies.length === 1 ? "estudo" : "estudos"}
+                        {runtimeItemCount}{" "}
+                        {devotionals.length === 0
+                          ? studies.length === 1
+                            ? "estudo"
+                            : "estudos"
+                          : runtimeItemCount === 1
+                            ? "conteúdo"
+                            : "conteúdos"}
                       </Text>
 
                       <View style={styles.naturePill}>
@@ -236,20 +305,171 @@ export default function StudyTrackScreen({ navigation, route }: Props) {
               </ImageBackground>
             </View>
 
-            {studies.length > 0 ? (
+            {runtimeItemCount > 0 ? (
               <View style={styles.listStartSpacer} />
             ) : null}
           </>
         }
         ListEmptyComponent={
-          <View style={styles.emptyCard} testID="study-track-empty-state">
-            <Text style={styles.emptyTitle}>
-              {emptyStateCopy.title}
-            </Text>
-            <Text style={styles.emptyText}>
-              {emptyStateCopy.message}
-            </Text>
-          </View>
+          runtimeItemCount === 0 ? (
+            <View style={styles.emptyCard} testID="study-track-empty-state">
+              <Text style={styles.emptyTitle}>
+                {emptyStateCopy.title}
+              </Text>
+              <Text style={styles.emptyText}>
+                {emptyStateCopy.message}
+              </Text>
+            </View>
+          ) : null
+        }
+        ListFooterComponent={
+          devotionals.length > 0 ? (
+            <View
+              style={[
+                styles.devotionalList,
+                studies.length === 0 &&
+                  styles.devotionalListFirst,
+              ]}
+            >
+              {devotionals.map((entry) => {
+                const devotionalProgress =
+                  progressByDevotionalId.get(
+                    entry.content.id,
+                  );
+                const devotionalProgressLabel =
+                  getDevotionalProgressLabel(
+                    devotionalProgress,
+                  );
+                const authorProfile =
+                  entry.content.author
+                    .publicDisplayAuthorization ===
+                  "AUTHORIZED"
+                    ? entry.content.author.publicProfile
+                    : null;
+                const authorMeta = authorProfile
+                  ? [
+                      authorProfile.role,
+                      authorProfile.cityState,
+                    ]
+                      .filter(
+                        (value): value is string =>
+                          value !== null,
+                      )
+                      .join(" - ")
+                  : "";
+                const devotionalDescription =
+                  entry.content.subtitle ??
+                  entry.content.summary ??
+                  "Devocional colaborativo";
+
+                return (
+                  <Pressable
+                    key={entry.content.id}
+                    accessibilityLabel={`Abrir devocional: ${entry.content.title}`}
+                    accessibilityRole="button"
+                    onPress={() =>
+                      navigation.navigate(
+                        "DevotionalDetail",
+                        {
+                          devotionalId:
+                            entry.content.id,
+                        },
+                      )
+                    }
+                    style={({ pressed }) => [
+                      styles.card,
+                      styles.devotionalCard,
+                      pressed && styles.cardPressed,
+                    ]}
+                    testID={`devotional-${entry.content.id}`}
+                  >
+                    <View
+                      accessibilityElementsHidden
+                      importantForAccessibility="no"
+                      style={[
+                        styles.numberBadge,
+                        styles.devotionalNumberBadge,
+                      ]}
+                    >
+                      <Text
+                        style={styles.devotionalBadgeText}
+                      >
+                        DEV
+                      </Text>
+                    </View>
+
+                    <View style={styles.cardContent}>
+                      <Text style={styles.cardTitle}>
+                        {entry.content.title}
+                      </Text>
+
+                      {authorProfile ? (
+                        <View
+                          style={styles.cardAuthorBlock}
+                          testID={`devotional-author-${entry.content.id}`}
+                        >
+                          <Text
+                            style={styles.cardAuthorName}
+                          >
+                            Por {authorProfile.displayName}
+                          </Text>
+                                                    {authorMeta ? (
+                            <Text
+                              style={styles.cardAuthorMeta}
+                            >
+                              {authorMeta}
+                            </Text>
+                          ) : null}
+                          {authorProfile.formation ? (
+                            <Text style={styles.cardAuthorFormation}>
+                              {authorProfile.formation}
+                            </Text>
+                          ) : null}
+                        </View>
+                      ) : (
+                        <Text
+                          style={styles.cardDescription}
+                        >
+                          {devotionalDescription}
+                        </Text>
+                      )}
+
+                      {devotionalProgressLabel ? (
+                        <Text
+                          style={[
+                            styles.cardProgress,
+                            devotionalProgress?.state ===
+                              "COMPLETED" &&
+                              styles.cardProgressCompleted,
+                          ]}
+                          testID={`devotional-progress-${entry.content.id}`}
+                        >
+                          {devotionalProgressLabel}
+                        </Text>
+                      ) : null}
+
+                      <View style={styles.cardMetaRow}>
+                        <Text style={styles.cardMetaText}>
+                          {entry.content.format ===
+                          "OPEN_LETTER"
+                            ? "Carta aberta"
+                            : "Reflexão"}
+                        </Text>
+                      </View>
+                    </View>
+
+                    <Text
+                      accessibilityElementsHidden
+                      importantForAccessibility="no"
+                      style={styles.cardChevron}
+                    >
+                      ›
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          ) : null
         }
         ItemSeparatorComponent={() => (
           <View style={styles.itemSeparator} />
@@ -272,6 +492,17 @@ export default function StudyTrackScreen({ navigation, route }: Props) {
           );
           const progressLabel =
             getStudyProgressLabel(progress);
+          const authorProfile =
+            entry.content.trackId === "track-05"
+              ? entry.publicAuthorProfile
+              : null;
+          const authorMeta = authorProfile
+            ? [authorProfile.role, authorProfile.cityState]
+                .filter(
+                  (value): value is string => value !== null,
+                )
+                .join(" - ")
+            : "";
 
           return (
             <Pressable
@@ -302,9 +533,30 @@ export default function StudyTrackScreen({ navigation, route }: Props) {
                 <Text style={styles.cardTitle}>
                   {entry.content.title}
                 </Text>
-                <Text style={styles.cardDescription}>
-                  {descriptionText}
-                </Text>
+                {authorProfile ? (
+                  <View
+                    style={styles.cardAuthorBlock}
+                    testID={`study-author-${entry.content.id}`}
+                  >
+                    <Text style={styles.cardAuthorName}>
+                      Por {authorProfile.displayName}
+                    </Text>
+                    {authorMeta ? (
+                      <Text style={styles.cardAuthorMeta}>
+                        {authorMeta}
+                      </Text>
+                    ) : null}
+                    {authorProfile.formation ? (
+                      <Text style={styles.cardAuthorFormation}>
+                        {authorProfile.formation}
+                      </Text>
+                    ) : null}
+                  </View>
+                ) : (
+                  <Text style={styles.cardDescription}>
+                    {descriptionText}
+                  </Text>
+                )}
 
                 {progressLabel ? (
                   <Text
@@ -486,6 +738,29 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: "800",
   },
+  devotionalCard: {
+    backgroundColor: "#F3F8FB",
+    borderColor: "#8CB9CC",
+    borderWidth: 1.5,
+  },
+  devotionalNumberBadge: {
+    backgroundColor: "#DDEFF6",
+    borderColor: "#8CB9CC",
+    borderWidth: 1,
+  },
+  devotionalBadgeText: {
+    color: colors.secondaryPressed,
+    fontSize: 13,
+    fontWeight: "900",
+    letterSpacing: 0.5,
+  },
+  devotionalList: {
+    gap: 10,
+    marginTop: 10,
+  },
+  devotionalListFirst: {
+    marginTop: 16,
+  },
   cardContent: {
     flex: 1,
     minWidth: 0,
@@ -501,6 +776,28 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 18,
     marginTop: 5,
+  },
+  cardAuthorBlock: {
+    marginTop: 5,
+  },
+  cardAuthorName: {
+    color: colors.textStrong,
+    fontSize: 13,
+    fontWeight: "700",
+    lineHeight: 18,
+  },
+  cardAuthorMeta: {
+    color: colors.primary,
+    fontSize: 12,
+    fontWeight: "700",
+    lineHeight: 17,
+    marginTop: 2,
+  },
+  cardAuthorFormation: {
+    color: colors.textMuted,
+    fontSize: 12,
+    lineHeight: 17,
+    marginTop: 2,
   },
   cardProgress: {
     color: colors.primary,

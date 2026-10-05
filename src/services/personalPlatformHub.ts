@@ -1,3 +1,4 @@
+import { SQLiteDevotionalProgressRepository } from "../data/personal/devotionals/sqliteDevotionalProgressRepository";
 import { SQLiteFavoritesRepository } from "../data/personal/favorites/sqliteFavoritesRepository";
 import { SQLiteJournalRepository } from "../data/personal/journal/sqliteJournalRepository";
 import { SQLiteStudyProgressRepository } from "../data/personal/studies/sqliteStudyProgressRepository";
@@ -18,6 +19,7 @@ import {
   SystemPersonalClock,
   SystemPersonalDatePolicy,
 } from "./personalPlatformDefaults";
+import { DevotionalProgressService } from "./devotionals/devotionalProgressService";
 import { FavoritesService } from "./favorites/favoritesService";
 import { JournalService } from "./journal/journalService";
 import { StudyProgressService } from "./studies/studyProgressService";
@@ -31,6 +33,7 @@ export interface PersonalPlatformHub {
   readonly privacyPolicy: PersonalPrivacyPolicy;
   readonly favoritesService: FavoritesService;
   readonly journalService: JournalService;
+  readonly devotionalProgressService: DevotionalProgressService;
   readonly studyProgressService: StudyProgressService;
 }
 
@@ -72,6 +75,14 @@ export function createPersonalPlatformHub(
     clock,
     datePolicy,
   );
+  const devotionalProgressRepository =
+    new SQLiteDevotionalProgressRepository(database);
+  const devotionalProgressService =
+    new DevotionalProgressService(
+      devotionalProgressRepository,
+      clock,
+      datePolicy,
+    );
   const studyProgressRepository =
     new SQLiteStudyProgressRepository(database);
   const studyProgressService = new StudyProgressService(
@@ -89,6 +100,7 @@ export function createPersonalPlatformHub(
     privacyPolicy: PERSONAL_PRIVACY_POLICY,
     favoritesService,
     journalService,
+    devotionalProgressService,
     studyProgressService,
   };
 

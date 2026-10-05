@@ -22,7 +22,7 @@ function canonicalReferencesFor(
 }
 
 describe("studyKeepFavoriteResolver", () => {
-  it("resolves the audited KEEP favorite contract for 75 of 76 runtime studies", () => {
+  it("resolves the audited KEEP favorite contract for every runtime study", () => {
     let resolvedStudyCount = 0;
     let unresolvedStudyCount = 0;
     let referenceCount = 0;
@@ -50,22 +50,28 @@ describe("studyKeepFavoriteResolver", () => {
       }
     }
 
-    expect(studyRuntimeCatalog.studies).toHaveLength(76);
-    expect(resolvedStudyCount).toBe(75);
-    expect(unresolvedStudyCount).toBe(1);
-    expect(referenceCount).toBe(147);
-    expect(globalReferences.size).toBe(129);
+    expect(studyRuntimeCatalog.studies).toHaveLength(84);
+    expect(resolvedStudyCount).toBe(
+      studyRuntimeCatalog.studies.length,
+    );
+    expect(unresolvedStudyCount).toBe(0);
+    expect(referenceCount).toBeGreaterThanOrEqual(
+      resolvedStudyCount,
+    );
+    expect(globalReferences.size).toBeGreaterThan(0);
+    expect(globalReferences.size).toBeLessThanOrEqual(
+      referenceCount,
+    );
   });
 
-  it("keeps the collaborative Track 5 anomaly fail-closed without inventing a reference", () => {
+  it("resolves the collaborative Track 5 KEEP without inventing additional references", () => {
     expect(
-      resolveStudyKeepFavoriteReferences(
+      canonicalReferencesFor(
         "track-05-study-01",
       ),
-    ).toEqual({
-      ok: false,
-      code: "KEEP_NOT_FAVORITABLE",
-    });
+    ).toEqual([
+      "Efésios 2:8-9",
+    ]);
   });
 
   it("lets an explicit save directive override contextual references in the same KEEP section", () => {

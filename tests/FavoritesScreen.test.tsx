@@ -203,7 +203,7 @@ describe("FavoritesScreen", () => {
     await waitFor(() => {
       expect(
         view.getByText(
-          "Seus textos, estudos e hinos favoritos aparecerão aqui.",
+          "Seus textos, estudos, devocionais e hinos favoritos aparecerão aqui.",
         ),
       ).toBeTruthy();
     });
@@ -585,5 +585,34 @@ describe("FavoritesScreen", () => {
         /Adicionar|Remover/i,
       ),
     ).toBeNull();
+  });
+});
+describe("A14-A7 Devotional Favorites UI contract", () => {
+  it("adds a dedicated devotional filter, runtime title and return route", () => {
+    const fsActual =
+      jest.requireActual<typeof import("fs")>("fs");
+    const source = fsActual.readFileSync(
+      "src/screens/FavoritesScreen.tsx",
+      "utf8",
+    );
+
+    expect(source).toContain(
+      '"devotional" | "hymn"',
+    );
+    expect(source).toContain(
+      '{ key: "devotional", label: "Devocionais" }',
+    );
+    expect(source).toContain(
+      "getRuntimeDevotionalById",
+    );
+    expect(source).toContain(
+      'screen: "DevotionalDetail"',
+    );
+    expect(source).toContain(
+      "returnToFavorites: true",
+    );
+    expect(source).toContain(
+      "favorite-devotional-",
+    );
   });
 });

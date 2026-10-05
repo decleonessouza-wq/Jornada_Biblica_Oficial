@@ -850,7 +850,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Uma pergunta importante",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Eu apenas aprendi a linguagem da fé ou realmente estou respondendo a Cristo com fé e",
@@ -886,7 +886,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Isso destrói o orgulho",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "A vida cristã começa recebendo, não exibindo mérito.",
@@ -914,7 +914,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Deus não quer apenas maquiagem espiritual",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Ele deseja um coração renovado.",
@@ -942,7 +942,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Nova vida não é truque religioso",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "É obra do Espírito de Deus em pessoas reais.",
@@ -980,7 +980,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Novo nascimento é começo",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Não linha de chegada.",
@@ -1012,7 +1012,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Moralidade não é inútil",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Mas não deve ser confundida com salvação.",
@@ -1050,7 +1050,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "A nova vida é graça",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Não prêmio para quem conseguiu se tornar bom sozinho.",
@@ -1058,7 +1058,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "ENTENDA 4. A nova criação começa agora, mas ainda aguarda plenitude",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "2 Coríntios 5 fala de nova criação em Cristo.",
@@ -1078,7 +1078,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Já começou, mas ainda não terminou",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "A nova vida é presente e esperança.",
@@ -1086,11 +1086,11 @@ const rawSectionsByStudy = [
           },
           {
             "text": "CUIDADO PARA NÃO CONFUNDIR",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Não transforme uma experiência emocional específica em regra para todos",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Algumas pessoas conseguem apontar um dia e uma hora de conversão.",
@@ -1110,7 +1110,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "O centro não é reproduzir a experiência de outra pessoa",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "É responder verdadeiramente a Jesus.",
@@ -1142,7 +1142,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Não construa uma conclusão maior que o texto",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Mantenha Cristo e a obra do Espírito no centro.",
@@ -1178,7 +1178,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Não olhe apenas para um momento isolado",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Observe a direção da caminhada.",
@@ -1212,7 +1212,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Deus não quer apenas uma versão religiosa de você",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Ele quer você diante dele com sinceridade.",
@@ -1236,7 +1236,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Mudança real costuma começar em decisões pequenas",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Uma conversa, um limite, uma confissão, um hábito.",
@@ -1264,7 +1264,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Dependência não é passividade",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "É agir reconhecendo de onde vem a vida.",
@@ -1292,7 +1292,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Crescimento cristão não é teatro de perfeição",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "É uma caminhada de transformação.",
@@ -1346,7 +1346,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Verdade Prática",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "A nova vida começa pela graça de Deus e se torna visível numa caminhada crescente de fé,",
@@ -1448,7 +1448,7 @@ const rawSectionsByStudy = [
         "blocks": [
           {
             "text": "Oração",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Senhor, obrigado porque não me chamaste apenas para parecer melhor, mas para receber vida",
@@ -1494,7 +1494,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Favoritos",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Guarde essas passagens para lembrar que a vida cristã começa e continua dependente da graça",
@@ -1555,16 +1555,12 @@ const rawSectionsByStudy = [
         "title": "Continue sua Jornada",
         "blocks": [
           {
-            "text": "Se a nova vida não é conquistada por mérito, uma pergunta aparece:",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Como um pecador pode ser aceito por um Deus santo?",
+            "text": "Se a nova vida não é conquistada por mérito, uma pergunta aparece: Como um pecador pode ser aceito por um Deus santo?",
             "type": "PARAGRAPH"
           },
           {
             "text": "Próximo estudo",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Estudo 02 - Justificação pela fé: aceitos por causa de Cristo",
@@ -1775,7 +1771,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "A cruz nivela nosso orgulho",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Todos precisamos de graça.",
@@ -1799,7 +1795,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Receber não é conquistar",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "A fé estende mãos vazias para aquilo que Deus oferece em Cristo.",
@@ -1827,7 +1823,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "O poder não está em acreditar em qualquer coisa",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Está naquele em quem confiamos.",
@@ -1851,7 +1847,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Justificação muda nossa posição",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Não precisamos viver diante de Deus como fugitivos tentando esconder a culpa.",
@@ -1889,7 +1885,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Graça não nega a verdade",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Ela nos reconcilia apesar de não termos mérito próprio.",
@@ -1917,7 +1913,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Fé olha para fora de si",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Ela deixa de confiar em si mesma como salvadora.",
@@ -1955,7 +1951,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "As duas verdades caminham juntas",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Obras não são a raiz da nossa aceitação, mas uma fé viva produz fruto.",
@@ -1987,7 +1983,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "A ordem importa",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Deus não diz: “Mude tudo e então venha”. Em Cristo, somos recebidos e então chamados a",
@@ -1999,11 +1995,11 @@ const rawSectionsByStudy = [
           },
           {
             "text": "CUIDADO PARA NÃO CONFUNDIR",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Não use a justificação para eliminar responsabilidade",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Ser perdoado por Deus não significa que toda consequência humana desaparece.",
@@ -2023,7 +2019,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Perdão diante de Deus não transforma irresponsabilidade em maturidade",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "A graça nos ensina a assumir a verdade.",
@@ -2059,7 +2055,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Uma frase simples",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Justificação é ser recebido por Deus com base em Cristo, não no nosso currículo espiritual.",
@@ -2093,7 +2089,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Nossa esperança é Cristo",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Não a nota que damos a nós mesmos no fim do dia.",
@@ -2117,7 +2113,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Pessoas justificadas ainda confessam",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Mas confessam como filhos que voltam para o Pai, não como candidatos tentando comprar uma",
@@ -2145,7 +2141,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Graça recebida produz humildade",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Não arrogância espiritual.",
@@ -2169,7 +2165,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Boas obras têm lugar importante",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Mas no lugar certo: fruto, não preço.",
@@ -2227,7 +2223,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Verdade Prática",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Quem é justificado pela fé pode viver com humildade, gratidão e paz, porque sua aceitação",
@@ -2256,11 +2252,7 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "e:",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Preciso voltar a confiar em Cristo nesta área...",
+            "text": "e: Preciso voltar a confiar em Cristo nesta área...",
             "type": "PARAGRAPH"
           },
           {
@@ -2333,7 +2325,7 @@ const rawSectionsByStudy = [
         "blocks": [
           {
             "text": "Oração",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Senhor, obrigado porque não preciso apresentar um currículo perfeito para ser recebido por ti.",
@@ -2375,7 +2367,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Favoritos",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Guarde essas passagens para os dias em que orgulho ou culpa tentarem ocupar o lugar da graça.",
@@ -2445,7 +2437,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Próximo estudo",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Estudo 03 - Santificação: aprendendo a viver como quem pertence a Deus",
@@ -2545,11 +2537,7 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "Depois, conecte com: Romanos 6:1-14 | Filipenses 2:12-13 | Hebreus 12:14 | 1 Pedro 1:13-16 | Gálatas",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "5:16-25",
+            "text": "Depois, conecte com: Romanos 6:1-14 | Filipenses 2:12-13 | Hebreus 12:14 | 1 Pedro 1:13-16 | Gálatas 5:16-25",
             "type": "PARAGRAPH"
           }
         ],
@@ -2563,11 +2551,7 @@ const rawSectionsByStudy = [
         "title": "Antes de entender",
         "blocks": [
           {
-            "text": "Depois de falar de graça, surge uma pergunta importante:",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Se somos salvos pela graça, ainda importa como vivemos?",
+            "text": "Depois de falar de graça, surge uma pergunta importante: Se somos salvos pela graça, ainda importa como vivemos?",
             "type": "PARAGRAPH"
           },
           {
@@ -2656,7 +2640,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "A ordem protege o Evangelho",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Não mudamos para que Deus finalmente nos aceite; porque fomos alcançados, aprendemos a",
@@ -2684,7 +2668,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "A fé chega ao corpo e ao cotidiano",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Deus não quer apenas pensamentos religiosos.",
@@ -2708,7 +2692,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Podemos agradecer pelo que Deus já fez e continuar buscando mudança",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "As duas coisas cabem juntas.",
@@ -2732,7 +2716,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Santidade nasce do relacionamento",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Pertencemos a Deus; por isso nossa vida importa.",
@@ -2770,7 +2754,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Não é “Deus faz tudo e eu fico parado”",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Nem “eu mudo sozinho”. É uma caminhada de graça e obediência.",
@@ -2798,7 +2782,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Queda não precisa ser fim",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Mas também não deve virar residência confortável.",
@@ -2832,7 +2816,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Graça não faz amizade com aquilo que nos escraviza",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Ela nos chama para liberdade.",
@@ -2840,7 +2824,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "ENTENDA 4. Santidade é mais do que evitar uma lista de pecados",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Às vezes pensamos que santificação é apenas “não fazer”.",
@@ -2860,7 +2844,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Santidade possui direção positiva",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Tornar-se mais parecido com Cristo, não apenas menos parecido com antigos hábitos.",
@@ -2868,11 +2852,11 @@ const rawSectionsByStudy = [
           },
           {
             "text": "CUIDADO PARA NÃO CONFUNDIR",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Não confunda santidade com aparência cultural",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Comunidades cristãs podem possuir costumes diferentes.",
@@ -2888,7 +2872,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Pergunte pelo fundamento",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "O texto bíblico exige isso ou estamos transformando costume em medida universal de",
@@ -2900,7 +2884,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Também não use “processo” como desculpa eterna",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "É verdade que crescemos aos poucos.",
@@ -2920,7 +2904,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Graça nos recebe como estamos",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Mas nos ama demais para nos deixar exatamente onde estamos.",
@@ -2960,7 +2944,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Olhe para a direção da vida",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Existe luta, arrependimento e retorno ou apenas justificativa para permanecer longe de Deus?",
@@ -2990,7 +2974,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Nomeie a área",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Mudança genérica costuma produzir compromisso genérico.",
@@ -3014,7 +2998,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Não ore apenas por força para permanecer ao lado do fogo",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Também dê passos para se afastar dele.",
@@ -3034,7 +3018,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Constância vale muito",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Uma vida santa é construída em muitas pequenas respostas a Deus.",
@@ -3058,7 +3042,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Quem enxerga a própria dependência da graça perde o gosto pela superioridade",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Crescer não é subir num pedestal.",
@@ -3112,7 +3096,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Verdade Prática",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Aquele que foi recebido por graça pode crescer sem medo e arrepender-se sem esconderijo,",
@@ -3226,7 +3210,7 @@ const rawSectionsByStudy = [
         "blocks": [
           {
             "text": "Oração",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Senhor, obrigado porque tua graça não apenas me perdoa, mas também me transforma. Mostra",
@@ -3264,7 +3248,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Favoritos",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Guarde essas passagens para lembrar que a transformação cristã envolve a ação de Deus e",
@@ -3325,16 +3309,12 @@ const rawSectionsByStudy = [
         "title": "Continue sua Jornada",
         "blocks": [
           {
-            "text": "À medida que mudamos, também precisamos aprender a responder a uma pergunta básica:",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Quem sou eu agora que pertenço a Cristo?",
+            "text": "À medida que mudamos, também precisamos aprender a responder a uma pergunta básica: Quem sou eu agora que pertenço a Cristo?",
             "type": "PARAGRAPH"
           },
           {
             "text": "Próximo estudo",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Estudo 04 - Identidade em Cristo: quem somos quando nossa vida pertence a Jesus",
@@ -3438,11 +3418,7 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "Depois, conecte com: 2 Coríntios 5:17-21 | Efésios 1:3-14 | Colossenses 3:1-4 | 1 Pedro 2:9-10 | Gálatas",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "3:26-29",
+            "text": "Depois, conecte com: 2 Coríntios 5:17-21 | Efésios 1:3-14 | Colossenses 3:1-4 | 1 Pedro 2:9-10 | Gálatas 3:26-29",
             "type": "PARAGRAPH"
           }
         ],
@@ -3561,7 +3537,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Seu pecado precisa ser enfrentado",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Mas não precisa se tornar seu sobrenome para sempre.",
@@ -3589,7 +3565,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Adoção produz segurança e pertencimento",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Deus não nos chama apenas para trabalhar para Ele, mas para viver com Ele.",
@@ -3613,7 +3589,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Quem somos e como vivemos se relacionam",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "A graça não separa identidade de transformação.",
@@ -3637,7 +3613,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "A fé não diz apenas “eu e Deus”",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Ela nos coloca dentro de uma família espiritual.",
@@ -3671,7 +3647,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Verdade é melhor que autoengano",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Em Cristo podemos ser humildes sem nos odiar.",
@@ -3699,7 +3675,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Nova criação não é perda de memória",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "É uma nova direção dentro de uma história redimida.",
@@ -3733,7 +3709,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Identidade cristã não é autocriada",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Ela é recebida numa relação.",
@@ -3741,7 +3717,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "ENTENDA 4. Igual valor não significa ausência de diferenças",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Gálatas 3 afirma que barreiras de superioridade não definem nosso acesso a Cristo.",
@@ -3757,7 +3733,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Unidade não é uniformidade",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Podemos pertencer igualmente a Cristo e continuar sendo pessoas distintas.",
@@ -3765,11 +3741,11 @@ const rawSectionsByStudy = [
           },
           {
             "text": "CUIDADO PARA NÃO CONFUNDIR",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Não use “minha identidade em Cristo” para fugir de responsabilidade",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Se alguém feriu outras pessoas, dizer “não sou mais aquela pessoa” não elimina a necessidade de",
@@ -3785,7 +3761,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Nova identidade não apaga responsabilidade",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Ela nos dá coragem para enfrentá-la sem viver aprisionados nela.",
@@ -3817,7 +3793,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Uma prática simples",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Quando seu sentimento disser “não tenho valor”, responda com verdade bíblica, não com frases",
@@ -3851,7 +3827,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Você pode falhar numa tarefa sem concluir que é um fracasso humano",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Seu valor é maior que seu resultado.",
@@ -3875,7 +3851,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Em Cristo existe verdade e recomeço",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Sem negar o passado e sem ser condenado a ele.",
@@ -3899,7 +3875,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Pertencimento é parte da nova vida",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Não apenas uma atividade semanal.",
@@ -3927,7 +3903,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Pergunte",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Que escolha de hoje combina com quem sou em Cristo?",
@@ -3977,7 +3953,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Verdade Prática",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Saber quem somos em Cristo nos ajuda a enfrentar culpa, comparação e rejeição sem",
@@ -4079,7 +4055,7 @@ const rawSectionsByStudy = [
         "blocks": [
           {
             "text": "Oração",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Pai, obrigado porque em Cristo me chamaste para perto. Livra-me de construir meu valor apenas",
@@ -4117,7 +4093,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Favoritos",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Guarde essas passagens para os momentos em que comparação, culpa ou rejeição tentarem",
@@ -4191,7 +4167,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Próximo estudo",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Estudo 05 - Como vencer a tentação: reconhecer, fugir e permanecer em Cristo",
@@ -4295,11 +4271,7 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "Depois, conecte com: Tiago 1:12-16 | 1 Coríntios 10:12-13 | Hebreus 4:14-16 | 2 Timóteo 2:22 | Salmo",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "119:9-11",
+            "text": "Depois, conecte com: Tiago 1:12-16 | 1 Coríntios 10:12-13 | Hebreus 4:14-16 | 2 Timóteo 2:22 | Salmo 119:9-11",
             "type": "PARAGRAPH"
           }
         ],
@@ -4406,7 +4378,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Não transforme a luta em identidade",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Ser tentado não é o mesmo que ter escolhido pecar.",
@@ -4462,7 +4434,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "A Palavra precisa ser conhecida com sentido",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Não como frase mágica.",
@@ -4486,7 +4458,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Muita tentação cresce da necessidade de provar algo",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Quem sabe a quem pertence não precisa aceitar todo desafio.",
@@ -4520,7 +4492,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Autoconhecimento espiritual importa",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Quais situações, emoções e desejos costumam abrir a porta para suas quedas?",
@@ -4548,7 +4520,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Não despreze saídas simples",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Muitas vitórias começam com uma porta fechada na hora certa.",
@@ -4586,7 +4558,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Na tentação, aproxime-se",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Não espere cair para lembrar que precisa de graça.",
@@ -4594,7 +4566,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "ENTENDA 4. Fugir pode ser sinal de sabedoria, não covardia",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "2 Timóteo 2:22 manda fugir de paixões e seguir justiça junto com outras pessoas.",
@@ -4606,7 +4578,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Você não precisa vencer toda luta permanecendo no mesmo lugar",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Algumas tentações são enfrentadas com distância.",
@@ -4614,11 +4586,11 @@ const rawSectionsByStudy = [
           },
           {
             "text": "CUIDADO PARA NÃO CONFUNDIR",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Não confunda pensamentos involuntários com escolhas deliberadas",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Um pensamento pode surgir sem ser convidado.",
@@ -4634,7 +4606,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Não acrescente culpa desnecessária à luta",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Reconheça o pensamento e escolha a direção seguinte.",
@@ -4642,7 +4614,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Também não espiritualize tudo e ignore padrões práticos",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Falta de sono, isolamento, acesso irrestrito, uso de álcool, ambientes específicos e conflitos não resolvidos",
@@ -4658,7 +4630,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Espiritualidade bíblica é concreta",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Ela alcança rotina, corpo, ambientes e relacionamentos.",
@@ -4690,7 +4662,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "A tentação de Jesus nos consola",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Nosso Salvador conhece a luta e permanece sem pecado.",
@@ -4724,7 +4696,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Vigilância acontece antes",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Não apenas depois do arrependimento.",
@@ -4748,7 +4720,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Sabedoria é mais útil que heroísmo",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Você não precisa provar que consegue ficar perto sem cair.",
@@ -4772,7 +4744,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Procure alguém maduro e confiável",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Ajuda não é derrota; pode ser parte da vitória.",
@@ -4800,7 +4772,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Vazio também precisa ser preenchido",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Substitua, não apenas remova.",
@@ -4853,11 +4825,7 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "Deus não nos chama a brincar com a tentação, mas a enfrentá-la com vigilância, graça, verdade,",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "fuga e comunhão.",
+            "text": "Deus não nos chama a brincar com a tentação, mas a enfrentá-la com vigilância, graça, verdade, fuga e comunhão.",
             "type": "PARAGRAPH"
           }
         ],
@@ -4872,7 +4840,7 @@ const rawSectionsByStudy = [
         "blocks": [
           {
             "text": "Escolha uma tentação recorrente e faça um plano simples:",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Meu gatilho costuma ser...",
@@ -4960,7 +4928,7 @@ const rawSectionsByStudy = [
         "blocks": [
           {
             "text": "Oração",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Senhor Jesus, obrigado porque conheces a realidade da tentação e permaneceste fiel. Dá-me",
@@ -5002,7 +4970,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Favoritos",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Guarde essas passagens para consultar antes, não apenas depois, de uma situação de tentação.",
@@ -5068,7 +5036,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Próximo estudo",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             type: "PARAGRAPH",
@@ -5168,11 +5136,7 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "Depois, conecte com: João 15:1-8 | Colossenses 3:12-15 | Efésios 5:8-10 | Romanos 8:5-14 | 1 Coríntios",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "13:1-7",
+            "text": "Depois, conecte com: João 15:1-8 | Colossenses 3:12-15 | Efésios 5:8-10 | Romanos 8:5-14 | 1 Coríntios 13:1-7",
             "type": "PARAGRAPH"
           }
         ],
@@ -5279,7 +5243,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "O Espírito trabalha no cotidiano",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Não apenas nos momentos extraordinários.",
@@ -5303,7 +5267,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Caráter também é evidência",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Não basta parecer espiritual enquanto ferimos pessoas continuamente.",
@@ -5327,7 +5291,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Não é cardápio de virtudes opcionais",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "É uma direção de crescimento.",
@@ -5351,7 +5315,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Fruto é produzido pelo Espírito",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Mas cresce numa vida que aprende a permanecer e obedecer.",
@@ -5385,7 +5349,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Deus não precisa apagar sua personalidade",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Mas deseja transformá-la.",
@@ -5409,7 +5373,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Talento não substitui caráter",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Visibilidade espiritual nunca deve ser usada para esconder falta de amor, verdade ou domínio",
@@ -5447,7 +5411,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Fruto nasce de comunhão",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Permanecer em Cristo é central.",
@@ -5455,7 +5419,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "ENTENDA 4. Fruto cresce em situações reais, não em laboratório",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Paciência só é testada quando algo demora.",
@@ -5475,7 +5439,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "As dificuldades também revelam onde precisamos crescer",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Elas expõem áreas que o conforto costuma esconder.",
@@ -5483,7 +5447,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "CUIDADO PARA NÃO CONFUNDIR",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Não use o fruto como uma nova régua para condenar-se todos os dias",
@@ -5503,7 +5467,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Use a lista como direção e oração",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Não como instrumento de desespero.",
@@ -5543,7 +5507,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "O fruto não exige emoções artificiais",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Deus forma verdade, não teatro.",
@@ -5581,7 +5545,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Espiritualidade verdadeira atravessa a porta de casa",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Não termina no culto.",
@@ -5605,7 +5569,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Transforme virtude em ação",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "“Quero ser paciente” precisa virar uma decisão real.",
@@ -5629,7 +5593,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Constância cria profundidade",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Não procure apenas momentos fortes.",
@@ -5653,7 +5617,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Melhor ser transformado do que apenas admirado",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "O fruto vale mais que a aparência.",
@@ -5711,7 +5675,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Verdade Prática",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Ser cheio do Espírito envolve permitir que sua presença alcance nossa maneira de amar, reagir,",
@@ -5821,7 +5785,7 @@ const rawSectionsByStudy = [
         "blocks": [
           {
             "text": "Oração",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Espírito Santo, forma em mim o caráter de Cristo. Não quero apenas falar sobre vida espiritual;",
@@ -5863,7 +5827,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Favoritos",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Guarde essas passagens para revisar seu crescimento com esperança e sinceridade.",
@@ -5929,7 +5893,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Próximo estudo",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Estudo 07 - Perdão: libertar o coração sem chamar o mal de bem",
@@ -6037,11 +6001,7 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "Depois, conecte com: Efésios 4:31-32 | Colossenses 3:12-13 | Romanos 12:17-21 | Lucas 17:3-4 | Salmo",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "55:12-23",
+            "text": "Depois, conecte com: Efésios 4:31-32 | Colossenses 3:12-13 | Romanos 12:17-21 | Lucas 17:3-4 | Salmo 55:12-23",
             "type": "PARAGRAPH"
           }
         ],
@@ -6148,7 +6108,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "O ponto de partida é a graça",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Quem se lembra do que recebeu encontra um novo lugar para responder às faltas dos outros.",
@@ -6172,7 +6132,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Perdoar não é chamar o mal de bem",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "A verdade permanece verdade.",
@@ -6192,7 +6152,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "A ferida é real",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Mas não precisa governar para sempre o coração.",
@@ -6212,7 +6172,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Receber graça muda relações",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Não apenas nosso destino individual.",
@@ -6246,7 +6206,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Lembrar não significa necessariamente não ter perdoado",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "O que fazemos com a memória é que importa.",
@@ -6274,7 +6234,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Reconciliação precisa de segurança e verdade",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Perdão não obriga acesso ilimitado.",
@@ -6308,7 +6268,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Abrir mão da vingança não é abrir mão da verdade",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Podemos buscar justiça sem alimentar ódio.",
@@ -6316,7 +6276,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "ENTENDA 4. Perdão pode ser um processo",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Há feridas cuja decisão de perdoar precisa ser reafirmada muitas vezes.",
@@ -6332,7 +6292,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Não confunda processo com fracasso",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Continue entregando a Deus aquilo que volta a doer.",
@@ -6340,11 +6300,11 @@ const rawSectionsByStudy = [
           },
           {
             "text": "CUIDADO PARA NÃO CONFUNDIR",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Perdão não impede denúncia nem proteção",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Se houve crime, abuso ou risco, buscar ajuda, proteção e justiça pode ser necessário.",
@@ -6356,7 +6316,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Perdão não é cúmplice do mal",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "A verdade e a proteção dos vulneráveis fazem parte da justiça.",
@@ -6364,7 +6324,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Perdão não exige voltar para uma relação perigosa",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "É possível desejar que uma pessoa se arrependa e ainda manter distância.",
@@ -6376,7 +6336,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Amor não significa acesso sem limites",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Segurança importa.",
@@ -6416,7 +6376,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Uma distinção útil",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Posso começar a libertar meu coração sem fingir que a relação já foi restaurada.",
@@ -6446,7 +6406,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Verdade abre espaço para cura",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Não precisamos minimizar a dor para parecer espirituais.",
@@ -6466,7 +6426,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Justiça pertence a Deus de maneira final",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Seu coração não precisa carregar o tribunal do universo.",
@@ -6486,7 +6446,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Limite não é necessariamente falta de perdão",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Pode ser sabedoria.",
@@ -6510,7 +6470,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "As duas verdades cabem juntas",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Fui ferido de verdade e também fui alcançado por uma graça enorme.",
@@ -6560,7 +6520,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Verdade Prática",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "A graça nos ensina a tratar a ferida com sinceridade, buscar justiça quando necessário e não",
@@ -6670,7 +6630,7 @@ const rawSectionsByStudy = [
         "blocks": [
           {
             "text": "Oração",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Senhor, tu conheces minhas feridas e não me pedes para fingir que nada aconteceu. Ajuda-me a",
@@ -6712,7 +6672,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Favoritos",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Guarde essas passagens para revisitá-las quando a dor reacender e você precisar escolher",
@@ -6782,7 +6742,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Próximo estudo",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Estudo 08 - Oração: falar com Deus sem transformar a fé em fórmula",
@@ -6886,11 +6846,7 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "Depois, conecte com: Salmo 62:8 | Lucas 11:1-13 | Filipenses 4:6-7 | Romanos 8:26-27 | 1 João 5:14-15 |",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Hebreus 4:14-16",
+            "text": "Depois, conecte com: Salmo 62:8 | Lucas 11:1-13 | Filipenses 4:6-7 | Romanos 8:26-27 | 1 João 5:14-15 | Hebreus 4:14-16",
             "type": "PARAGRAPH"
           }
         ],
@@ -6989,7 +6945,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Deus não precisa de performance",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "A oração pode ser simples e verdadeira.",
@@ -7013,7 +6969,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "O valor não está na fórmula",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Está na relação com o Pai.",
@@ -7037,7 +6993,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Orar não é apenas trazer Deus para meus planos",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "É também permitir que meus planos sejam colocados diante dele.",
@@ -7057,7 +7013,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Podemos pedir",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Deus não exige que finjamos não precisar de nada.",
@@ -7091,7 +7047,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Pedir nos coloca no lugar certo",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Recebedores diante do Pai.",
@@ -7111,7 +7067,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "O nome de Jesus não é senha de controle",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "É o fundamento da nossa aproximação.",
@@ -7145,7 +7101,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Silêncio diante de Deus também pode ser oração",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Você não precisa sempre encontrar palavras perfeitas.",
@@ -7153,7 +7109,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "ENTENDA 4. Oração e vontade de Deus caminham juntas",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "1 João fala de pedir segundo a vontade de Deus.",
@@ -7169,7 +7125,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Podemos pedir com coragem e entregar com humildade",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "As duas coisas não são inimigas.",
@@ -7177,7 +7133,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "CUIDADO PARA NÃO CONFUNDIR",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Não transforme resposta negativa ou demora em acusação automática de falta de fé",
@@ -7197,7 +7153,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Fé não controla Deus",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Ela confia nele.",
@@ -7205,7 +7161,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Oração não substitui ação responsável",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Podemos orar por emprego e enviar currículo.",
@@ -7221,7 +7177,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Orar e agir podem caminhar juntos",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Dependência não é passividade.",
@@ -7253,7 +7209,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "A Bíblia nos dá linguagem para orar",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Quando faltar palavras, ore com as Escrituras.",
@@ -7295,7 +7251,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Deus não se assusta com sua honestidade",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "A oração é lugar de verdade.",
@@ -7315,7 +7271,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Comece alguns minutos dizendo quem Deus é",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Antes de dizer o que você quer.",
@@ -7335,7 +7291,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Constância vale mais que promessa impossível",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Cinco minutos verdadeiros podem ser começo de uma vida profunda.",
@@ -7355,7 +7311,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Entrega não é falta de fé",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "É reconhecer que Deus continua sendo Pai quando responde de maneira diferente.",
@@ -7401,7 +7357,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Verdade Prática",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Uma vida de oração cresce menos pela busca de frases perfeitas e mais pela constância de um",
@@ -7523,18 +7479,14 @@ const rawSectionsByStudy = [
         "blocks": [
           {
             "text": "Oração",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Pai, obrigado porque já conheces minhas necessidades e ainda assim me convidas a falar",
             "type": "PARAGRAPH"
           },
           {
-            "text": "contigo. Livra-me de transformar oração em desempenho ou fórmula. Ensina-me a desejar teu",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Reino, a apresentar minhas necessidades com confiança e a receber tua vontade com",
+            "text": "contigo. Livra-me de transformar oração em desempenho ou fórmula. Ensina-me a desejar teu Reino, a apresentar minhas necessidades com confiança e a receber tua vontade com",
             "type": "PARAGRAPH"
           },
           {
@@ -7565,7 +7517,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Favoritos",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Guarde essas passagens para os dias em que você não souber como começar a orar.",
@@ -7631,7 +7583,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Próximo estudo",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Estudo 09 - Leitura e meditação na Palavra: ouvir Deus com atenção",
@@ -7822,7 +7774,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "A Palavra precisa de tempo",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Algumas verdades são mais bem percebidas na segunda ou terceira leitura.",
@@ -7846,7 +7798,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "A Bíblia não quer apenas informar",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Ela deseja formar.",
@@ -7870,7 +7822,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Raízes importam nos dias difíceis",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Não construímos profundidade somente durante a crise.",
@@ -7890,7 +7842,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "A Bíblia confronta relativismo pessoal",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Nem todo caminho que parece bom conduz ao mesmo lugar.",
@@ -7920,7 +7872,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Leia a frase dentro da conversa",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Isso evita transformar a Bíblia em coleção de slogans.",
@@ -7948,7 +7900,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Nem toda frase funciona do mesmo jeito",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Respeitar o tipo de texto melhora nossa leitura.",
@@ -7990,7 +7942,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "ENTENDA 4. A comunidade ajuda a ler melhor",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Atos 17 elogia pessoas que examinavam as Escrituras.",
@@ -8002,7 +7954,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Humildade busca ajuda",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Igreja, bons professores e recursos confiáveis podem ampliar nossa compreensão.",
@@ -8010,11 +7962,11 @@ const rawSectionsByStudy = [
           },
           {
             "text": "CUIDADO PARA NÃO CONFUNDIR",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Não use a Bíblia como sorteio de respostas",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Abrir aleatoriamente e apontar para um versículo pode produzir interpretações perigosas.",
@@ -8026,7 +7978,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "A Bíblia não é oráculo de frases soltas",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "É Palavra para ser conhecida em contexto.",
@@ -8034,7 +7986,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Meditação bíblica não é esvaziar a mente",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "No sentido bíblico, meditar é preencher a mente com a Palavra, repetir, pensar e responder.",
@@ -8046,7 +7998,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Meditar é ruminar a verdade",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Até ela alcançar pensamento e prática.",
@@ -8082,7 +8034,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Use uma Bíblia que você compreenda",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "E recorra a outras traduções quando uma frase precisar de comparação.",
@@ -8116,7 +8068,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Profundidade também conta",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Leia para entender, não apenas para marcar como concluído.",
@@ -8146,7 +8098,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Observe antes de aplicar",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Aplicação saudável nasce da compreensão.",
@@ -8166,7 +8118,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "O Diário pode se tornar memória espiritual",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Não apenas depósito de emoções do dia.",
@@ -8186,7 +8138,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Textos conhecidos ainda possuem profundidade",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Não confunda familiaridade com esgotamento.",
@@ -8232,7 +8184,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Verdade Prática",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "A Palavra se torna luz para a caminhada quando deixamos de usá-la apenas como coleção de",
@@ -8346,7 +8298,7 @@ const rawSectionsByStudy = [
         "blocks": [
           {
             "text": "Oração",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Senhor, dá-me fome pela tua Palavra e humildade para ouvi-la com atenção. Livra-me de usar",
@@ -8384,7 +8336,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Favoritos",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Guarde essas passagens como lembrete do propósito da leitura bíblica.",
@@ -8450,7 +8402,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Próximo estudo",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Estudo 10 - Ansiedade e confiança: viver um dia de cada vez diante de Deus",
@@ -8649,7 +8601,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Jesus conhece a vida concreta",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Ele fala com pessoas que realmente precisavam de sustento.",
@@ -8673,7 +8625,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Você tem valor diante do Pai",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Sua preocupação não é invisível para Ele.",
@@ -8693,7 +8645,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Pensar não é o mesmo que controlar",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Planejamento e preocupação são coisas diferentes.",
@@ -8713,7 +8665,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Deus dá graça para o dia presente",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Não precisamos sofrer antecipadamente por todos os futuros possíveis.",
@@ -8743,7 +8695,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Fé e busca de ajuda não são inimigas",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Orar, conversar e procurar cuidado responsável podem caminhar juntos.",
@@ -8767,7 +8719,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Planeje sem adorar o plano",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Faça o que pode e entregue o que não controla.",
@@ -8801,7 +8753,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Nem todo pensamento precisa virar moradia",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Podemos aprender a redirecionar a atenção.",
@@ -8809,7 +8761,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "ENTENDA 4. Buscar primeiro o Reino reorganiza prioridades",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Jesus não promete que quem busca o Reino nunca terá dificuldades.",
@@ -8821,7 +8773,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "O Reino coloca o futuro no lugar certo",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Deus é maior que aquilo que tentamos garantir.",
@@ -8829,11 +8781,11 @@ const rawSectionsByStudy = [
           },
           {
             "text": "CUIDADO PARA NÃO CONFUNDIR",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Não diga a alguém em sofrimento: “Se tivesse fé, não estaria assim”",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Essa frase simplifica uma realidade que pode envolver história, corpo, circunstâncias e sofrimento intenso.",
@@ -8845,7 +8797,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "A verdade deve ser oferecida com cuidado",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Consolo não precisa vir acompanhado de acusação.",
@@ -8881,7 +8833,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Deus pode cuidar por muitos meios",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Receber ajuda não precisa ser motivo de vergonha.",
@@ -8911,7 +8863,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Dê nome aos dois",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Isso ajuda a devolver cada peso ao seu lugar.",
@@ -8935,7 +8887,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Oração dá endereço à preocupação",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Em vez de deixá-la circular sem fim.",
@@ -8955,7 +8907,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Fidelidade cabe no próximo passo",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Não precisamos resolver toda a vida em uma tarde.",
@@ -8979,7 +8931,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Proteja sua mente com sabedoria",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Nem tudo precisa entrar o tempo todo.",
@@ -9025,7 +8977,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Verdade Prática",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Confiar é aprender a trazer preocupações para Deus, agir com responsabilidade no presente e",
@@ -9131,7 +9083,7 @@ const rawSectionsByStudy = [
         "blocks": [
           {
             "text": "Oração",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Pai, tu conheces minhas necessidades antes mesmo de eu falar. Perdoa-me quando tento",
@@ -9173,7 +9125,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Favoritos",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Guarde essas passagens para os momentos em que sua mente tentar viver muitos amanhãs de",
@@ -9247,7 +9199,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Próximo estudo",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Estudo 11 - Sofrimento: fé quando a vida dói",
@@ -9351,11 +9303,7 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "Depois, conecte com: João 11:17-36 | Romanos 8:18-39 | 2 Coríntios 4:7-18 | 1 Pedro 5:8-10 | Apocalipse",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "21:1-5",
+            "text": "Depois, conecte com: João 11:17-36 | Romanos 8:18-39 | 2 Coríntios 4:7-18 | 1 Pedro 5:8-10 | Apocalipse 21:1-5",
             "type": "PARAGRAPH"
           }
         ],
@@ -9462,7 +9410,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Lamento ainda é oração",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Você pode levar a Deus até a sensação de que Ele está longe.",
@@ -9482,7 +9430,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Esperança pode pedir",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Entrega não significa ausência de desejo por alívio.",
@@ -9502,7 +9450,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Alegria e tristeza podem existir na mesma caminhada",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "A Bíblia não exige emoções artificiais.",
@@ -9522,7 +9470,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Nem sempre temos explicação",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Mas podemos ter um lugar para apoiar o coração.",
@@ -9552,7 +9500,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Cuidado com julgamentos rápidos",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Sofrimento não autoriza suspeitar da espiritualidade de alguém.",
@@ -9572,7 +9520,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Jesus não ridiculariza lágrimas",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Ele entra na cena da dor.",
@@ -9602,7 +9550,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "A cruz não explica toda dor",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Mas mostra que Deus não é estranho ao sofrimento.",
@@ -9610,7 +9558,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "ENTENDA 4. A ressurreição impede que a dor tenha a palavra final",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Romanos 8 e Apocalipse 21 apontam para um futuro em que sofrimento, corrupção e morte não continuarão",
@@ -9626,7 +9574,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "A dor é real, mas não eterna",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Essa é uma diferença decisiva.",
@@ -9634,11 +9582,11 @@ const rawSectionsByStudy = [
           },
           {
             "text": "CUIDADO PARA NÃO CONFUNDIR",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Evite frases prontas que fecham a conversa",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "“Tudo acontece por uma razão.”",
@@ -9658,7 +9606,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Às vezes presença é mais fiel que explicação",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Chore com quem chora.",
@@ -9666,7 +9614,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Buscar ajuda não é falta de fé",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Sofrimento intenso pode exigir apoio pastoral, familiar, médico, psicológico, jurídico ou social, conforme a",
@@ -9682,7 +9630,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Não carregue tudo sozinho",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Deus também cuida por meio de pessoas.",
@@ -9718,7 +9666,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Uma distinção essencial",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Deus pode agir para o bem em meio ao mal sem chamar o mal de bem.",
@@ -9748,7 +9696,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Nomear não aumenta a dor",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Pode torná-la mais honesta diante de Deus.",
@@ -9768,7 +9716,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "A dor faz parte da história",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Não precisa ser o título de toda a vida.",
@@ -9788,7 +9736,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Receber cuidado também exige humildade",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Você não precisa demonstrar força o tempo todo.",
@@ -9808,7 +9756,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Esperança não manda parar de chorar",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Ela diz que um dia haverá um último choro.",
@@ -9862,7 +9810,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Verdade Prática",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "A dor não precisa ser negada nem divinizada: podemos atravessá-la com verdade, companhia e",
@@ -9968,7 +9916,7 @@ const rawSectionsByStudy = [
         "blocks": [
           {
             "text": "Oração",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Senhor, tu conheces aquilo que dói e não preciso fingir diante de ti. Recebe minhas perguntas,",
@@ -10010,7 +9958,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Favoritos",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Guarde essas passagens para os dias em que sentir Deus distante.",
@@ -10076,7 +10024,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Próximo estudo",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Estudo 12 - Contentamento: aprender a viver sem depender de ter sempre mais",
@@ -10180,11 +10128,7 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "Depois, conecte com: 1 Timóteo 6:6-10,17-19 | Hebreus 13:5-6 | Salmo 23:1-6 | Mateus 6:19-24 | Lucas",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "12:13-21",
+            "text": "Depois, conecte com: 1 Timóteo 6:6-10,17-19 | Hebreus 13:5-6 | Salmo 23:1-6 | Mateus 6:19-24 | Lucas 12:13-21",
             "type": "PARAGRAPH"
           }
         ],
@@ -10275,7 +10219,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Podemos crescer nisso",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Insatisfação não precisa ser destino permanente.",
@@ -10295,7 +10239,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "O problema não é apenas quanto temos",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "É quanto aquilo que temos governa nosso coração.",
@@ -10315,7 +10259,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "O versículo não promete sucesso ilimitado",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Promete força para fidelidade.",
@@ -10335,7 +10279,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Ser contente não é dizer “não preciso de ninguém”",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "A comunhão continua importante.",
@@ -10369,7 +10313,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "A diferença está no senhor do coração",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Posso buscar mudança sem acreditar que só terei valor quando ela chegar.",
@@ -10389,7 +10333,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Dinheiro é ferramenta ruim para ocupar o lugar de Deus",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Use-o; não o adore.",
@@ -10419,7 +10363,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Coração satisfeito compartilha melhor",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Porque não acredita que cada coisa perdida destrói sua segurança.",
@@ -10427,7 +10371,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "ENTENDA 4. Gratidão treina nossos olhos sem negar dificuldades",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Gratidão não significa dizer que tudo está bom.",
@@ -10439,7 +10383,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Gratidão é atenção",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Ela nos ajuda a perceber o que a insatisfação constante deixa invisível.",
@@ -10447,11 +10391,11 @@ const rawSectionsByStudy = [
           },
           {
             "text": "CUIDADO PARA NÃO CONFUNDIR",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Não use contentamento para manter pessoas em injustiça",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Alguém mal pago pode buscar condições justas.",
@@ -10467,7 +10411,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Contentamento não absolve injustiça",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Quem pode agir com justiça deve agir.",
@@ -10499,7 +10443,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Desejo e idolatria não são a mesma coisa",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Mas desejos precisam ser colocados diante de Deus.",
@@ -10533,7 +10477,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Pergunte",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Eu preciso disso ou preciso provar alguma coisa?",
@@ -10553,7 +10497,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Especificidade educa os olhos",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Gratidão concreta se torna mais real.",
@@ -10573,7 +10517,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Receba com gratidão",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Compartilhe sem apego.",
@@ -10593,7 +10537,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Cristo não é meio para chegar ao tesouro",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Ele é o tesouro.",
@@ -10643,7 +10587,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Verdade Prática",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Cristo nos ensina a receber com gratidão, atravessar a falta com esperança e não permitir que",
@@ -10745,7 +10689,7 @@ const rawSectionsByStudy = [
         "blocks": [
           {
             "text": "Oração",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Senhor Jesus, ensina-me o contentamento que Paulo aprendeu. Guarda-me da comparação, do",
@@ -10783,7 +10727,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Favoritos",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Guarde essas passagens para os momentos em que comparação e insatisfação começarem a",
@@ -10857,7 +10801,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Próximo estudo",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Estudo 13 - Sabedoria nas decisões: escolher sem exigir um mapa completo",
@@ -10961,11 +10905,7 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "Depois, conecte com: Provérbios 3:5-7 | Provérbios 11:14 | Romanos 12:1-2 | Colossenses 3:15-17 | Tiago",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "4:13-17 | Atos 15:1-29",
+            "text": "Depois, conecte com: Provérbios 3:5-7 | Provérbios 11:14 | Romanos 12:1-2 | Colossenses 3:15-17 | Tiago 4:13-17 | Atos 15:1-29",
             "type": "PARAGRAPH"
           }
         ],
@@ -11068,7 +11008,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Reconhecer limites é sabedoria",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Não precisamos fingir certeza para parecer espirituais.",
@@ -11088,7 +11028,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "A melhor decisão nem sempre é a mais fácil ou lucrativa",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Pergunte o que é fiel.",
@@ -11108,7 +11048,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Deus guia também formando quem decide",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Não apenas apontando setas no caminho.",
@@ -11132,7 +11072,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Decisões importantes não precisam ser solitárias",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Conselho maduro pode revelar ângulos que não enxergamos.",
@@ -11166,7 +11106,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Liberdade também exige maturidade",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Nem toda escolha precisa de um sinal extraordinário.",
@@ -11194,7 +11134,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Paz interior não substitui discernimento",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Ela é um elemento, não o juiz final.",
@@ -11228,7 +11168,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Planeje de joelhos",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Trabalhe com responsabilidade e mantenha as mãos abertas.",
@@ -11236,7 +11176,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "ENTENDA 4. Portas abertas e fechadas não dizem tudo sozinhas",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Uma oportunidade fácil pode ser ruim.",
@@ -11252,7 +11192,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Circunstância não é interpretação automática",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Avalie a porta, não apenas se ela abriu.",
@@ -11260,11 +11200,11 @@ const rawSectionsByStudy = [
           },
           {
             "text": "CUIDADO PARA NÃO CONFUNDIR",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Cuidado com “Deus me disse” quando você possui apenas uma impressão",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Há diferença entre convicção pessoal e palavra explícita de Deus nas Escrituras.",
@@ -11276,7 +11216,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Uma linguagem humilde pode ser mais fiel",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "“Tenho a impressão”, “estou orando”, “parece sábio” deixam espaço para correção.",
@@ -11284,7 +11224,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Não use “vontade de Deus” para manipular outra pessoa",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Dizer “Deus me mostrou que você deve casar comigo” ou “Deus mandou você me obedecer nisso” pode ser",
@@ -11296,7 +11236,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Deus não precisa de manipulação para conduzir seu povo",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Respeite consciência, liberdade e responsabilidade do outro.",
@@ -11328,7 +11268,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Não transforme exceção em regra",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Deus já nos deu muito para formar decisões responsáveis.",
@@ -11362,7 +11302,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "A vontade de Deus nunca precisa contradizer a Palavra de Deus",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Comece pelo fundamento.",
@@ -11382,7 +11322,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Desejos influenciam discernimento",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Traga-os para a luz.",
@@ -11402,7 +11342,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Bom conselho não é aplauso",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "É ajuda para enxergar melhor.",
@@ -11426,7 +11366,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Fé também caminha sem mapa completo",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Deus é maior que nossa possibilidade de escolher imperfeitamente.",
@@ -11476,7 +11416,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Verdade Prática",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Podemos tomar decisões sem controlar todos os resultados, confiando que Deus continua",
@@ -11590,7 +11530,7 @@ const rawSectionsByStudy = [
         "blocks": [
           {
             "text": "Oração",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Senhor, dá-me sabedoria para escolher. Livra-me de confundir meus desejos com tua voz e de",
@@ -11628,7 +11568,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Favoritos",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Guarde essas passagens para os momentos em que decisões importantes trouxerem confusão.",
@@ -11694,7 +11634,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Próximo estudo",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Estudo 14 - Relacionamentos: amar com verdade, graça e limites",
@@ -11802,11 +11742,7 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "Depois, conecte com: Efésios 4:25-32 | Colossenses 3:12-15 | Provérbios 13:20 | 1 Coríntios 13:4-7 | Mateus",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "18:15-17",
+            "text": "Depois, conecte com: Efésios 4:25-32 | Colossenses 3:12-15 | Provérbios 13:20 | 1 Coríntios 13:4-7 | Mateus 18:15-17",
             "type": "PARAGRAPH"
           }
         ],
@@ -11909,7 +11845,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Amor cristão não é teatro",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Verdade e bondade precisam caminhar juntas.",
@@ -11929,7 +11865,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Amor possui conteúdo moral",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Ele deseja o bem verdadeiro, não apenas evitar desconforto.",
@@ -11949,7 +11885,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Presença também é amor",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Nem sempre precisamos consertar tudo.",
@@ -11969,7 +11905,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Você é responsável pela sua parte",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Não pelo controle da resposta do outro.",
@@ -11999,7 +11935,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Paz sem verdade é frágil",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Conversas difíceis podem fazer parte do amor.",
@@ -12023,7 +11959,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Amar não é oferecer acesso ilimitado",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Confiança é construída e pode precisar ser reconstruída.",
@@ -12057,7 +11993,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "O amor bíblico não protege a injustiça",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Ele se alegra com a verdade.",
@@ -12065,7 +12001,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "ENTENDA 4. Nem toda relação precisa ocupar o mesmo lugar",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Podemos tratar todos com dignidade sem transformar todos em amigos íntimos.",
@@ -12077,7 +12013,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Proximidade exige discernimento",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Dignidade é para todos; intimidade é construída.",
@@ -12085,11 +12021,11 @@ const rawSectionsByStudy = [
           },
           {
             "text": "CUIDADO PARA NÃO CONFUNDIR",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Não use submissão, perdão ou unidade para manter abuso",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Violência, coerção, ameaça e abuso de poder não devem ser protegidos por linguagem espiritual.",
@@ -12101,7 +12037,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Unidade não é silêncio diante do mal",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "A paz bíblica anda com verdade e justiça.",
@@ -12137,7 +12073,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Limites servem à saúde e à verdade",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Não precisam ser usados como vingança.",
@@ -12167,7 +12103,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Troque “você é horrível” por verdade específica",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Isso abre mais espaço para compreensão e mudança.",
@@ -12187,7 +12123,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Peça com clareza",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "O outro não lê sua mente.",
@@ -12207,7 +12143,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Amizade não é neutra",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Caminhe perto de pessoas que ajudam sua fé a crescer.",
@@ -12231,7 +12167,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Fidelidade não é controlar o resultado",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "É responder corretamente.",
@@ -12277,7 +12213,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Verdade Prática",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "O Evangelho nos ensina a amar sem fingimento, falar a verdade sem crueldade e estabelecer",
@@ -12387,7 +12323,7 @@ const rawSectionsByStudy = [
         "blocks": [
           {
             "text": "Oração",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Senhor, ensina-me a amar sem fingimento. Dá-me coragem para falar a verdade, humildade para",
@@ -12425,7 +12361,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Favoritos",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Guarde essas passagens para conversas difíceis e decisões sobre limites.",
@@ -12491,7 +12427,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Próximo estudo",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Estudo 15 - O uso das palavras: falar de um jeito que produz vida",
@@ -12599,11 +12535,7 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "Depois, conecte com: Efésios 4:25-32 | Provérbios 18:21 | Provérbios 15:1 | Mateus 12:33-37 | Colossenses",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "4:5-6",
+            "text": "Depois, conecte com: Efésios 4:25-32 | Provérbios 18:21 | Provérbios 15:1 | Mateus 12:33-37 | Colossenses 4:5-6",
             "type": "PARAGRAPH"
           }
         ],
@@ -12702,7 +12634,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "A língua é pequena, mas revela muito",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Nossa fala mostra áreas onde o coração ainda precisa de formação.",
@@ -12722,7 +12654,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Não subestime pequenas frases",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Elas podem mudar o rumo de uma conversa inteira.",
@@ -12738,7 +12670,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Culto e relacionamento não podem ser separados",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "A boca que canta também precisa aprender a respeitar.",
@@ -12758,7 +12690,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Palavras são sintomas e sementes",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Precisamos tratar coração e hábito.",
@@ -12800,7 +12732,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Palavras têm poder relacional e moral",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Não são comandos mágicos para controlar o universo.",
@@ -12820,7 +12752,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Verdade sem amor pode virar arma",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Graça sem verdade vira omissão.",
@@ -12858,7 +12790,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "ENTENDA 4. Silêncio também pode ser pecado ou sabedoria",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Há momentos de calar para evitar fofoca.",
@@ -12874,7 +12806,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Pergunte",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Meu silêncio está guardando paz ou escondendo algo que precisa de verdade?",
@@ -12882,11 +12814,11 @@ const rawSectionsByStudy = [
           },
           {
             "text": "CUIDADO PARA NÃO CONFUNDIR",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Não use “declarar” como substituto para agir",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Dizer “declaro que tudo vai melhorar” não substitui pedir perdão, procurar emprego, buscar tratamento,",
@@ -12902,7 +12834,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Palavras de fé precisam de verdade",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Não de negação da realidade.",
@@ -12946,7 +12878,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Nem todo compartilhamento é igual",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "O objetivo e o destinatário importam.",
@@ -12976,7 +12908,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Você não precisa responder tudo imediatamente",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Domínio próprio também aparece no tempo.",
@@ -12996,7 +12928,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Se a pessoa sempre sai menor, talvez não seja apenas piada",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Reavalie.",
@@ -13016,7 +12948,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Diga o bem enquanto há tempo",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Muitas pessoas ouvem crítica em abundância e encorajamento em escassez.",
@@ -13036,7 +12968,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Correção cristã busca verdade e restauração",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Não prazer em humilhar.",
@@ -13078,7 +13010,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Verdade Prática",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "O Evangelho alcança nossa linguagem quando aprendemos a usar palavras não para controlar",
@@ -13180,7 +13112,7 @@ const rawSectionsByStudy = [
         "blocks": [
           {
             "text": "Oração",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Senhor, coloca guarda sobre minha boca e trata também meu coração. Perdoa palavras que",
@@ -13222,7 +13154,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Favoritos",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Guarde essas passagens para revisar antes de conversas delicadas.",
@@ -13288,7 +13220,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Próximo estudo",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Estudo 16 - Serviço: grandeza que se ajoelha",
@@ -13495,7 +13427,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Liderança cristã não imita abuso de poder",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Autoridade deve servir.",
@@ -13519,7 +13451,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "No Reino, poder é responsabilidade",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Não privilégio para explorar.",
@@ -13539,7 +13471,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Jesus não pede um caminho que recusou percorrer",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Serviço está no centro de seu exemplo.",
@@ -13559,7 +13491,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Dom é responsabilidade",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Aquilo que recebemos pode se tornar bênção compartilhada.",
@@ -13589,7 +13521,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Não espere um microfone",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Muito serviço importante acontece longe do palco.",
@@ -13609,7 +13541,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Fidelidade vale mais que imitação",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Descubra como aquilo que recebeu pode servir.",
@@ -13639,7 +13571,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Humildade não é pensar que você não vale nada",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "É não precisar ser o centro o tempo todo.",
@@ -13647,7 +13579,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "ENTENDA 4. Serviço precisa de limites e descanso",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Jesus servia intensamente e também se retirava.",
@@ -13659,7 +13591,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Você não é o Salvador",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Servir fielmente inclui reconhecer limites.",
@@ -13667,11 +13599,11 @@ const rawSectionsByStudy = [
           },
           {
             "text": "CUIDADO PARA NÃO CONFUNDIR",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Não use “servo” para justificar exploração",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Uma igreja ou líder não pode exigir trabalho sem fim, manipular culpa ou tratar pessoas como recursos",
@@ -13687,7 +13619,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Líderes também servem",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Título não autoriza dominação.",
@@ -13723,7 +13655,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Comece perto",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "O próximo lugar de serviço pode estar diante de você.",
@@ -13757,7 +13689,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Faça algumas coisas que ninguém verá",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Isso treina liberdade do reconhecimento.",
@@ -13777,7 +13709,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Limite também pode ser fidelidade",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Você não precisa fazer tudo.",
@@ -13793,7 +13725,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Autoridade que serve multiplica",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Não concentra tudo em si.",
@@ -13817,7 +13749,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Serviço não precisa parecer extraordinário",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Precisa ser fiel.",
@@ -13863,7 +13795,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Verdade Prática",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Servimos porque Cristo nos serviu primeiro, usando dons e oportunidades com humildade,",
@@ -13961,7 +13893,7 @@ const rawSectionsByStudy = [
         "blocks": [
           {
             "text": "Oração",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Senhor Jesus, tu vieste para servir e deste tua vida. Livra-me da necessidade de ser o centro e",
@@ -13999,7 +13931,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Favoritos",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Guarde essas passagens para lembrar que dons e posição existem para serviço.",
@@ -14065,18 +13997,14 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Próximo estudo",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Estudo 17 - Generosidade: mãos abertas num mundo de medo e acúmulo",
             "type": "PARAGRAPH"
           },
           {
-            "text": "Pergunta central: Como dar com liberdade sem transformar generosidade em barganha com",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Deus?",
+            "text": "Pergunta central: Como dar com liberdade sem transformar generosidade em barganha com Deus?",
             "type": "PARAGRAPH"
           }
         ],
@@ -14169,11 +14097,7 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "Depois, conecte com: 2 Coríntios 8:1-15 | Atos 20:32-35 | 1 Timóteo 6:17-19 | Lucas 12:13-21 | Marcos",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "12:41-44",
+            "text": "Depois, conecte com: 2 Coríntios 8:1-15 | Atos 20:32-35 | 1 Timóteo 6:17-19 | Lucas 12:13-21 | Marcos 12:41-44",
             "type": "PARAGRAPH"
           }
         ],
@@ -14276,7 +14200,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Deus não quer apenas uma porcentagem sem coração",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "A oferta faz parte de uma vida entregue.",
@@ -14292,7 +14216,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Pressão não é o ideal bíblico",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Generosidade precisa de liberdade.",
@@ -14312,7 +14236,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Dinheiro serve pessoas",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "A generosidade se torna cuidado real.",
@@ -14332,7 +14256,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Generosidade cristã aponta para Deus",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Não para construir celebridade do benfeitor.",
@@ -14362,7 +14286,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Deus supre para uma vida frutífera",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Não oferece um esquema de investimento espiritual.",
@@ -14382,7 +14306,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Deus não mede amor pelo tamanho absoluto da oferta",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "O coração e a realidade importam.",
@@ -14420,7 +14344,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "ENTENDA 4. Dar também envolve tempo, hospitalidade e capacidades",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Generosidade financeira é importante, mas não esgota o tema.",
@@ -14432,7 +14356,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Mãos abertas vão além da carteira",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "A vida inteira pode aprender a compartilhar.",
@@ -14440,11 +14364,11 @@ const rawSectionsByStudy = [
           },
           {
             "text": "CUIDADO PARA NÃO CONFUNDIR",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Não use promessa de bênção para pressionar oferta",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Frases como “dê este valor e Deus vai devolver dez vezes” não possuem apoio seguro no ensino apostólico",
@@ -14460,7 +14384,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Oferta não compra milagre",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Graça não está à venda.",
@@ -14468,7 +14392,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Generosidade não significa irresponsabilidade com quem depende de você",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Há responsabilidades com família, dívidas e necessidades básicas.",
@@ -14480,7 +14404,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Generosidade e sabedoria caminham juntas",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Planeje para poder compartilhar melhor.",
@@ -14516,7 +14440,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "O ponto comum é claro",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "O discípulo de Jesus não vive com as mãos fechadas.",
@@ -14546,7 +14470,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Generosidade pode ser intencional",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Não apenas espontânea.",
@@ -14566,7 +14490,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Generosidade não cria propriedade sobre o outro",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Dar não compra pessoas.",
@@ -14582,7 +14506,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Comece onde seus olhos alcançam",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Família, igreja, vizinhança, comunidade.",
@@ -14602,7 +14526,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Receber com gratidão também é humildade",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Você não precisa sempre ocupar o lugar de quem ajuda.",
@@ -14648,7 +14572,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Verdade Prática",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Quem reconhece que tudo o que possui foi recebido pode aprender a dar com alegria, sem",
@@ -14746,7 +14670,7 @@ const rawSectionsByStudy = [
         "blocks": [
           {
             "text": "Oração",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Senhor, tudo o que tenho passa por tuas mãos. Livra-me do medo, do apego e da ideia de que",
@@ -14784,7 +14708,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Favoritos",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Guarde essas passagens para revisar suas decisões financeiras diante de Deus.",
@@ -14854,7 +14778,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Próximo estudo",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Estudo 18 - Perseverança: continuar quando a caminhada fica longa",
@@ -14958,11 +14882,7 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "Depois, conecte com: Hebreus 10:23-25,35-39 | Tiago 1:2-4,12 | Romanos 5:1-5 | Filipenses 3:12-14 | 2",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Timóteo 4:6-8",
+            "text": "Depois, conecte com: Hebreus 10:23-25,35-39 | Tiago 1:2-4,12 | Romanos 5:1-5 | Filipenses 3:12-14 | 2 Timóteo 4:6-8",
             "type": "PARAGRAPH"
           }
         ],
@@ -15065,7 +14985,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "A fé possui memória",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Histórias de outros podem nos lembrar que é possível continuar.",
@@ -15085,7 +15005,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Pergunte",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "O que pode ser permitido, mas está atrapalhando minha caminhada?",
@@ -15105,7 +15025,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Perseverança nasce de um foco maior que nós mesmos",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Cristo já percorreu o caminho da obediência.",
@@ -15125,7 +15045,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Esperança fortalece resistência",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "O presente não é tudo o que existe.",
@@ -15159,7 +15079,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Cair pede arrependimento",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Não identidade permanente.",
@@ -15179,7 +15099,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Ninguém precisa correr sozinho",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Encorajamento é parte da resistência.",
@@ -15217,7 +15137,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Deus pode formar em meio à dificuldade",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Sem precisar dizer que a dificuldade é boa.",
@@ -15225,7 +15145,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "ENTENDA 4. Perseverança cristã possui uma esperança futura",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Paulo fala da coroa e da corrida terminada.",
@@ -15237,7 +15157,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Não estamos apenas tentando sobreviver ao presente",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Caminhamos em direção a uma promessa.",
@@ -15245,11 +15165,11 @@ const rawSectionsByStudy = [
           },
           {
             "text": "CUIDADO PARA NÃO CONFUNDIR",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Não confunda perseverança com permanecer onde existe abuso ou perigo",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "“Aguente firme” não deve ser conselho para ficar em violência, exploração ou situação destrutiva.",
@@ -15261,7 +15181,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Perseveramos em Cristo",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Não necessariamente em toda circunstância ou relação.",
@@ -15269,7 +15189,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Descanso não é desistência",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Jesus descansou.",
@@ -15285,7 +15205,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Você não é máquina",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Perseverança saudável respeita limites humanos.",
@@ -15317,7 +15237,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Fidelidade é ao Senhor",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Não a toda meta que um dia estabelecemos.",
@@ -15359,7 +15279,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Perseverança é acumulativa",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Muitos próximos passos formam uma longa caminhada.",
@@ -15379,7 +15299,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Nem tudo precisa continuar com você",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Algumas coisas devem ser deixadas para correr melhor.",
@@ -15399,7 +15319,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Fidelidade vale nos dias comuns",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Nem todo dia terá sensação de avivamento.",
@@ -15415,7 +15335,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Memória alimenta esperança",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Deus já sustentou você em capítulos anteriores.",
@@ -15465,7 +15385,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Verdade Prática",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "A nova vida amadurece em pessoas que aprendem a permanecer, recomeçar e continuar pela",
@@ -15575,7 +15495,7 @@ const rawSectionsByStudy = [
         "blocks": [
           {
             "text": "Oração",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Senhor Jesus, obrigado porque és o autor e consumador da fé. Quando eu cansar, lembra-me de",
@@ -15613,7 +15533,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Favoritos",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             type: "PARAGRAPH",
@@ -15695,10 +15615,10 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Próximo estudo",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
-            "text": "Próxima trilha - Trilha 5: Igreja e Missão",
+            "text": "Próxima trilha - Trilha 5: Estudos Colaborativos",
             "type": "PARAGRAPH"
           },
           {

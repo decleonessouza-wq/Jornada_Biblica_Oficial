@@ -315,11 +315,7 @@ const rawSectionsByStudy = [
             "type": "SUBHEADING"
           },
           {
-            "text": "Depois, conecte com: Levítico 19:1-2 | Salmo 99:1-5 | 1 Pedro 1:13-16 | Hebreus 10:19-22 | Apocalipse",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "4:8-11",
+            "text": "Depois, conecte com: Levítico 19:1-2 | Salmo 99:1-5 | 1 Pedro 1:13-16 | Hebreus 10:19-22 | Apocalipse 4:8-11",
             "type": "PARAGRAPH"
           }
         ],
@@ -1295,11 +1291,7 @@ const rawSectionsByStudy = [
             "type": "SUBHEADING"
           },
           {
-            "text": "Depois, conecte com: Gênesis 18:22-33 | Salmo 9:7-10 | Salmo 89:14 | Romanos 2:1-11 | Romanos 3:21-26 |",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Miqueias 6:8",
+            "text": "Depois, conecte com: Gênesis 18:22-33 | Salmo 9:7-10 | Salmo 89:14 | Romanos 2:1-11 | Romanos 3:21-26 | Miqueias 6:8",
             "type": "PARAGRAPH"
           }
         ],
@@ -1443,11 +1435,7 @@ const rawSectionsByStudy = [
         "title": "2. Deus não mede o valor das pessoas pela posição social",
         "blocks": [
           {
-            "text": "Deuteronômio chama atenção para pessoas que, naquele contexto, poderiam facilmente ficar desprotegidas:",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "órfãos, viúvas e estrangeiros.",
+            "text": "Deuteronômio chama atenção para pessoas que, naquele contexto, poderiam facilmente ficar desprotegidas: órfãos, viúvas e estrangeiros.",
             "type": "PARAGRAPH"
           },
           {
@@ -1612,7 +1600,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Ela também pergunta",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "E o seu coração?",
@@ -2266,11 +2254,7 @@ const rawSectionsByStudy = [
             "type": "SUBHEADING"
           },
           {
-            "text": "Depois, conecte com: Salmo 103:8-14 | Lamentações 3:21-24 | Jonas 3:10-4:11 | Lucas 6:35-36 | Lucas",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "15:11-24 | Efésios 2:1-5 | Tito 3:3-7",
+            "text": "Depois, conecte com: Salmo 103:8-14 | Lamentações 3:21-24 | Jonas 3:10-4:11 | Lucas 6:35-36 | Lucas 15:11-24 | Efésios 2:1-5 | Tito 3:3-7",
             "type": "PARAGRAPH"
           }
         ],
@@ -3241,11 +3225,7 @@ const rawSectionsByStudy = [
             "type": "SUBHEADING"
           },
           {
-            "text": "Depois, conecte com: Números 23:19 | Josué 21:43-45 | Salmo 89:1-8 | Lamentações 3:21-24 | 2 Timóteo",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "2:11-13 | Hebreus 10:23 | 1 Coríntios 1:9",
+            "text": "Depois, conecte com: Números 23:19 | Josué 21:43-45 | Salmo 89:1-8 | Lamentações 3:21-24 | 2 Timóteo 2:11-13 | Hebreus 10:23 | 1 Coríntios 1:9",
             "type": "PARAGRAPH"
           }
         ],
@@ -4288,11 +4268,7 @@ const rawSectionsByStudy = [
             "type": "SUBHEADING"
           },
           {
-            "text": "Depois, conecte com: Salmo 19:1-4 | Romanos 1:19-20 | João 1:14-18 | João 14:8-11 | 2 Timóteo 3:14-17 |",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Deuteronômio 29:29",
+            "text": "Depois, conecte com: Salmo 19:1-4 | Romanos 1:19-20 | João 1:14-18 | João 14:8-11 | 2 Timóteo 3:14-17 | Deuteronômio 29:29",
             "type": "PARAGRAPH"
           }
         ],
@@ -4436,11 +4412,7 @@ const rawSectionsByStudy = [
         "title": "OBSERVE 3. Deus se revela também na história",
         "blocks": [
           {
-            "text": "A fé bíblica não é construída apenas sobre ideias abstratas. Deus age na história: chama um povo, liberta",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Israel, firma alianças, envia profetas e cumpre promessas.",
+            "text": "A fé bíblica não é construída apenas sobre ideias abstratas. Deus age na história: chama um povo, liberta Israel, firma alianças, envia profetas e cumpre promessas.",
             "type": "PARAGRAPH"
           },
           {
@@ -5097,11 +5069,7 @@ const rawSectionsByStudy = [
             "type": "SUBHEADING"
           },
           {
-            "text": "Depois, conecte com: Salmo 115:1-3 | Daniel 4:34-37 | Provérbios 16:9 | Romanos 8:28-39 | Tiago 4:13-15 |",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Atos 4:23-31",
+            "text": "Depois, conecte com: Salmo 115:1-3 | Daniel 4:34-37 | Provérbios 16:9 | Romanos 8:28-39 | Tiago 4:13-15 | Atos 4:23-31",
             "type": "PARAGRAPH"
           }
         ],
@@ -5874,11 +5842,7 @@ const rawSectionsByStudy = [
             "type": "SUBHEADING"
           },
           {
-            "text": "Depois, conecte com: João 3:16-17 | Romanos 5:6-8 | Romanos 8:31-39 | 1 Coríntios 13:4-7 | Hebreus",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "12:5-11 | 1 João 3:16-18",
+            "text": "Depois, conecte com: João 3:16-17 | Romanos 5:6-8 | Romanos 8:31-39 | 1 Coríntios 13:4-7 | Hebreus 12:5-11 | 1 João 3:16-18",
             "type": "PARAGRAPH"
           }
         ],
@@ -6655,11 +6619,7 @@ const rawSectionsByStudy = [
             "type": "SUBHEADING"
           },
           {
-            "text": "Depois, conecte com: Êxodo 34:6-7 | Isaías 53:4-6 | João 3:16-17 | Romanos 5:6-11 | Efésios 2:4-10 | 1 Pedro",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "2:24",
+            "text": "Depois, conecte com: Êxodo 34:6-7 | Isaías 53:4-6 | João 3:16-17 | Romanos 5:6-11 | Efésios 2:4-10 | 1 Pedro 2:24",
             "type": "PARAGRAPH"
           }
         ],
@@ -7080,7 +7040,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Graça verdadeira produz reverência",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Não descuido.",
@@ -7460,11 +7420,7 @@ const rawSectionsByStudy = [
             "type": "SUBHEADING"
           },
           {
-            "text": "Depois, conecte com: Deuteronômio 6:4 | Mateus 28:18-20 | João 1:1-3,14 | João 14:16-17,26 | Atos 5:3-4 |",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "2 Coríntios 13:13",
+            "text": "Depois, conecte com: Deuteronômio 6:4 | Mateus 28:18-20 | João 1:1-3,14 | João 14:16-17,26 | Atos 5:3-4 | 2 Coríntios 13:13",
             "type": "PARAGRAPH"
           }
         ],
@@ -8026,11 +7982,7 @@ const rawSectionsByStudy = [
         "title": "Registrar no Diário",
         "blocks": [
           {
-            "text": "O que mudou na minha visão de Deus ao perceber como a Bíblia apresenta Pai, Filho e Espírito",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Santo?",
+            "text": "O que mudou na minha visão de Deus ao perceber como a Bíblia apresenta Pai, Filho e Espírito Santo?",
             "type": "PARAGRAPH"
           }
         ],

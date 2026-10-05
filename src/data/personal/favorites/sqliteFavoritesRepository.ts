@@ -3,6 +3,7 @@ import {
   type FavoriteId,
   type FavoriteTargetKind,
 } from "../../../domain/favorites/favorite";
+import type { DevotionalId } from "../../../domain/devotionals/devotional";
 import type {
   PersonalUtcTimestamp,
 } from "../../../domain/personal/personalTime";
@@ -14,6 +15,7 @@ import {
   PersonalRepositoryBase,
 } from "../personalRepositoryBase";
 import type {
+  FavoriteDevotionalOriginPersistenceRecord,
   FavoritePersistenceRecord,
   FavoriteStudyOriginPersistenceRecord,
   FavoritesRepository,
@@ -28,6 +30,10 @@ type FavoriteRow = Readonly<{
 
 type FavoriteStudyOriginRow = Readonly<{
   study_id: string;
+}>;
+
+type FavoriteDevotionalOriginRow = Readonly<{
+  devotional_id: string;
 }>;
 
 function isFavoriteTargetKind(
@@ -74,6 +80,19 @@ function assertValidStudyId(
   }
 }
 
+function assertValidDevotionalId(
+  devotionalId: DevotionalId,
+): void {
+  if (
+    typeof devotionalId !== "string" ||
+    devotionalId.trim().length === 0
+  ) {
+    throw new Error(
+      "PERSONAL_FAVORITES_DEVOTIONAL_ORIGIN_INVALID",
+    );
+  }
+}
+
 function mapFavoriteRow(
   row: FavoriteRow,
 ): FavoritePersistenceRecord {
@@ -116,6 +135,25 @@ function mapStudyOriginRow(
   return {
     favoriteId,
     studyId: row.study_id as StudyId,
+  };
+}
+
+function mapDevotionalOriginRow(
+  favoriteId: FavoriteId,
+  row: FavoriteDevotionalOriginRow,
+): FavoriteDevotionalOriginPersistenceRecord {
+  if (
+    typeof row.devotional_id !== "string" ||
+    row.devotional_id.trim().length === 0
+  ) {
+    throw new Error(
+      "PERSONAL_FAVORITES_DEVOTIONAL_ORIGIN_ROW_INVALID",
+    );
+  }
+
+  return {
+    favoriteId,
+    devotionalId: row.devotional_id as DevotionalId,
   };
 }
 
@@ -277,6 +315,58 @@ ORDER BY study_id ASC
 
         return rows.map((row) =>
           mapStudyOriginRow(favoriteId, row),
+        );
+      },
+    );
+  }
+
+  async addDevotionalOrigin(
+    record: FavoriteDevotionalOriginPersistenceRecord,
+  ): Promise<void> {
+    assertValidFavoriteId(record.favoriteId);
+    assertValidDevotionalId(record.devotionalId);
+
+    await this.personalDatabase.withConnection(
+      async (database) => {
+        await database.runAsync(
+          `
+INSERT INTO personal_favorite_devotional_origins (
+  favorite_id,
+  devotional_id
+)
+VALUES (?, ?)
+ON CONFLICT(favorite_id, devotional_id) DO NOTHING
+`,
+          record.favoriteId,
+          record.devotionalId,
+        );
+      },
+    );
+  }
+
+  async listDevotionalOrigins(
+    favoriteId: FavoriteId,
+  ): Promise<
+    readonly FavoriteDevotionalOriginPersistenceRecord[]
+  > {
+    assertValidFavoriteId(favoriteId);
+
+    return this.personalDatabase.withConnection(
+      async (database) => {
+        const rows =
+          await database.getAllAsync<FavoriteDevotionalOriginRow>(
+            `
+SELECT
+  devotional_id
+FROM personal_favorite_devotional_origins
+WHERE favorite_id = ?
+ORDER BY devotional_id ASC
+`,
+            favoriteId,
+          );
+
+        return rows.map((row) =>
+          mapDevotionalOriginRow(favoriteId, row),
         );
       },
     );

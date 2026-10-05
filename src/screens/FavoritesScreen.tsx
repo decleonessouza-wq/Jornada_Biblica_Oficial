@@ -29,11 +29,12 @@ import {
   getJourneyBibleReaderRouteForReference,
 } from "../services/journeyBibleReaderAdapter";
 import { getPersonalPlatformHub } from "../services/personalPlatformHub";
+import { getRuntimeDevotionalById } from "../devotionals/runtime/devotionalRuntimeCatalog";
 import { getRuntimeStudyById } from "../studies/runtime/studyRuntimeCatalog";
 import { colors } from "../theme/colors";
 
 type FavoritesScreenProps = AppDrawerScreenProps<"Favorites">;
-type FavoriteFilter = "all" | "bible" | "study" | "hymn";
+type FavoriteFilter = "all" | "bible" | "study" | "devotional" | "hymn";
 type LoadStatus = "loading" | "ready" | "error";
 
 const FILTERS: readonly Readonly<{
@@ -43,6 +44,7 @@ const FILTERS: readonly Readonly<{
   { key: "all", label: "Todos" },
   { key: "bible", label: "Bíblia" },
   { key: "study", label: "Estudos" },
+  { key: "devotional", label: "Devocionais" },
   { key: "hymn", label: "Harpa" },
 ];
 
@@ -55,11 +57,15 @@ function getEmptyMessage(filter: FavoriteFilter): string {
     return "Você ainda não marcou nenhum estudo como favorito.";
   }
 
+  if (filter === "devotional") {
+    return "Você ainda não marcou nenhum devocional como favorito.";
+  }
+
   if (filter === "hymn") {
     return "Você ainda não marcou nenhum hino como favorito.";
   }
 
-  return "Seus textos, estudos e hinos favoritos aparecerão aqui.";
+  return "Seus textos, estudos, devocionais e hinos favoritos aparecerão aqui.";
 }
 
 export default function FavoritesScreen({
@@ -190,6 +196,21 @@ export default function FavoritesScreen({
         return;
       }
 
+      if (favorite.target.kind === "devotional") {
+        navigation.navigate("MainTabs", {
+          screen: "StudiesTab",
+          params: {
+            screen: "DevotionalDetail",
+            params: {
+              devotionalId:
+                favorite.target.devotionalId,
+              returnToFavorites: true,
+            },
+          },
+        });
+        return;
+      }
+
       if (favorite.target.kind !== "hymn") {
         return;
       }
@@ -228,7 +249,7 @@ export default function FavoritesScreen({
             <Text style={styles.heroEyebrow}>FAVORITOS</Text>
             <Text style={styles.heroTitle}>Favoritos</Text>
             <Text style={styles.heroSubtitle}>
-              Seus textos, estudos e hinos marcados em um só lugar
+              Seus textos, estudos, devocionais e hinos marcados em um só lugar
             </Text>
           </View>
         </ImageBackground>
@@ -426,6 +447,52 @@ export default function FavoritesScreen({
                       </Text>
                       <Text style={styles.favoriteMeta}>
                         Estudo bíblico
+                      </Text>
+                    </Pressable>
+                  );
+                }
+
+                if (favorite.target.kind === "devotional") {
+                  const runtimeDevotional =
+                    getRuntimeDevotionalById(
+                      favorite.target.devotionalId,
+                    );
+                  const devotionalTitle =
+                    runtimeDevotional?.content.title ??
+                    "Devocional indisponível";
+                  const devotionalMeta =
+                    runtimeDevotional?.content.format ===
+                    "OPEN_LETTER"
+                      ? "Carta aberta"
+                      : "Reflexão";
+
+                  return (
+                    <Pressable
+                      key={favorite.id}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Abrir devocional favorito ${devotionalTitle}`}
+                      onPress={() => {
+                        void openFavorite(favorite);
+                      }}
+                      style={({ pressed }) => [
+                        styles.favoriteCard,
+                        pressed && styles.favoriteCardPressed,
+                      ]}
+                      testID={`favorite-devotional-${favorite.target.devotionalId}`}
+                    >
+                      <View style={styles.cardTopLine}>
+                        <View style={styles.kindBadge}>
+                          <Text style={styles.kindBadgeText}>
+                            Devocional
+                          </Text>
+                        </View>
+                        <Text style={styles.openHint}>Abrir</Text>
+                      </View>
+                      <Text style={styles.favoriteTitle}>
+                        {devotionalTitle}
+                      </Text>
+                      <Text style={styles.favoriteMeta}>
+                        {devotionalMeta}
                       </Text>
                     </Pressable>
                   );

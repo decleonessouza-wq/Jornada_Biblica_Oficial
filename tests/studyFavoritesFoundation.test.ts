@@ -152,6 +152,7 @@ describe("P17-P11-A1 Study favorites foundation", () => {
       "bible_verse",
       "bible_reference",
       "study",
+      "devotional",
       "hymn",
     ]);
   });

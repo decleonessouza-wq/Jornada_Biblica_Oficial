@@ -50,7 +50,7 @@ describe("track05Study01Draft", () => {
     expect(serialized).toContain(
       "a-obra-redentora-de-cristo-e-o-plano-da-salvacao",
     );
-    expect(serialized).toContain("A OBRA REDENTORA DE CRISTO E O PLANO DA SALVAÇÃO");
+    expect(serialized).toContain("A Obra Redentora de Cristo e o Plano da Salvação");
     expect(serialized).toContain("Apocalipse 21");
 
     expect(serialized).not.toContain("track-05-study-02");

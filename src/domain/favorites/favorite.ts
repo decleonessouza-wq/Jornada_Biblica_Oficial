@@ -3,6 +3,7 @@ import type {
   BibleReference,
 } from "../bible/bibleReference";
 import type { BibleVersionId } from "../bible/bibleVersion";
+import type { DevotionalId } from "../devotionals/devotional";
 import type { HymnId } from "../hymnal/hymn";
 import type { HymnalEditionId } from "../hymnal/hymnalEdition";
 import type { PersonalCanonicalId } from "../personal/personalIdentity";
@@ -15,6 +16,7 @@ export const FAVORITE_TARGET_KINDS = [
   "bible_verse",
   "bible_reference",
   "study",
+  "devotional",
   "hymn",
 ] as const;
 
@@ -38,6 +40,11 @@ export type StudyFavoriteTarget = Readonly<{
   studyId: StudyId;
 }>;
 
+export type DevotionalFavoriteTarget = Readonly<{
+  kind: "devotional";
+  devotionalId: DevotionalId;
+}>;
+
 export type HymnFavoriteTarget = Readonly<{
   kind: "hymn";
   editionId: HymnalEditionId;
@@ -48,12 +55,22 @@ export type FavoriteTarget =
   | BibleVerseFavoriteTarget
   | BibleReferenceFavoriteTarget
   | StudyFavoriteTarget
+  | DevotionalFavoriteTarget
   | HymnFavoriteTarget;
 
-export type FavoriteOriginContext = Readonly<{
+export type StudyFavoriteOriginContext = Readonly<{
   kind: "study";
   studyId: StudyId;
 }>;
+
+export type DevotionalFavoriteOriginContext = Readonly<{
+  kind: "devotional";
+  devotionalId: DevotionalId;
+}>;
+
+export type FavoriteOriginContext =
+  | StudyFavoriteOriginContext
+  | DevotionalFavoriteOriginContext;
 
 export type Favorite = Readonly<{
   id: FavoriteId;

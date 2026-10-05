@@ -865,6 +865,95 @@ describe("JournalService", () => {
     ).toHaveBeenCalledWith(published);
   });
 
+  it("creates a DEVOTIONAL draft with explicit snapshots and no persisted source id", async () => {
+    const harness = createHarness();
+
+    const draft =
+      await harness.service.createDevotionalDraft({
+        entryDate: OTHER_ENTRY_DATE,
+        reflectionText:
+          "Reflexão a partir do devocional.",
+        sourceTitleSnapshot:
+          "Devocional de teste",
+        promptSnapshot:
+          "O que este devocional despertou em você?",
+      });
+
+    expect(harness.now).toHaveBeenCalledTimes(1);
+    expect(
+      harness.toLocalDate,
+    ).not.toHaveBeenCalled();
+    expect(
+      harness.toUtcTimestamp,
+    ).toHaveBeenCalledWith(NOW);
+    expect(
+      harness.createId,
+    ).toHaveBeenCalledTimes(1);
+    expect(
+      harness.createId,
+    ).toHaveBeenCalledWith(
+      "journal_entry",
+    );
+
+    expect(draft).toEqual({
+      id: ENTRY_ID,
+      entryDate: OTHER_ENTRY_DATE,
+      reflectionText:
+        "Reflexão a partir do devocional.",
+      gratitudeText: null,
+      status: "DRAFT",
+      sourceType: "DEVOTIONAL",
+      sourceTitleSnapshot:
+        "Devocional de teste",
+      promptSnapshot:
+        "O que este devocional despertou em você?",
+      category: null,
+      isPinned: false,
+      references: [],
+      tags: [],
+      createdAtUtc: CREATED_AT,
+      updatedAtUtc: CREATED_AT,
+    });
+
+    expect(
+      draft,
+    ).not.toHaveProperty("devotionalId");
+    expect(
+      harness.create,
+    ).toHaveBeenCalledWith(draft);
+  });
+
+  it.each([
+    [
+      {
+        sourceTitleSnapshot: "   ",
+        promptSnapshot: "Prompt válido",
+      },
+      "PERSONAL_JOURNAL_DEVOTIONAL_SOURCE_TITLE_INVALID",
+    ],
+    [
+      {
+        sourceTitleSnapshot: "Título válido",
+        promptSnapshot: "   ",
+      },
+      "PERSONAL_JOURNAL_DEVOTIONAL_PROMPT_INVALID",
+    ],
+  ] as const)(
+    "rejects invalid DEVOTIONAL snapshot input %#",
+    async (input, errorCode) => {
+      const harness = createHarness();
+
+      await expect(
+        harness.service.createDevotionalDraft(
+          input as never,
+        ),
+      ).rejects.toThrow(errorCode);
+
+      expect(harness.now).not.toHaveBeenCalled();
+      expect(harness.create).not.toHaveBeenCalled();
+    },
+  );
+
   it("creates a draft with explicit date and preserves non-empty text byte-for-byte", async () => {
     const harness = createHarness();
     const reflectionText = "  linha 1\nlinha 2  ";

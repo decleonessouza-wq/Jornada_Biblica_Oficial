@@ -5,6 +5,7 @@ import type {
 import { formatBibleReference } from "../../domain/bible/bibleReferenceFormatter";
 import { parseBibleReference } from "../../domain/bible/bibleReferenceParser";
 import type { BibleVersionId } from "../../domain/bible/bibleVersion";
+import type { DevotionalId } from "../../domain/devotionals/devotional";
 import type {
   FavoriteTarget,
   FavoriteTargetKind,
@@ -109,6 +110,17 @@ export function encodeFavoriteTargetKey(
         target.studyId,
       ]);
 
+    case "devotional":
+      if (!isNonEmptyString(target.devotionalId)) {
+        return invalidFavoriteTargetKey();
+      }
+
+      return JSON.stringify([
+        FAVORITE_TARGET_KEY_VERSION,
+        "devotional",
+        target.devotionalId,
+      ]);
+
     case "hymn":
       return JSON.stringify([
         FAVORITE_TARGET_KEY_VERSION,
@@ -186,6 +198,22 @@ export function decodeFavoriteTargetKey(
       return {
         kind: "study",
         studyId: value[2] as StudyId,
+      };
+    }
+
+    case "devotional": {
+      if (
+        value.length !== 3 ||
+        value[0] !== FAVORITE_TARGET_KEY_VERSION ||
+        value[1] !== "devotional" ||
+        !isNonEmptyString(value[2])
+      ) {
+        return invalidFavoriteTargetKey();
+      }
+
+      return {
+        kind: "devotional",
+        devotionalId: value[2] as DevotionalId,
       };
     }
 

@@ -1019,11 +1019,7 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "Leia os Evangelhos para conhecer uma pessoa, não apenas colecionar frases. Pergunte em cada cena: quem",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Jesus é, como age, o que ama, o que confronta e o que revela sobre Deus.",
+            "text": "Leia os Evangelhos para conhecer uma pessoa, não apenas colecionar frases. Pergunte em cada cena: quem Jesus é, como age, o que ama, o que confronta e o que revela sobre Deus.",
             "type": "PARAGRAPH"
           },
           {
@@ -1040,7 +1036,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Uma oração honesta",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Jesus, corrige a imagem pequena que fiz de ti e ensina-me a conhecer-te como realmente és.",
@@ -1113,11 +1109,7 @@ const rawSectionsByStudy = [
         "title": "Para refletir",
         "blocks": [
           {
-            "text": "Eu costumo pensar em Jesus apenas a partir de seu nascimento terreno?•",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "O que muda quando compreendo que Ele já existia antes de Belém?",
+            "text": "Eu costumo pensar em Jesus apenas a partir de seu nascimento terreno?• O que muda quando compreendo que Ele já existia antes de Belém?",
             "type": "PARAGRAPH"
           },
           {
@@ -1154,7 +1146,7 @@ const rawSectionsByStudy = [
         "blocks": [
           {
             "text": "Oração",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Senhor Jesus, abre meus olhos para te conhecer como realmente és. Não permitas que eu te reduza a",
@@ -1224,7 +1216,7 @@ const rawSectionsByStudy = [
         "blocks": [
           {
             "text": "Próximo passo",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             type: "PARAGRAPH",
@@ -1565,7 +1557,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Cristo abre o caminho para a família",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Não somos filhos no mesmo sentido único de Jesus; somos recebidos por graça por meio do Filho.",
@@ -1691,7 +1683,7 @@ const rawSectionsByStudy = [
         "blocks": [
           {
             "text": "Oração",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Pai, obrigado porque enviaste teu Filho. Senhor Jesus, ajuda-me a conhecer-te não apenas por títulos,",
@@ -1757,7 +1749,7 @@ const rawSectionsByStudy = [
         "blocks": [
           {
             "text": "Próximo passo",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Estudo 03 - Filho do Homem: glória, serviço e sofrimento. Por que Jesus usava tanto esse título para",
@@ -2090,7 +2082,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Uma pergunta prática",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Meu desejo de crescer inclui o desejo real de servir?",
@@ -2216,7 +2208,7 @@ const rawSectionsByStudy = [
         "blocks": [
           {
             "text": "Oração",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Senhor Jesus, Filho do Homem, obrigado porque te aproximaste de nossa condição e escolheste o",
@@ -2282,7 +2274,7 @@ const rawSectionsByStudy = [
         "blocks": [
           {
             "text": "Próximo passo",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Estudo 04 - Messias: o Ungido que cumpre a esperança. Que tipo de Salvador Jesus veio ser?",
@@ -2478,11 +2470,7 @@ const rawSectionsByStudy = [
         "title": "Compreenda",
         "blocks": [
           {
-            "text": "“Cristo” não é sobrenome de Jesus. É título e corresponde à ideia de “Messias”, o Ungido. Quando dizemos",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Jesus Cristo, confessamos Jesus como o Ungido prometido.",
+            "text": "“Cristo” não é sobrenome de Jesus. É título e corresponde à ideia de “Messias”, o Ungido. Quando dizemos Jesus Cristo, confessamos Jesus como o Ungido prometido.",
             "type": "PARAGRAPH"
           },
           {
@@ -2611,7 +2599,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Uma pergunta direta",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Eu sigo o Messias ou tento fazer o Messias seguir o meu projeto?",
@@ -2741,7 +2729,7 @@ const rawSectionsByStudy = [
         "blocks": [
           {
             "text": "Oração",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Jesus, Messias prometido, obrigado porque cumpriste a esperança de Deus de maneira maior que",
@@ -2807,7 +2795,7 @@ const rawSectionsByStudy = [
         "blocks": [
           {
             "text": "Próximo passo",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Estudo 05 - O Cordeiro: o Rei que se entrega. Por que o Novo Testamento chama Jesus de Cordeiro",
@@ -2903,11 +2891,7 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "Depois, conecte com: Êxodo 12:1-13 • Isaías 53:4-7 • 1 Coríntios 5:7 • 1 Pedro 1:18-19 • Apocalipse",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "5:6-14",
+            "text": "Depois, conecte com: Êxodo 12:1-13 • Isaías 53:4-7 • 1 Coríntios 5:7 • 1 Pedro 1:18-19 • Apocalipse 5:6-14",
             "type": "PARAGRAPH"
           }
         ],
@@ -2977,11 +2961,7 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "Isaías 53 acrescenta a imagem do Servo que sofre, comparado a cordeiro levado ao matadouro. O Novo",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Testamento relaciona explicitamente esse texto a Jesus.",
+            "text": "Isaías 53 acrescenta a imagem do Servo que sofre, comparado a cordeiro levado ao matadouro. O Novo Testamento relaciona explicitamente esse texto a Jesus.",
             "type": "PARAGRAPH"
           },
           {
@@ -3144,7 +3124,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Liberdade tem direção",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Somos libertados do pecado para pertencer a Deus, não para viver sem Senhor.",
@@ -3225,11 +3205,7 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "•",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "O que a imagem do Cordeiro muda na minha visão de poder?",
+            "text": "• O que a imagem do Cordeiro muda na minha visão de poder?",
             "type": "PARAGRAPH"
           },
           {
@@ -3262,7 +3238,7 @@ const rawSectionsByStudy = [
         "blocks": [
           {
             "text": "Oração",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Jesus, Cordeiro de Deus, obrigado porque te entregaste por nós. Livra-me de tratar o pecado como",
@@ -3328,7 +3304,7 @@ const rawSectionsByStudy = [
         "blocks": [
           {
             "text": "Próximo passo",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Estudo 06 - Rei: um Reino que não se parece com os reinos deste mundo. Que tipo de Rei é Jesus?",
@@ -3428,11 +3404,7 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "Depois, conecte com: 2 Samuel 7:12-16 • Lucas 1:30-33 • Mateus 21:1-9 • Filipenses 2:9-11 • Apocalipse",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "19:11-16",
+            "text": "Depois, conecte com: 2 Samuel 7:12-16 • Lucas 1:30-33 • Mateus 21:1-9 • Filipenses 2:9-11 • Apocalipse 19:11-16",
             "type": "PARAGRAPH"
           }
         ],
@@ -3681,7 +3653,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Uma pergunta simples",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Quem decide o que é certo quando meus desejos entram em conflito com Jesus?",
@@ -3736,11 +3708,7 @@ const rawSectionsByStudy = [
         "title": "Pratique hoje",
         "blocks": [
           {
-            "text": "Escolha uma decisão concreta que precisa tomar. Antes de decidir apenas pelo que é conveniente, pergunte:",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "O que combina com o governo de Jesus?",
+            "text": "Escolha uma decisão concreta que precisa tomar. Antes de decidir apenas pelo que é conveniente, pergunte: O que combina com o governo de Jesus?",
             "type": "PARAGRAPH"
           }
         ],
@@ -3766,11 +3734,7 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "•",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Como posso exercer autoridade de modo mais parecido com Jesus?",
+            "text": "• Como posso exercer autoridade de modo mais parecido com Jesus?",
             "type": "PARAGRAPH"
           },
           {
@@ -3803,7 +3767,7 @@ const rawSectionsByStudy = [
         "blocks": [
           {
             "text": "Oração",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Rei Jesus, reconheço tua autoridade. Perdoa-me quando uso teu nome, mas continuo governando",
@@ -3873,7 +3837,7 @@ const rawSectionsByStudy = [
         "blocks": [
           {
             "text": "Próximo passo",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             type: "PARAGRAPH",
@@ -3890,11 +3854,7 @@ const rawSectionsByStudy = [
         "title": "Referências Bíblicas",
         "blocks": [
           {
-            "text": "João 18:33-38 • 2 Samuel 7:12-16 • Lucas 1:30-33 • Mateus 21:1-9 • Filipenses 2:9-11 • Apocalipse",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "19:11-16",
+            "text": "João 18:33-38 • 2 Samuel 7:12-16 • Lucas 1:30-33 • Mateus 21:1-9 • Filipenses 2:9-11 • Apocalipse 19:11-16",
             "type": "PARAGRAPH"
           },
           {
@@ -4105,11 +4065,7 @@ const rawSectionsByStudy = [
             text: "1 Coríntios 8:6 fala de um Deus, o Pai, e de um Senhor, Jesus Cristo, dentro da fé cristã no único Deus. A Igreja não está adicionando um ídolo ao lado de Deus.",
           },
           {
-            "text": "Obediência não compra salvação. Obedecemos porque fomos alcançados pela graça e recebemos um novo",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Senhor. A ordem é importante: graça, fé, nova lealdade e obediência.",
+            "text": "Obediência não compra salvação. Obedecemos porque fomos alcançados pela graça e recebemos um novo Senhor. A ordem é importante: graça, fé, nova lealdade e obediência.",
             "type": "PARAGRAPH"
           }
         ],
@@ -4210,7 +4166,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Pergunte a si mesmo",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "O que eu não consigo contrariar, mesmo quando Jesus me chama para outro caminho?",
@@ -4340,7 +4296,7 @@ const rawSectionsByStudy = [
         "blocks": [
           {
             "text": "Oração",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Senhor Jesus, reconheço tua autoridade sobre minha vida. Perdoa-me quando uso teu nome sem",
@@ -4410,7 +4366,7 @@ const rawSectionsByStudy = [
         "blocks": [
           {
             "text": "Próximo passo",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Estudo 08 - Sumo Sacerdote: aquele que nos representa diante de Deus. Por que isso muda a",
@@ -4666,11 +4622,7 @@ const rawSectionsByStudy = [
         "title": "Cuidado para não confundir",
         "blocks": [
           {
-            "text": "Não imagine o Pai como alguém que não quer nos receber e Jesus tentando convencê-lo. O Novo",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Testamento apresenta a salvação como propósito de Deus: o Pai envia o Filho, o Filho se entrega",
+            "text": "Não imagine o Pai como alguém que não quer nos receber e Jesus tentando convencê-lo. O Novo Testamento apresenta a salvação como propósito de Deus: o Pai envia o Filho, o Filho se entrega",
             "type": "PARAGRAPH"
           },
           {
@@ -4739,7 +4691,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Corra para a graça",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Não espere ficar “bom o suficiente” para voltar a Deus.",
@@ -4865,7 +4817,7 @@ const rawSectionsByStudy = [
         "blocks": [
           {
             "text": "Oração",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Jesus, meu Sumo Sacerdote, obrigado porque conheces minha fraqueza e não me desprezas.",
@@ -4931,7 +4883,7 @@ const rawSectionsByStudy = [
         "blocks": [
           {
             "text": "Próximo passo",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             type: "PARAGRAPH",
@@ -5252,7 +5204,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "O comum também pertence a Deus",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "A presença de Deus não começa apenas nos momentos extraordinários.",
@@ -5378,7 +5330,7 @@ const rawSectionsByStudy = [
         "blocks": [
           {
             "text": "Oração",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Senhor Jesus, obrigado porque te fizeste carne e habitaste entre nós. Obrigado porque conheces de",
@@ -5444,7 +5396,7 @@ const rawSectionsByStudy = [
         "blocks": [
           {
             "text": "Próximo passo",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Estudo 10 - Ministério: o Reino de Deus em palavras e ações. O que Jesus veio fazer durante seu",
@@ -5544,11 +5496,7 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "Depois, conecte com: Lucas 4:16-21 • Mateus 9:35-38 • Marcos 2:13-17 • Marcos 3:13-15 • Atos",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "10:37-38",
+            "text": "Depois, conecte com: Lucas 4:16-21 • Mateus 9:35-38 • Marcos 2:13-17 • Marcos 3:13-15 • Atos 10:37-38",
             "type": "PARAGRAPH"
           }
         ],
@@ -5785,7 +5733,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Pergunte a si mesmo",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "O que estou praticando daquilo que já aprendi sobre Jesus?",
@@ -5915,7 +5863,7 @@ const rawSectionsByStudy = [
         "blocks": [
           {
             "text": "Oração",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Jesus, ensina-me a seguir teu caminho, não apenas admirar teu ministério. Dá-me amor pela verdade,",
@@ -5981,7 +5929,7 @@ const rawSectionsByStudy = [
         "blocks": [
           {
             "text": "Próximo passo",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Estudo 11 - Milagres: sinais que apontam para quem Jesus é. Por que Jesus realizou milagres?",
@@ -6103,11 +6051,7 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "Mas os milagres não existem apenas para provocar espanto. Eles levantam uma pergunta mais importante:",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Quem é Jesus?",
+            "text": "Mas os milagres não existem apenas para provocar espanto. Eles levantam uma pergunta mais importante: Quem é Jesus?",
             "type": "PARAGRAPH"
           }
         ],
@@ -6330,7 +6274,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Ore com confiança e entrega",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Deus pode agir de maneira extraordinária e continua sendo Deus quando o caminho é diferente do",
@@ -6385,11 +6329,7 @@ const rawSectionsByStudy = [
         "title": "Pratique hoje",
         "blocks": [
           {
-            "text": "Ore hoje por uma necessidade concreta de alguém. Depois faça também algo que esteja ao seu alcance:",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "visitar, ajudar, acompanhar, preparar uma refeição ou simplesmente estar presente.",
+            "text": "Ore hoje por uma necessidade concreta de alguém. Depois faça também algo que esteja ao seu alcance: visitar, ajudar, acompanhar, preparar uma refeição ou simplesmente estar presente.",
             "type": "PARAGRAPH"
           }
         ],
@@ -6415,11 +6355,7 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "•",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "O que os milagres revelam sobre a identidade de Jesus?",
+            "text": "• O que os milagres revelam sobre a identidade de Jesus?",
             "type": "PARAGRAPH"
           },
           {
@@ -6452,7 +6388,7 @@ const rawSectionsByStudy = [
         "blocks": [
           {
             "text": "Oração",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Jesus, tu tens autoridade e compaixão. Apresento a ti minhas necessidades e as necessidades de",
@@ -6518,7 +6454,7 @@ const rawSectionsByStudy = [
         "blocks": [
           {
             "text": "Próximo passo",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Estudo 12 - Ensino: palavras que pedem uma vida diferente. Por que ouvir Jesus exige mais do que",
@@ -6859,7 +6795,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Escolha uma prática",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Qual ensino de Jesus você já conhece, mas ainda evita praticar?",
@@ -6981,7 +6917,7 @@ const rawSectionsByStudy = [
         "blocks": [
           {
             "text": "Oração",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Mestre Jesus, obrigado por tuas palavras. Livra-me de ouvir muito e praticar pouco. Mostra onde",
@@ -7047,7 +6983,7 @@ const rawSectionsByStudy = [
         "blocks": [
           {
             "text": "Próximo passo",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Estudo 13 - Cruz: o Rei entrega a própria vida. O que a cruz revela sobre Jesus e sobre a maneira",
@@ -7143,11 +7079,7 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "Depois, conecte com: Isaías 53:4-6 • João 10:17-18 • Romanos 5:6-11 • 2 Coríntios 5:18-21 • Colossenses",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "2:13-15",
+            "text": "Depois, conecte com: Isaías 53:4-6 • João 10:17-18 • Romanos 5:6-11 • 2 Coríntios 5:18-21 • Colossenses 2:13-15",
             "type": "PARAGRAPH"
           }
         ],
@@ -7368,7 +7300,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "O chão da cruz é nivelado",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Não há espaço para superioridade espiritual diante daquele que morreu por pecadores.",
@@ -7498,7 +7430,7 @@ const rawSectionsByStudy = [
         "blocks": [
           {
             "text": "Oração",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Jesus, obrigado por tua cruz. Reconheço meu pecado e também tua graça. Livra-me de minimizar",
@@ -7564,7 +7496,7 @@ const rawSectionsByStudy = [
         "blocks": [
           {
             "text": "Próximo passo",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Estudo 14 - Ressurreição: Jesus vive e a história muda. Por que sem a ressurreição o Evangelho perde",
@@ -7585,11 +7517,7 @@ const rawSectionsByStudy = [
         "title": "Referências Bíblicas",
         "blocks": [
           {
-            "text": "Marcos 15:21-39 • Isaías 53:4-6 • João 10:17-18 • Romanos 5:6-11 • 2 Coríntios 5:18-21 • Colossenses",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "2:13-15",
+            "text": "Marcos 15:21-39 • Isaías 53:4-6 • João 10:17-18 • Romanos 5:6-11 • 2 Coríntios 5:18-21 • Colossenses 2:13-15",
             "type": "PARAGRAPH"
           },
           {
@@ -7664,11 +7592,7 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "Depois, conecte com: João 20:19-29 • Atos 2:22-36 • Romanos 6:4-11 • 1 Coríntios 15:12-22 • 1 Pedro",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "1:3-5",
+            "text": "Depois, conecte com: João 20:19-29 • Atos 2:22-36 • Romanos 6:4-11 • 1 Coríntios 15:12-22 • 1 Pedro 1:3-5",
             "type": "PARAGRAPH"
           }
         ],
@@ -7909,7 +7833,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Esperança não cancela lágrimas",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Dá às lágrimas um futuro.",
@@ -8035,7 +7959,7 @@ const rawSectionsByStudy = [
         "blocks": [
           {
             "text": "Oração",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Jesus ressuscitado, obrigado porque a morte não te venceu. Sustenta minha fé quando eu tiver",
@@ -8101,7 +8025,7 @@ const rawSectionsByStudy = [
         "blocks": [
           {
             "text": "Próximo passo",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             type: "PARAGRAPH",
@@ -8197,11 +8121,7 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "Depois, conecte com: Lucas 24:50-53 • Efésios 1:19-23 • Filipenses 2:9-11 • Hebreus 10:11-13 • Salmo",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "110:1",
+            "text": "Depois, conecte com: Lucas 24:50-53 • Efésios 1:19-23 • Filipenses 2:9-11 • Hebreus 10:11-13 • Salmo 110:1",
             "type": "PARAGRAPH"
           }
         ],
@@ -8397,11 +8317,7 @@ const rawSectionsByStudy = [
         "title": "Aplique",
         "blocks": [
           {
-            "text": "Viva a missão onde você está. Nem todos irão para outro país, mas todos podem testemunhar no lugar onde",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Deus os colocou.",
+            "text": "Viva a missão onde você está. Nem todos irão para outro país, mas todos podem testemunhar no lugar onde Deus os colocou.",
             "type": "PARAGRAPH"
           },
           {
@@ -8430,7 +8346,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Esperança tem tarefa",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Até que Ele venha, testemunhamos, servimos e permanecemos fiéis.",
@@ -8552,7 +8468,7 @@ const rawSectionsByStudy = [
         "blocks": [
           {
             "text": "Oração",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Jesus exaltado, obrigado porque estás vivo e reinando. Livra-me de viver paralisado pelo medo ou",
@@ -8618,7 +8534,7 @@ const rawSectionsByStudy = [
         "blocks": [
           {
             "text": "Próximo passo",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Estudo 16 - Intercessão: Jesus continua agindo por nós. Que segurança isso oferece?",
@@ -8979,7 +8895,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "A graça nos ensina a voltar",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             type: "PARAGRAPH",
@@ -9113,7 +9029,7 @@ const rawSectionsByStudy = [
         "blocks": [
           {
             "text": "Oração",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Jesus, obrigado porque tua obra não terminou no túmulo. Tu estás vivo e não és indiferente à minha",
@@ -9219,7 +9135,7 @@ const rawSectionsByStudy = [
         "blocks": [
           {
             "text": "Próximo passo",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Estudo 17 - Retorno: o Rei voltará. O que a Bíblia realmente afirma sobre a volta de Jesus - e como",
@@ -9558,7 +9474,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Esperar é viver acordado",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Não é adivinhar datas; é permanecer fiel ao Rei enquanto Ele não chegou.",
@@ -9680,7 +9596,7 @@ const rawSectionsByStudy = [
         "blocks": [
           {
             "text": "Oração",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Senhor Jesus, eu creio que voltarás. Livra-me da ansiedade de querer saber aquilo que não revelaste e",
@@ -9750,7 +9666,7 @@ const rawSectionsByStudy = [
         "blocks": [
           {
             "text": "Próximo passo",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Estudo 18 - Reino: o governo de Cristo até que tudo seja restaurado. Como o Reino de Jesus está",
@@ -9807,11 +9723,7 @@ const rawSectionsByStudy = [
         "title": "Referências Bíblicas",
         "blocks": [
           {
-            "text": "1 Tessalonicenses 4:13-18 • João 14:1-3 • Atos 1:9-11 • Mateus 24:36-44 • Tito 2:11-14 • 1 Coríntios",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "15:51-58 • Apocalipse 22:20",
+            "text": "1 Tessalonicenses 4:13-18 • João 14:1-3 • Atos 1:9-11 • Mateus 24:36-44 • Tito 2:11-14 • 1 Coríntios 15:51-58 • Apocalipse 22:20",
             "type": "PARAGRAPH"
           }
         ],
@@ -9830,11 +9742,7 @@ const rawSectionsByStudy = [
         "title": "Texto Áureo",
         "blocks": [
           {
-            "text": "“Porque convém que reine até que haja posto a todos os inimigos debaixo de seus pés.” 1 Coríntios",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "15:25",
+            "text": "“Porque convém que reine até que haja posto a todos os inimigos debaixo de seus pés.” 1 Coríntios 15:25",
             "type": "PARAGRAPH"
           }
         ],
@@ -9870,11 +9778,7 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "Depois, conecte com: Marcos 1:14-15 • Mateus 6:9-10 • Lucas 17:20-21 • Colossenses 1:13-14 •",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Apocalipse 11:15 • Apocalipse 21:1-5",
+            "text": "Depois, conecte com: Marcos 1:14-15 • Mateus 6:9-10 • Lucas 17:20-21 • Colossenses 1:13-14 • Apocalipse 11:15 • Apocalipse 21:1-5",
             "type": "PARAGRAPH"
           }
         ],
@@ -10127,7 +10031,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Servimos sem desespero",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "O Reino não depende de nossa capacidade de terminar a história. O Rei terminará o que começou.",
@@ -10249,7 +10153,7 @@ const rawSectionsByStudy = [
         "blocks": [
           {
             "text": "Oração",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Rei Jesus, reconheço teu governo. Ensina-me a viver sob tua autoridade hoje sem fingir que o mundo",
@@ -10319,7 +10223,7 @@ const rawSectionsByStudy = [
         "blocks": [
           {
             "text": "Próximo passo",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Estudo 19 - Juízo e restauração: o Rei colocará todas as coisas em ordem. Como Jesus exercerá juízo",
@@ -10376,11 +10280,7 @@ const rawSectionsByStudy = [
         "title": "Referências Bíblicas",
         "blocks": [
           {
-            "text": "1 Coríntios 15:20-28 • Marcos 1:14-15 • Mateus 6:9-10 • Lucas 17:20-21 • Colossenses 1:13-14 •",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Apocalipse 11:15 • Apocalipse 21:1-5",
+            "text": "1 Coríntios 15:20-28 • Marcos 1:14-15 • Mateus 6:9-10 • Lucas 17:20-21 • Colossenses 1:13-14 • Apocalipse 11:15 • Apocalipse 21:1-5",
             "type": "PARAGRAPH"
           }
         ],
@@ -10435,11 +10335,7 @@ const rawSectionsByStudy = [
             "type": "PARAGRAPH"
           },
           {
-            "text": "Depois, conecte com: Mateus 25:31-46 • Atos 17:30-31 • 2 Coríntios 5:10 • Apocalipse 20:11-15 •",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "Apocalipse 21:1-5 • Apocalipse 22:1-5",
+            "text": "Depois, conecte com: Mateus 25:31-46 • Atos 17:30-31 • 2 Coríntios 5:10 • Apocalipse 20:11-15 • Apocalipse 21:1-5 • Apocalipse 22:1-5",
             "type": "PARAGRAPH"
           }
         ],
@@ -10704,7 +10600,7 @@ const rawSectionsByStudy = [
           },
           {
             "text": "Jesus coloca a história em ordem",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "O fim não pertence à morte, à injustiça ou ao pecado. Pertence ao Rei.",
@@ -10838,7 +10734,7 @@ const rawSectionsByStudy = [
         "blocks": [
           {
             "text": "Oração",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "Senhor Jesus, ao longo desta Jornada eu te vi como Verbo, Filho de Deus, Filho do Homem, Messias,",
@@ -10956,7 +10852,7 @@ const rawSectionsByStudy = [
         "blocks": [
           {
             "text": "Próximo passo",
-            "type": "PARAGRAPH"
+            "type": "SUBHEADING"
           },
           {
             "text": "VOCÊ CONCLUIU A TRILHA 3 - CONHECENDO JESUS CRISTO | 19/19.",
@@ -10981,11 +10877,7 @@ const rawSectionsByStudy = [
         "title": "Referências Bíblicas",
         "blocks": [
           {
-            "text": "João 5:22-29 • Mateus 25:31-46 • Atos 17:30-31 • 2 Coríntios 5:10 • Apocalipse 20:11-15 • Apocalipse",
-            "type": "PARAGRAPH"
-          },
-          {
-            "text": "21:1-5 • Apocalipse 22:1-5",
+            "text": "João 5:22-29 • Mateus 25:31-46 • Atos 17:30-31 • 2 Coríntios 5:10 • Apocalipse 20:11-15 • Apocalipse 21:1-5 • Apocalipse 22:1-5",
             "type": "PARAGRAPH"
           }
         ],

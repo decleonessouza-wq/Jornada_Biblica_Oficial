@@ -8,6 +8,7 @@ import {
 import type {
   BibleReference,
 } from "../domain/bible/bibleReference";
+import DevotionalDetailScreen from "../screens/DevotionalDetailScreen";
 import StudiesScreen from "../screens/StudiesScreen";
 import StudyDetailScreen from "../screens/StudyDetailScreen";
 import StudyTrackScreen from "../screens/StudyTrackScreen";
@@ -25,6 +26,7 @@ export const STUDIES_ROUTE_NAMES = Object.freeze({
   home: "StudiesHome",
   track: "StudyTrack",
   detail: "StudyDetail",
+  devotionalDetail: "DevotionalDetail",
 } as const);
 
 export const StudiesStack =
@@ -67,11 +69,28 @@ export default function StudiesNavigator({
     [navigation],
   );
 
-  const handleOpenJournalContext = useCallback(
+  const handleOpenStudyJournalContext = useCallback(
     (
       sourceContext: Extract<
         JournalEntryEditorSourceContext,
         { sourceType: "STUDY" }
+      >,
+    ) => {
+      navigation.navigate("Journal", {
+        screen: "JournalEntryEditor",
+        params: {
+          sourceContext,
+        },
+      });
+    },
+    [navigation],
+  );
+
+  const handleOpenDevotionalJournalContext = useCallback(
+    (
+      sourceContext: Extract<
+        JournalEntryEditorSourceContext,
+        { sourceType: "DEVOTIONAL" }
       >,
     ) => {
       navigation.navigate("Journal", {
@@ -121,7 +140,26 @@ export default function StudiesNavigator({
               handleOpenBibleReference
             }
             onOpenJournalContext={
-              handleOpenJournalContext
+              handleOpenStudyJournalContext
+            }
+            onRequestFavorites={
+              handleRequestFavorites
+            }
+          />
+        )}
+      </StudiesStack.Screen>
+      <StudiesStack.Screen
+        name="DevotionalDetail"
+        options={{ headerShown: false, title: "Devocional" }}
+      >
+        {(screenProps) => (
+          <DevotionalDetailScreen
+            {...screenProps}
+            onOpenBibleReference={
+              handleOpenBibleReference
+            }
+            onOpenJournalContext={
+              handleOpenDevotionalJournalContext
             }
             onRequestFavorites={
               handleRequestFavorites

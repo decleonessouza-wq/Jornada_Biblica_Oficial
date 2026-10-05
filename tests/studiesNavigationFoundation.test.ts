@@ -11,7 +11,7 @@ const detailSource = read("src/screens/StudyDetailScreen.tsx");
 const favoritesSource = read("src/screens/FavoritesScreen.tsx");
 
 describe("Studies navigation foundation", () => {
-  it("defines exactly the three internal Studies routes with controlled return metadata", () => {
+  it("defines exactly the four internal Studies routes with controlled return metadata", () => {
     expect(typesSource).toContain("export type StudiesStackParamList = {");
     expect(typesSource).toContain("StudiesHome: undefined;");
     expect(typesSource).toContain(
@@ -62,7 +62,7 @@ describe("Studies navigation foundation", () => {
     expect(rootBlock).not.toContain("Studies");
   });
 
-  it("registers exactly the three Studies screens and their exact components", () => {
+  it("registers exactly the four Studies screens and their exact components", () => {
     expect(navigatorSource).toContain(
       'import StudiesScreen from "../screens/StudiesScreen";',
     );
@@ -81,7 +81,7 @@ describe("Studies navigation foundation", () => {
 
     const registrations =
       navigatorSource.match(/<StudiesStack\.Screen\b/g) ?? [];
-    expect(registrations).toHaveLength(3);
+    expect(registrations).toHaveLength(4);
 
     expect(navigatorSource).toMatch(
       /component=\{StudiesScreen\}[\s\S]*?name="StudiesHome"/,
@@ -146,5 +146,27 @@ describe("Studies navigation foundation", () => {
     expect(navigatorSource).not.toContain("QuickActionSheet");
     expect(navigatorSource).not.toContain("track-05-study-01");
     expect(navigatorSource).not.toMatch(/name="Studies[^H]/);
+  });
+});
+describe("A14-A7 Devotional navigation contract", () => {
+  it("keeps DevotionalDetail separate from StudyDetail with minimal route params", () => {
+    expect(typesSource).toContain(
+      "DevotionalDetail: Readonly<{",
+    );
+    expect(typesSource).toContain(
+      "devotionalId: DevotionalId;",
+    );
+    expect(navigatorSource).toContain(
+      'import DevotionalDetailScreen from "../screens/DevotionalDetailScreen";',
+    );
+    expect(navigatorSource).toContain(
+      'devotionalDetail: "DevotionalDetail"',
+    );
+    expect(navigatorSource).toMatch(
+      /name="DevotionalDetail"[\s\S]*?<DevotionalDetailScreen[\s\S]*?handleOpenDevotionalJournalContext/,
+    );
+    expect(navigatorSource).not.toMatch(
+      /name="DevotionalDetail"[\s\S]{0,250}<StudyDetailScreen/,
+    );
   });
 });

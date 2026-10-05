@@ -75,7 +75,7 @@ function createJournalServiceHarness() {
 }
 
 describe("P17-P10-A1 Study journal integration foundation", () => {
-  it("resolves journal context for all 76 released studies from JOURNAL_PROMPT only", () => {
+  it("resolves journal context for all 84 released studies from JOURNAL_PROMPT only", () => {
     const before = JSON.stringify(
       studyRuntimeCatalog.packages,
     );
@@ -90,10 +90,10 @@ describe("P17-P10-A1 Study journal integration foundation", () => {
       }),
     );
 
-    expect(results).toHaveLength(76);
+    expect(results).toHaveLength(84);
     expect(
       results.filter(({ result }) => result.ok),
-    ).toHaveLength(76);
+    ).toHaveLength(84);
 
     for (const { content, result } of results) {
       expect(result.ok).toBe(true);
@@ -165,7 +165,7 @@ describe("P17-P10-A1 Study journal integration foundation", () => {
     ).toBe("Fé • vida segunda parte");
   });
 
-  it("preserves the explicit Track 5 journal text without inventing a question", () => {
+  it("preserves the explicit approved Track 5 V3 journal prompt", () => {
     const result =
       resolveRuntimeStudyJournalContext(
         "track-05-study-01",
@@ -179,13 +179,9 @@ describe("P17-P10-A1 Study journal integration foundation", () => {
       );
     }
 
-    expect(result.promptSnapshot).toContain(
-      "A salvação não termina no momento da conversão.",
+    expect(result.promptSnapshot).toBe(
+      "O que mudou — ou ainda precisa mudar — na sua vida desde que você creu na obra que Cristo realizou por você?",
     );
-    expect(result.promptSnapshot).toContain(
-      "o cristão depende diariamente da graça e da ação do Espírito Santo.",
-    );
-    expect(result.promptSnapshot).not.toContain("?");
   });
 
   it("fails closed for a missing runtime study", () => {

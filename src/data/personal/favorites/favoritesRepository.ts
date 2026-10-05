@@ -2,6 +2,7 @@ import type {
   FavoriteId,
   FavoriteTargetKind,
 } from "../../../domain/favorites/favorite";
+import type { DevotionalId } from "../../../domain/devotionals/devotional";
 import type {
   PersonalUtcTimestamp,
 } from "../../../domain/personal/personalTime";
@@ -17,6 +18,11 @@ export type FavoritePersistenceRecord = Readonly<{
 export type FavoriteStudyOriginPersistenceRecord = Readonly<{
   favoriteId: FavoriteId;
   studyId: StudyId;
+}>;
+
+export type FavoriteDevotionalOriginPersistenceRecord = Readonly<{
+  favoriteId: FavoriteId;
+  devotionalId: DevotionalId;
 }>;
 
 export interface FavoritesRepository {
@@ -43,4 +49,12 @@ export interface FavoritesRepository {
   listStudyOrigins(
     favoriteId: FavoriteId,
   ): Promise<readonly FavoriteStudyOriginPersistenceRecord[]>;
+
+  addDevotionalOrigin(
+    record: FavoriteDevotionalOriginPersistenceRecord,
+  ): Promise<void>;
+
+  listDevotionalOrigins(
+    favoriteId: FavoriteId,
+  ): Promise<readonly FavoriteDevotionalOriginPersistenceRecord[]>;
 }

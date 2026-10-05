@@ -180,6 +180,9 @@ describe("P17-P2-A29-A56 canonical Track 01 package", () => {
       ),
     );
 
+    let structuredSectionCount = 0;
+    let paragraphFallbackCount = 0;
+
     for (const candidate of track01DraftStudies) {
       const studyId = candidate.payload.study.id;
       const canonicalSections = track01DraftBatchPackage.sections.filter(
@@ -195,14 +198,22 @@ describe("P17-P2-A29-A56 canonical Track 01 package", () => {
         expect(canonicalSection?.title).toBe(sourceSection.sourceHeading);
         expect(canonicalSection?.optional).toBe(false);
         expect(canonicalSection?.collapsible).toBe(false);
-        expect(canonicalSection?.blocks).toEqual([
-          {
-            type: "PARAGRAPH",
-            text: sourceSection.contentText,
-          },
-        ]);
+        if ("blocks" in sourceSection && Array.isArray(sourceSection.blocks)) {
+          expect(canonicalSection?.blocks).toEqual(sourceSection.blocks);
+          structuredSectionCount++;
+        } else {
+          expect(canonicalSection?.blocks).toEqual([
+            {
+              type: "PARAGRAPH",
+              text: sourceSection.contentText,
+            },
+          ]);
+          paragraphFallbackCount++;
+        }
       });
     }
+    expect(structuredSectionCount).toBeGreaterThan(0);
+    expect(paragraphFallbackCount).toBeGreaterThan(0);
   });
 
   it("keeps an explicit DRAFT candidate gated while the released runtime exposes Track 01", () => {

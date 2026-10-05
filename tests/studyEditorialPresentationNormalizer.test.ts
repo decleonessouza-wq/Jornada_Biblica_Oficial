@@ -107,8 +107,8 @@ describe("studyEditorialPresentationNormalizer", () => {
     ]);
   });
 
-  it("normalizes the released 76-study presentation while quarantining Track 6 and preserving V8 link offsets", () => {
-    expect(studyRuntimeCatalog.studies).toHaveLength(76);
+  it("normalizes the released 84-study presentation while quarantining Track 6 and preserving V8 link offsets", () => {
+    expect(studyRuntimeCatalog.studies).toHaveLength(84);
 
     let objectiveListStudyCount = 0;
     let changedStudyCount = 0;

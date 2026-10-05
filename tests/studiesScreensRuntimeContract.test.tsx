@@ -50,6 +50,7 @@ jest.mock("../src/navigation/AppShellChromeContext", () => ({
   }),
 }));
 
+import { devotionalRuntimeCatalog } from "../src/devotionals/runtime/devotionalRuntimeCatalog";
 import StudiesScreen, {
   shouldExposeStudyTrackPresentation,
 } from "../src/screens/StudiesScreen";
@@ -324,7 +325,22 @@ describe("Studies visual/runtime screen contract", () => {
 
     for (const track of studyTrackPresentationCatalog) {
       const runtimeTrack = getRuntimeTrack(track.trackId);
-      const runtimeCount = countRuntimeStudies(track.trackId);
+      const runtimeStudyCount = countRuntimeStudies(track.trackId);
+      const runtimeCount =
+        runtimeStudyCount +
+        (track.trackId === "track-05"
+          ? devotionalRuntimeCatalog.devotionals.filter(
+              ({ content }) => content.placement === "TRACK_05",
+            ).length
+          : 0);
+      const countNoun =
+        track.trackId === "track-05"
+          ? runtimeCount === 1
+            ? "conteúdo"
+            : "conteúdos"
+          : runtimeCount === 1
+            ? "estudo"
+            : "estudos";
       const card = view.getByTestId(
         `study-track-${track.trackId}`,
       );
@@ -348,9 +364,7 @@ describe("Studies visual/runtime screen contract", () => {
       ).toBeTruthy();
       expect(
         cardQueries.getByText(
-          `▣ ${runtimeCount} ${
-            runtimeCount === 1 ? "estudo" : "estudos"
-          }`,
+          `▣ ${runtimeCount} ${countNoun}`,
         ),
       ).toBeTruthy();
       expect(
@@ -361,11 +375,16 @@ describe("Studies visual/runtime screen contract", () => {
     }
 
     fireEvent.press(view.getByTestId("study-track-track-05"));
+    expect(view.getByTestId("track5-info-sheet")).toBeTruthy();
+    expect(navigation.navigate).not.toHaveBeenCalledWith(
+      "StudyTrack",
+      { trackId: "track-05" },
+    );
+
+    fireEvent.press(view.getByTestId("track5-info-continue"));
     expect(navigation.navigate).toHaveBeenCalledWith(
       "StudyTrack",
-      {
-        trackId: "track-05",
-      },
+      { trackId: "track-05" },
     );
   });
 
@@ -523,13 +542,43 @@ describe("Studies visual/runtime screen contract", () => {
     );
   });
 
-  it("preserves the current real published Track 5 study while the zero-state stays dormant", () => {
+  it("renders all nine published Track 5 studies with their own authors while the zero-state stays dormant", () => {
     const runtimeCount = countRuntimeStudies("track-05");
-    expect(runtimeCount).toBe(1);
-
+    expect(runtimeCount).toBe(9);
+    const entries = studyRuntimeCatalog.studies.filter(
+      (entry) => entry.content.trackId === "track-05",
+    );
+    const expectedAuthors = [
+      "Michael Batista da Silva",
+      "Neterson Oliveira de Souza",
+      "Adriel Jackson Batista de Oliveira",
+      "Eliete Alves",
+      "Hélio Nascimento Sousa",
+      "Nelson Ramos de Oliveira",
+      "Adriel Jackson Batista de Oliveira",
+      "Sidinei Rodrigues de Souza",
+      "Adriel Jackson Batista de Oliveira",
+    ];
+    const expectedAuthorMeta = [
+      "Presbítero - Rondonópolis/MT",
+      "Presbítero/Dirigente de congregação - Pedra Preta/MT",
+      "Evangelista - Rondonópolis/MT",
+      "Líder do ministério de mulheres - Rondonópolis/MT",
+      "Presbítero · Professor de Escola Bíblica - Rondonópolis/MT",
+      "Pastor - Rondonópolis/MT",
+      "Evangelista - Rondonópolis/MT",
+      "Pastor - Rondonópolis/MT",
+      "Evangelista - Rondonópolis/MT",
+    ];
+    expect(entries.map((entry) => entry.content.id)).toEqual(
+      Array.from({ length: 9 }, (_, index) =>
+        `track-05-study-${String(index + 1).padStart(2, "0")}`,
+      ),
+    );
+    const navigate = jest.fn();
     const view = render(
       <StudyTrackScreen
-        navigation={{ navigate: jest.fn() } as never}
+        navigation={{ navigate } as never}
         route={{
           key: "study-track-five-published-test",
           name: "StudyTrack",
@@ -540,17 +589,27 @@ describe("Studies visual/runtime screen contract", () => {
 
     expect(
       view.getByTestId("study-track-runtime-count").props.children,
-    ).toEqual([1, " ", "estudo"]);
-    expect(
-      view.queryByTestId("study-track-empty-state"),
-    ).toBeNull();
-    expect(
-      studyRuntimeCatalog.studies.some(
-        (entry) =>
-          entry.content.id === "track-05-study-01" &&
-          entry.content.trackId === "track-05",
-      ),
-    ).toBe(true);
+    ).toEqual([12, " ", "conteúdos"]);
+    expect(view.queryByTestId("study-track-empty-state")).toBeNull();
+    const devotionals = devotionalRuntimeCatalog.devotionals.filter(
+      (entry) => entry.content.placement === "TRACK_05",
+    );
+    expect(devotionals).toHaveLength(3);
+    for (const entry of devotionals) {
+      expect(view.getByTestId(`devotional-${entry.content.id}`)).toBeTruthy();
+    }
+    entries.forEach((entry, index) => {
+      const card = view.getByTestId(`study-${entry.content.id}`);
+      expect(within(card).getByText(entry.content.title)).toBeTruthy();
+      expect(within(view.getByTestId(`study-author-${entry.content.id}`))
+        .getByText(`Por ${expectedAuthors[index]}`)).toBeTruthy();
+      expect(within(view.getByTestId(`study-author-${entry.content.id}`))
+        .getByText(expectedAuthorMeta[index])).toBeTruthy();
+      fireEvent.press(card);
+      expect(navigate).toHaveBeenNthCalledWith(index + 1, "StudyDetail", {
+        studyId: entry.content.id,
+      });
+    });
   });
 
   it("renders Track 6 from presentation metadata with only runtime-safe studies", () => {
@@ -678,6 +737,32 @@ describe("Studies visual/runtime screen contract", () => {
     expect(
       view.getByTestId(`study-section-${sections[0].id}`),
     ).toBeTruthy();
+  });
+  it("never renders internal Track 05 EDITORIAL_NOTE content in the public reader", () => {
+    const studyId = "track-05-study-01";
+    const sections = getRuntimeStudySections(studyId);
+
+    expect(sections.length).toBeGreaterThan(0);
+    expect(
+      sections.some(
+        (section) => section.type === "EDITORIAL_NOTE",
+      ),
+    ).toBe(false);
+
+    const view = render(
+      <StudyDetailScreen
+        navigation={{ navigate: jest.fn() } as never}
+        route={{
+          key: "study-detail-track05-editorial-note-guard",
+          name: "StudyDetail",
+          params: { studyId },
+        }}
+      />,
+    );
+
+    expect(view.queryByText("Nota editorial")).toBeNull();
+    expect(view.queryByText(/OBSERVEDDIRECT/)).toBeNull();
+    expect(view.queryByText(/Status: DRAFT/)).toBeNull();
   });
   it("opens StudyProgress on focus and expands the saved resume section", async () => {
     const studyId = "track-01-study-01";
@@ -1706,7 +1791,7 @@ describe("Studies visual/runtime screen contract", () => {
     expect(trackSource).toContain('testID="study-track-scroll-header"');
     expect(trackSource).toContain("studyId: entry.content.id");
     expect(trackSource).toContain(
-      "getPersonalPlatformHub().studyProgressService",
+      "personalPlatformHub.studyProgressService",
     );
     expect(trackSource).toContain(
       "getStudyProgressLabel(progress)",
@@ -1776,7 +1861,7 @@ describe("Studies visual/runtime screen contract", () => {
     expect(combined).not.toMatch(/require\s*\([^)]*studies\/content/i);
   });
 
-  it("derives every library count from the runtime catalog without fixed totals", () => {
+  it("derives every library count from runtime Studies plus published Track 5 Devotionals", () => {
     const { navigation } = createNavigationMock();
     const view = render(
       <StudiesScreen
@@ -1790,25 +1875,41 @@ describe("Studies visual/runtime screen contract", () => {
     const studiesSource = read("src/screens/StudiesScreen.tsx");
 
     for (const track of studyTrackPresentationCatalog) {
-      const runtimeCount = countRuntimeStudies(track.trackId);
+      const studyCount = countRuntimeStudies(track.trackId);
+      const runtimeCount =
+        studyCount +
+        (track.trackId === "track-05"
+          ? devotionalRuntimeCatalog.devotionals.filter(
+              ({ content }) => content.placement === "TRACK_05",
+            ).length
+          : 0);
+      const noun =
+        track.trackId === "track-05"
+          ? runtimeCount === 1
+            ? "conteúdo"
+            : "conteúdos"
+          : runtimeCount === 1
+            ? "estudo"
+            : "estudos";
       const card = view.getByTestId(
         `study-track-${track.trackId}`,
       );
 
       expect(
         within(card).getByText(
-          `▣ ${runtimeCount} ${
-            runtimeCount === 1 ? "estudo" : "estudos"
-          }`,
+          `▣ ${runtimeCount} ${noun}`,
         ),
       ).toBeTruthy();
     }
 
+    expect(studiesSource).toContain(
+      "devotionalRuntimeCatalog.devotionals.filter(",
+    );
     expect(studiesSource).not.toMatch(/studyCount\s*:\s*\d+/);
+    expect(studiesSource).not.toMatch(/\b4\s+conteúdos\b/i);
     expect(studiesSource).not.toMatch(/\b18 estudos\b/i);
     expect(studiesSource).not.toMatch(/\b19 estudos\b/i);
   });
-
 
   it("supports long titles and Dynamic Type without essential hero/card truncation", () => {
     const studiesSource = read("src/screens/StudiesScreen.tsx");
@@ -1947,6 +2048,63 @@ describe("Studies visual/runtime screen contract", () => {
     );
     expect(detailSource).toContain(
       "accessibilityState={{ expanded }}",
+    );
+  });
+  it("uses structured author identity only for Track 5 cards and preserves summary fallback", () => {
+    const trackSource = read("src/screens/StudyTrackScreen.tsx");
+
+    expect(trackSource).toContain(
+      'entry.content.trackId === "track-05"',
+    );
+    expect(trackSource).toContain("entry.publicAuthorProfile");
+    expect(trackSource).toContain("Por {authorProfile.displayName}");
+    expect(trackSource).toContain("styles.cardAuthorMeta");
+    expect(trackSource).toContain('.join(" - ")');
+    expect(trackSource).toContain("authorProfile.formation");
+    expect(trackSource).toContain(
+      'testID={`study-author-${entry.content.id}`}',
+    );
+    expect(trackSource).toContain("{descriptionText}");
+  });
+});
+describe("A14-A7 Devotional Track 5 runtime integration", () => {
+  it("keeps Study and Devotional domains separate while presenting both in Track 5", () => {
+    const trackSource = read("src/screens/StudyTrackScreen.tsx");
+
+    expect(trackSource).toContain(
+      'devotionalRuntimeCatalog',
+    );
+    expect(trackSource).toContain(
+      'trackId === "track-05"',
+    );
+    expect(trackSource).toContain(
+      "personalPlatformHub.devotionalProgressService",
+    );
+    expect(trackSource).toContain(
+      'navigation.navigate(',
+    );
+    expect(trackSource).toContain(
+      '"DevotionalDetail"',
+    );
+    expect(trackSource).toContain(
+      "devotionalId:",
+    );
+    expect(trackSource).toContain(
+      "progressByDevotionalId",
+    );
+    expect(trackSource).not.toMatch(
+      /studyId:\s*entry\.content\.id[\s\S]{0,80}devotional/i,
+    );
+  });
+  it("visually distinguishes Track 5 devotionals and exposes complete approved author metadata", () => {
+    const trackSource = read("src/screens/StudyTrackScreen.tsx");
+
+    expect(trackSource).toContain("styles.devotionalCard");
+    expect(trackSource).toContain("styles.devotionalNumberBadge");
+    expect(trackSource).toContain("authorProfile.formation");
+    expect(trackSource).toContain("styles.cardAuthorFormation");
+    expect(trackSource).toContain(
+      'testID={`devotional-author-${entry.content.id}`}',
     );
   });
 });

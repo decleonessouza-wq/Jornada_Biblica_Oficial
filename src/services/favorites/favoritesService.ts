@@ -3,6 +3,7 @@ import type {
   FavoriteOriginContext,
   FavoriteTarget,
 } from "../../domain/favorites/favorite";
+import type { DevotionalId } from "../../domain/devotionals/devotional";
 import type { PersonalCanonicalIdFactory } from "../../domain/personal/personalIdentity";
 import type {
   PersonalClock,
@@ -77,9 +78,17 @@ export class FavoritesService {
       );
     }
 
-    await this.repository.addStudyOrigin({
+    if (origin.kind === "study") {
+      await this.repository.addStudyOrigin({
+        favoriteId: record.id,
+        studyId: origin.studyId,
+      });
+      return;
+    }
+
+    await this.repository.addDevotionalOrigin({
       favoriteId: record.id,
-      studyId: origin.studyId,
+      devotionalId: origin.devotionalId,
     });
   }
 
@@ -163,5 +172,28 @@ export class FavoritesService {
     );
 
     return origins.map((origin) => origin.studyId);
+  }
+
+  async listDevotionalOrigins(
+    target: FavoriteTarget,
+  ): Promise<readonly DevotionalId[]> {
+    const targetKey = encodeFavoriteTargetKey(target);
+    const record = await this.repository.findByTarget(
+      target.kind,
+      targetKey,
+    );
+
+    if (!record) {
+      return [];
+    }
+
+    const origins =
+      await this.repository.listDevotionalOrigins(
+        record.id,
+      );
+
+    return origins.map(
+      (origin) => origin.devotionalId,
+    );
   }
 }

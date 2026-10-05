@@ -4,6 +4,7 @@ import type {
   FavoriteId,
   FavoriteTargetKind,
 } from "../src/domain/favorites/favorite";
+import type { DevotionalId } from "../src/domain/devotionals/devotional";
 import type {
   PersonalUtcTimestamp,
 } from "../src/domain/personal/personalTime";
@@ -280,4 +281,61 @@ describe("SQLiteFavoritesRepository", () => {
       "content_body",
     );
   });
+  it("persists and lists devotional origins idempotently in the dedicated relation table", async () => {
+    const harness = createHarness();
+    const favoriteId =
+      "favorite-devotional-origin" as FavoriteId;
+    const devotionalId =
+      "track-05-devotional-repository-test" as DevotionalId;
+
+    harness.runAsync.mockResolvedValue(undefined);
+    harness.getAllAsync.mockResolvedValue([
+      { devotional_id: devotionalId },
+    ]);
+
+    await harness.repository.addDevotionalOrigin({
+      favoriteId,
+      devotionalId,
+    });
+
+    const insertSql = String(
+      harness.runAsync.mock.calls[0]?.[0],
+    );
+
+    expect(insertSql).toContain(
+      "INSERT INTO personal_favorite_devotional_origins",
+    );
+    expect(insertSql).toContain(
+      "ON CONFLICT(favorite_id, devotional_id) DO NOTHING",
+    );
+    expect(
+      harness.runAsync.mock.calls[0]?.slice(1),
+    ).toEqual([
+      favoriteId,
+      devotionalId,
+    ]);
+
+    await expect(
+      harness.repository.listDevotionalOrigins(
+        favoriteId,
+      ),
+    ).resolves.toEqual([
+      {
+        favoriteId,
+        devotionalId,
+      },
+    ]);
+
+    const listSql = String(
+      harness.getAllAsync.mock.calls[0]?.[0],
+    );
+
+    expect(listSql).toContain(
+      "FROM personal_favorite_devotional_origins",
+    );
+    expect(listSql).toContain(
+      "ORDER BY devotional_id ASC",
+    );
+  });
+
 });

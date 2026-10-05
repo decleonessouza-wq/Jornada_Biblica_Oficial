@@ -220,6 +220,41 @@ describe("journal navigation contract", () => {
     );
   });
 
+  it("accepts explicit DEVOTIONAL source context while keeping the source id navigation-only", () => {
+    expect(navigationTypes).toContain(
+      'import type { DevotionalId } from "../domain/devotionals/devotional";',
+    );
+    expect(navigationTypes).toContain(
+      'sourceType: "DEVOTIONAL";',
+    );
+    expect(navigationTypes).toContain(
+      "devotionalId: DevotionalId;",
+    );
+    expect(navigationTypes).toContain(
+      "sourceTitleSnapshot: string;",
+    );
+    expect(navigationTypes).toContain(
+      "promptSnapshot: string;",
+    );
+
+    const journalService = readSource(
+      "src/services/journal/journalService.ts",
+    );
+
+    expect(journalService).toContain(
+      "async createDevotionalDraft(",
+    );
+    expect(journalService).toContain(
+      'sourceType: "DEVOTIONAL"',
+    );
+    expect(journalService).not.toMatch(
+      /devotionalId/,
+    );
+    expect(journalService).not.toMatch(
+      /progressStore|completedAtUtc|readingProgress/,
+    );
+  });
+
   it("routes a canonical Bible reference from BibleTab to the Journal editor", () => {
     expect(bibleNavigator).toContain(
       'MainTabScreenProps<"BibleTab">',

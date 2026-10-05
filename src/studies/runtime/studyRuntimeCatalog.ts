@@ -1,6 +1,9 @@
 import type { StudyContentPackage } from "../content/studyContentPackage";
 import { validateStudyContentPackage } from "../content/studyContentValidator";
-import { studyReleaseManifest } from "../release/studyReleaseManifest";
+import {
+  studyReleaseManifest,
+  type StudyPublicAuthorProfile,
+} from "../release/studyReleaseManifest";
 
 type RuntimeStudyContentPackage = StudyContentPackage;
 type RuntimeStudyTrack = RuntimeStudyContentPackage["tracks"][number];
@@ -13,11 +16,14 @@ export interface StudyRuntimeCandidate {
   readonly contentPackage: RuntimeStudyContentPackage;
   readonly editorialStatus: StudyRuntimeEditorialStatus;
   readonly publicAuthorDisplayName: string | null;
+  readonly publicAuthorProfile?: StudyPublicAuthorProfile | null;
+  readonly publicAuthorProfilesByStudyId?: Readonly<Record<string, StudyPublicAuthorProfile>>;
 }
 
 export interface RuntimeStudyEntry {
   readonly content: RuntimeStudy;
   readonly publicAuthorDisplayName: string | null;
+  readonly publicAuthorProfile?: StudyPublicAuthorProfile | null;
 }
 
 export interface StudyRuntimeCatalog {
@@ -37,6 +43,27 @@ const isPackageShape = (
   Array.isArray(value.studies) &&
   Array.isArray(value.sections) &&
   Array.isArray(value.references);
+
+const normalizePublicAuthorProfile = (
+  value: unknown,
+): StudyPublicAuthorProfile | null => {
+  if (
+    !isRecord(value) ||
+    typeof value.displayName !== "string" ||
+    value.displayName.trim().length === 0 ||
+    (value.role !== null && typeof value.role !== "string") ||
+    (value.formation !== null && typeof value.formation !== "string") ||
+    (value.cityState !== null && typeof value.cityState !== "string")
+  ) {
+    return null;
+  }
+  return Object.freeze({
+    displayName: value.displayName,
+    role: value.role,
+    formation: value.formation,
+    cityState: value.cityState,
+  });
+};
 
 const normalizeCandidate = (
   value: unknown,
@@ -59,10 +86,54 @@ const normalizeCandidate = (
     return null;
   }
 
+  const rawAuthorProfile = value.publicAuthorProfile;
+  let publicAuthorProfile: StudyPublicAuthorProfile | null = null;
+
+  if (rawAuthorProfile !== undefined && rawAuthorProfile !== null) {
+    publicAuthorProfile = normalizePublicAuthorProfile(rawAuthorProfile);
+    if (!publicAuthorProfile) {
+      return null;
+    }
+
+    if (
+      value.publicAuthorDisplayName !== publicAuthorProfile.displayName
+    ) {
+      return null;
+    }
+  }
+
+  const rawAuthorProfiles = value.publicAuthorProfilesByStudyId;
+  let publicAuthorProfilesByStudyId:
+    Readonly<Record<string, StudyPublicAuthorProfile>> | undefined;
+  if (rawAuthorProfiles !== undefined) {
+    if (!isRecord(rawAuthorProfiles)) {
+      return null;
+    }
+    const studyIds: readonly string[] = value.contentPackage.studies.map((study) => study.id);
+    const keys = Object.keys(rawAuthorProfiles);
+    if (keys.length !== studyIds.length || keys.some((key) => !studyIds.includes(key))) {
+      return null;
+    }
+    const profiles: [string, StudyPublicAuthorProfile][] = [];
+    for (const studyId of studyIds) {
+      if (!Object.prototype.hasOwnProperty.call(rawAuthorProfiles, studyId)) {
+        return null;
+      }
+      const profile = normalizePublicAuthorProfile(rawAuthorProfiles[studyId]);
+      if (!profile) {
+        return null;
+      }
+      profiles.push([studyId, profile]);
+    }
+    publicAuthorProfilesByStudyId = Object.freeze(Object.fromEntries(profiles));
+  }
+
   return {
     contentPackage: value.contentPackage,
     editorialStatus: value.editorialStatus,
     publicAuthorDisplayName: value.publicAuthorDisplayName,
+    publicAuthorProfile,
+    publicAuthorProfilesByStudyId,
   };
 };
 
@@ -161,12 +232,15 @@ export const buildStudyRuntimeCatalog = (
   );
   const studies = Object.freeze(
     acceptedCandidates.flatMap((candidate) =>
-      candidate.contentPackage.studies.map((study) =>
-        Object.freeze({
+      candidate.contentPackage.studies.map((study) => {
+        const profile = candidate.publicAuthorProfilesByStudyId?.[study.id]
+          ?? candidate.publicAuthorProfile;
+        return Object.freeze({
           content: study,
-          publicAuthorDisplayName: candidate.publicAuthorDisplayName,
-        }),
-      ),
+          publicAuthorDisplayName: profile?.displayName ?? candidate.publicAuthorDisplayName,
+          publicAuthorProfile: profile,
+        });
+      }),
     ),
   );
 
@@ -179,6 +253,8 @@ const releasedCandidates: readonly StudyRuntimeCandidate[] = Object.freeze(
       contentPackage: entry.contentPackage,
       editorialStatus: "PUBLISHED" as const,
       publicAuthorDisplayName: entry.publicAuthorDisplayName,
+      publicAuthorProfile: entry.publicAuthorProfile,
+      publicAuthorProfilesByStudyId: entry.publicAuthorProfilesByStudyId,
     }),
   ),
 );

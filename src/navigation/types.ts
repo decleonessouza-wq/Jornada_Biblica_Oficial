@@ -10,6 +10,7 @@ import type { OfflineBibleReaderRouteParams } from "../bible/reader/bibleReaderC
 import type {
   BibleReference,
 } from "../domain/bible/bibleReference";
+import type { DevotionalId } from "../domain/devotionals/devotional";
 import type { JournalEntryId } from "../domain/journal/journal";
 import type {
   PersonalLocalDate,
@@ -56,6 +57,12 @@ export type JournalEntryEditorSourceContext =
       studyId: string;
       sourceTitleSnapshot: string;
       promptSnapshot: string;
+    }>
+  | Readonly<{
+      sourceType: "DEVOTIONAL";
+      devotionalId: DevotionalId;
+      sourceTitleSnapshot: string;
+      promptSnapshot: string;
     }>;
 
 export type JournalStackParamList = {
@@ -80,6 +87,10 @@ export type StudiesStackParamList = {
   StudyTrack: Readonly<{ trackId: string }>;
   StudyDetail: Readonly<{
     studyId: string;
+    returnToFavorites?: boolean;
+  }>;
+  DevotionalDetail: Readonly<{
+    devotionalId: DevotionalId;
     returnToFavorites?: boolean;
   }>;
 };

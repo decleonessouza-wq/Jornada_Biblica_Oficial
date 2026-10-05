@@ -2,11 +2,13 @@ import {
   useCallback,
   useLayoutEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import { useFocusEffect } from "@react-navigation/native";
 import {
   Image,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -15,6 +17,7 @@ import {
   View,
 } from "react-native";
 
+import { devotionalRuntimeCatalog } from "../devotionals/runtime/devotionalRuntimeCatalog";
 import { useAppShellChrome } from "../navigation/AppShellChromeContext";
 import type { StudiesStackScreenProps } from "../navigation/types";
 import {
@@ -180,6 +183,8 @@ export default function StudiesScreen({ navigation }: Props) {
   const [activeFilter, setActiveFilter] = useState<FilterKey>("ALL");
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [showTrack05Info, setShowTrack05Info] = useState(false);
+  const track05InfoAcknowledgedRef = useRef(false);
   const { resetChrome } = useAppShellChrome();
 
   useFocusEffect(
@@ -479,6 +484,17 @@ export default function StudiesScreen({ navigation }: Props) {
               description,
             }) => {
               const studyCount = studies.length;
+              const isTrack05 = presentation.trackId === "track-05";
+              const devotionalCount = isTrack05
+                ? devotionalRuntimeCatalog.devotionals.filter(
+                    ({ content }) => content.placement === "TRACK_05",
+                  ).length
+                : 0;
+              const contentCount = studyCount + devotionalCount;
+              let contentNoun = studyCount === 1 ? "estudo" : "estudos";
+              if (isTrack05) {
+                contentNoun = contentCount === 1 ? "conteúdo" : "conteúdos";
+              }
               const categoryLabel =
                 getTrackCategoryLabel(category);
               const badgeStyle =
@@ -489,11 +505,19 @@ export default function StudiesScreen({ navigation }: Props) {
                   key={presentation.trackId}
                   accessibilityLabel={`Abrir ${trackTitle}`}
                   accessibilityRole="button"
-                  onPress={() =>
+                  onPress={() => {
+                    if (
+                      presentation.trackId === "track-05" &&
+                      !track05InfoAcknowledgedRef.current
+                    ) {
+                      setShowTrack05Info(true);
+                      return;
+                    }
+
                     navigation.navigate("StudyTrack", {
                       trackId: presentation.trackId,
-                    })
-                  }
+                    });
+                  }}
                   style={({ pressed }) => [
                     styles.card,
                     pressed && styles.cardPressed,
@@ -532,8 +556,8 @@ export default function StudiesScreen({ navigation }: Props) {
                         style={styles.cardCount}
                         testID={`study-track-count-${presentation.trackId}`}
                       >
-                        ▣ {studyCount}{" "}
-                        {studyCount === 1 ? "estudo" : "estudos"}
+                        ▣ {contentCount}{" "}
+                        {contentNoun}
                       </Text>
 
                       <View
@@ -568,11 +592,247 @@ export default function StudiesScreen({ navigation }: Props) {
           )}
         </View>
       )}
+      <Modal
+        animationType="slide"
+        onRequestClose={() => setShowTrack05Info(false)}
+        transparent
+        visible={showTrack05Info}
+      >
+        <View style={styles.track5InfoOverlay} testID="track5-info-sheet">
+          <Pressable
+            accessibilityLabel="Fechar informações da Trilha 5"
+            accessibilityRole="button"
+            onPress={() => setShowTrack05Info(false)}
+            style={styles.track5InfoBackdrop}
+            testID="track5-info-backdrop"
+          />
+          <View style={styles.track5InfoCard}>
+            <View style={styles.track5InfoHandle} />
+
+            <ScrollView
+              contentContainerStyle={styles.track5InfoBodyContent}
+              showsVerticalScrollIndicator={false}
+              style={styles.track5InfoBody}
+            >
+              <Text style={styles.track5InfoTitle}>Estudos Colaborativos</Text>
+              <Text style={styles.track5InfoSubtitle}>
+                Diferentes experiências. Uma mesma busca pela Palavra.
+              </Text>
+
+              <Text style={styles.track5InfoText}>
+                Esta trilha reúne estudos e devocionais enviados{" "}
+                <Text style={styles.track5InfoStrong}>
+                  voluntariamente por cristãos evangélicos
+                </Text>{" "}
+                convidados a compartilhar conhecimento, experiências e
+                reflexões bíblicas para edificação de outros leitores.
+              </Text>
+
+              <Text style={styles.track5InfoText}>
+                Entre os colaboradores há{" "}
+                <Text style={styles.track5InfoStrong}>
+                  jovens, membros da igreja, obreiros, professores, pastores,
+                  ministros da Palavra e teólogos
+                </Text>
+                , trazendo diferentes temas, vivências e formas de abordar as
+                Escrituras.
+              </Text>
+
+              <Text style={styles.track5InfoText}>
+                Os conteúdos passam por{" "}
+                <Text style={styles.track5InfoStrong}>
+                  leitura, revisão e organização editorial
+                </Text>{" "}
+                antes da publicação. Ainda assim, por se tratarem de
+                contribuições autorais,{" "}
+                <Text style={styles.track5InfoStrong}>
+                  as interpretações, opiniões e enfoques apresentados pertencem
+                  aos seus respectivos autores e não representam necessariamente
+                  o posicionamento oficial do Bíblia Jornada
+                </Text>
+                .
+              </Text>
+
+              <Text style={styles.track5InfoText}>
+                A proposta desta trilha é justamente ampliar o aprendizado por
+                meio de uma{" "}
+                <Text style={styles.track5InfoStrong}>
+                  diversidade saudável de perspectivas dentro da fé cristã
+                  evangélica
+                </Text>
+                , mantendo a Bíblia como referência principal e buscando sempre{" "}
+                <Text style={styles.track5InfoStrong}>
+                  edificação, reflexão e crescimento espiritual
+                </Text>
+                .
+              </Text>
+
+              <Text style={styles.track5InfoQuote}>
+                Leia com atenção, confira nas Escrituras e permita que cada
+                estudo seja um convite para conhecer ainda mais a Palavra de
+                Deus.
+              </Text>
+
+              <Text style={styles.track5InfoBrand}>Bíblia Jornada</Text>
+              <Text style={styles.track5InfoTagline}>
+                Aprenda. Reflita. Cresça na Palavra.
+              </Text>
+            </ScrollView>
+
+            <Pressable
+              accessibilityLabel="Entendi, continuar para os estudos"
+              accessibilityRole="button"
+              onPress={() => {
+                track05InfoAcknowledgedRef.current = true;
+                setShowTrack05Info(false);
+                navigation.navigate("StudyTrack", {
+                  trackId: "track-05",
+                });
+              }}
+              style={({ pressed }) => [
+                styles.track5InfoPrimary,
+                pressed && styles.track5InfoPressed,
+              ]}
+              testID="track5-info-continue"
+            >
+              <Text style={styles.track5InfoPrimaryText}>
+                Entendi, continuar para os estudos.
+              </Text>
+            </Pressable>
+
+            <Pressable
+              accessibilityLabel="Fechar"
+              accessibilityRole="button"
+              onPress={() => setShowTrack05Info(false)}
+              style={({ pressed }) => [
+                styles.track5InfoClose,
+                pressed && styles.track5InfoPressed,
+              ]}
+              testID="track5-info-close"
+            >
+              <Text style={styles.track5InfoCloseText}>Fechar</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
+
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
+  track5InfoOverlay: {
+    flex: 1,
+    justifyContent: "flex-end",
+  },
+  track5InfoBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(15, 23, 42, 0.52)",
+  },
+  track5InfoCard: {
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    elevation: 12,
+    gap: 12,
+    maxHeight: "90%",
+    paddingBottom: 24,
+    paddingHorizontal: 22,
+    paddingTop: 12,
+  },
+  track5InfoBody: {
+    flexGrow: 0,
+  },
+  track5InfoBodyContent: {
+    gap: 12,
+    paddingBottom: 4,
+  },
+  track5InfoHandle: {
+    alignSelf: "center",
+    backgroundColor: colors.border,
+    borderRadius: 999,
+    height: 4,
+    marginBottom: 4,
+    width: 46,
+  },
+  track5InfoEyebrow: {
+    color: colors.secondaryPressed,
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 0.8,
+  },
+  track5InfoTitle: {
+    color: colors.textStrong,
+    fontSize: 22,
+    fontWeight: "800",
+    lineHeight: 27,
+  },
+  track5InfoSubtitle: {
+    color: colors.primary,
+    fontSize: 16,
+    fontWeight: "800",
+    lineHeight: 22,
+  },
+  track5InfoText: {
+    color: colors.text,
+    fontSize: 15,
+    lineHeight: 22,
+  },
+  track5InfoStrong: {
+    color: colors.textStrong,
+    fontWeight: "800",
+  },
+  track5InfoQuote: {
+    borderLeftColor: colors.secondary,
+    borderLeftWidth: 3,
+    color: colors.textStrong,
+    fontSize: 15,
+    fontStyle: "italic",
+    lineHeight: 22,
+    paddingLeft: 12,
+  },
+  track5InfoBrand: {
+    color: colors.primary,
+    fontSize: 16,
+    fontWeight: "800",
+    marginTop: 2,
+  },
+  track5InfoTagline: {
+    color: colors.textMuted,
+    fontSize: 14,
+    fontStyle: "italic",
+  },
+  track5InfoPrimary: {
+    alignItems: "center",
+    backgroundColor: colors.primary,
+    borderRadius: 14,
+    justifyContent: "center",
+    minHeight: 50,
+    marginTop: 4,
+    paddingHorizontal: 18,
+  },
+  track5InfoPrimaryText: {
+    color: colors.textInverse,
+    fontSize: 15,
+    fontWeight: "800",
+  },
+  track5InfoClose: {
+    alignItems: "center",
+    borderColor: colors.border,
+    borderRadius: 14,
+    borderWidth: 1,
+    justifyContent: "center",
+    minHeight: 48,
+    paddingHorizontal: 18,
+  },
+  track5InfoCloseText: {
+    color: colors.textStrong,
+    fontSize: 15,
+    fontWeight: "700",
+  },
+  track5InfoPressed: {
+    opacity: 0.78,
+  },
   screen: {
     backgroundColor: colors.background,
     flex: 1,
